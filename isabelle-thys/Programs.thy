@@ -89,9 +89,6 @@ fun substitute_oracles_raw :: \<open>raw_program list \<Rightarrow> raw_program 
 | \<open>substitute_oracles_raw os (InstantiateOracles c ds) = substitute_oracles_raw (map (substitute_oracles_raw os) ds @ os) c\<close>
 | \<open>substitute_oracles_raw os p = p\<close>
 
-lemma max_diff_distrib_left_nat: "max x y - z = max (x - z) (y - z)" for x y z :: nat
-  by (simp add: max_def)
-
 (* lemma cSUP_mono_simple: "bdd_above (g ` A) \<Longrightarrow> (\<And>n. n \<in> A \<Longrightarrow> f n \<le> g n) \<Longrightarrow> \<Squnion>(f ` A) \<le> \<Squnion>(g ` A)"
   for f g :: \<open>_ \<Rightarrow> _::conditionally_complete_lattice\<close>
   apply (cases \<open>A = {}\<close>)
@@ -101,68 +98,7 @@ sledgehammer [dont_slice]
 by -
  *)
 
-lemma [iff]: \<open>is_Sup {} (\<bottom>::_::order_bot)\<close>
-  by (simp add: is_Sup_def)
 
-
-lemma OFCLASS_conditionally_complete_lattice_Sup_orderI:
-  assumes \<open>Sup {} = (\<bottom>::'a)\<close>
-  shows \<open>OFCLASS('a::{conditionally_complete_lattice, order_bot}, Sup_order_class)\<close>
-proof
-  show \<open>is_Sup X (\<Squnion> X)\<close> if \<open>has_Sup X\<close> for X :: \<open>'a set\<close>
-  proof (cases \<open>X = {}\<close>)
-    case True
-    then show ?thesis
-      by (simp add: assms)
-  next
-    case False
-    with that show ?thesis
-      by (auto intro!: is_Sup_cSup has_Sup_bdd_above simp: )
-  qed
-  show \<open>is_Sup {x, y} (x \<squnion> y)\<close> if \<open>has_Sup {x, y}\<close> for x y :: 'a
-  by (simp add: is_Sup_def)
-qed
-
-instance nat :: Sup_order
-  apply (rule OFCLASS_conditionally_complete_lattice_Sup_orderI)
-  by (simp add: bot_nat_def)
-
-lemma (in Sup_order) Sup_eqI:
-  "(\<And>y. y \<in> A \<Longrightarrow> y \<le> x) \<Longrightarrow> (\<And>y. (\<And>z. z \<in> A \<Longrightarrow> z \<le> y) \<Longrightarrow> x \<le> y) \<Longrightarrow> \<Squnion>A = x"
-  apply (rule is_Sup_eq_Sup[symmetric])
-  using local.is_SupI by blast
-
-lemma SUP_diff_nat:
-  assumes \<open>finite (f ` I)\<close>
-  shows "(SUP i\<in>I. f i - c :: nat) = (SUP i\<in>I. f i) - c"
-proof (cases \<open>I = {}\<close>)
-  case True
-  then show ?thesis 
-  by simp
-next
-  case False
-  from assms have \<open>bdd_above (f ` I)\<close>
-    by fastforce
-  then have \<open>bdd_above ((\<lambda>i. f i - c) ` I)\<close>
-    by (meson bdd_above_mono2 diff_le_self dual_order.refl)
-  then have fin: \<open>finite ((\<lambda>i. f i - c) ` I)\<close>
-    by (simp add: bdd_above_nat)
-  show ?thesis
-  proof (rule antisym)
-    show \<open>(\<Squnion>i\<in>I. f i - c) \<le> (\<Squnion>i\<in>I. f i) - c\<close>
-      using False assms
-      by (auto intro!: cSUP_least diff_le_mono le_cSup_finite)
-    have \<open>f i - c \<le> (\<Squnion>i\<in>I. f i - c)\<close> if \<open>i \<in> I\<close> for i
-      by (auto intro!: le_cSup_finite that fin)
-    then have \<open>f i \<le> (\<Squnion>i\<in>I. f i - c) + c\<close> if \<open>i \<in> I\<close> for i
-      using that
-      by fastforce
-    then have \<open>(\<Squnion>i\<in>I. f i) \<le> (\<Squnion>i\<in>I. f i - c) + c\<close>
-      by (auto intro!: cSUP_least False simp: )
-    then show \<open>(\<Squnion>i\<in>I. f i) - c \<le> (\<Squnion>i\<in>I. f i - c)\<close>
-      by simp
-  qed
-qed
 
 
 lemma oracle_number_substitute_oracles_raw[simp]:
@@ -350,29 +286,6 @@ valid_oracle_program_Seq:  \<open>valid_oracle_program c \<Longrightarrow> valid
 definition \<open>valid_program p \<longleftrightarrow> valid_oracle_program p \<and> no_oracles p\<close>
 
 (* | valid_program_no_oracles: \<open>valid_oracle_program c \<Longrightarrow> no_oracles c \<Longrightarrow> valid_program c\<close> *)
-
-lemma Sup_upper_has_Sup:
-  fixes x :: "'a :: Sup_order"
-    and A :: "'a set"
-  assumes \<open>has_Sup A\<close>
-  assumes "x \<in> A"
-  shows "x \<le> \<Squnion> A"
-  using assms is_Sup_Sup is_Sup_def by blast
-
-lemma has_Sup_finite:
-  fixes X :: \<open>'a::semilattice_sup set\<close>
-  assumes \<open>finite X\<close> and \<open>X \<noteq> {}\<close>
-  shows \<open>has_Sup X\<close>
-proof -
-  have \<open>x \<in> X \<Longrightarrow> x \<le> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X\<close> for x
-    by (simp add: Sup_fin.coboundedI assms)
-  moreover have \<open> (\<And>x. x \<in> X \<Longrightarrow> x \<le> y) \<Longrightarrow> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X \<le> y\<close> for y
-    by (auto intro!: Sup_fin.boundedI assms)
-  ultimately have \<open>is_Sup X (Sup_fin X)\<close>
-    by (rule is_SupI)
-  then show \<open>has_Sup X\<close>
-    using is_Sup_has_Sup by blast
-qed
 
 lemma substitute_oracles_raw_relevant_prefix:
   assumes \<open>oracle_number p \<le> k\<close>
@@ -610,23 +523,6 @@ definition while :: \<open>bool expression \<Rightarrow> program list \<Rightarr
 (* lift_definition qinit :: \<open>'a qvariable \<Rightarrow> 'a ell2 expression \<Rightarrow> program\<close> is
 \<open>\<lambda>... QuantumOp\<close> *)
 
-lemma actual_cregister_range_empty[iff]: \<open>actual_cregister_range empty_cregister_range\<close>
-proof (intro actual_cregister_range_def[THEN iffD2] conjI allI)
-  show \<open>valid_cregister_range empty_cregister_range\<close>
-  using valid_empty_cregister_range by blast
-  fix m m' :: 'a
-  show \<open>\<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. (a \<circ>\<^sub>m b) m = Some m'\<close>
-    apply (rule bexI[of _ Some, rotated])
-     apply (simp add: empty_cregister_range_def)
-    apply (rule bexI[of _ \<open>\<lambda>_. Some m'\<close>])
-    by simp_all
-qed
-
-lemma ACTUAL_CREGISTER_CREGISTER_of[iff]: \<open>ACTUAL_CREGISTER (CREGISTER_of F)\<close>
-  apply (cases \<open>cregister F\<close>)
-   apply (simp add: ACTUAL_CREGISTER.rep_eq CREGISTER_of.rep_eq actual_register_range)
-  by (simp add: non_cregister ACTUAL_CREGISTER.rep_eq bot_CREGISTER.rep_eq)
-
 
 lift_definition localvars1 :: "'a cvariable \<Rightarrow> 'b qvariable \<Rightarrow> program \<Rightarrow> program" is
   \<open>\<lambda>C Q p. LocalC (CREGISTER_of C) undefined (LocalQ (QREGISTER_of Q) (tc_butterfly (ket undefined) (ket undefined)) p)\<close>
@@ -689,21 +585,6 @@ https://math.stackexchange.com/questions/4794773/tensor-product-of-factors-is-a-
     Rep_QREGISTER Q = {sandwich U a | a. actual_qregister_range_aux f a}})\<close> *)
 
 
-
-(* TODO: generalize (not only "type", rep/abs args) *)
-lemma with_type_conj:
-  assumes \<open>\<forall>\<^sub>\<tau> 'a::type = A. P\<close>
-    and \<open>\<forall>\<^sub>\<tau> 'b::type = B. Q\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P \<and> Q\<close>
-  apply (auto intro!: simp: with_type_def)
-  by (smt (verit, ccfv_threshold) assms(1) assms(2) prod.case_eq_if prod.simps(2) with_type_def)
-
-lemma with_type_mp2:
-  assumes \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (P Rep Abs))\<close>
-  assumes \<open>(\<And>Rep Abs Rep' Abs'. type_definition Rep Abs S \<Longrightarrow> fst CR S p \<Longrightarrow> type_definition Rep' Abs' S' \<Longrightarrow> fst CR' S' p' \<Longrightarrow>
-               P Rep Abs Rep' Abs' \<Longrightarrow> Q Rep Abs Rep' Abs')\<close>
-  shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
-  using assms by (auto simp add: with_type_def case_prod_beta)
 
 definition cq_map_local_q :: 
   \<open>'qu QREGISTER \<Rightarrow> ('qu ell2, 'qu ell2) trace_class \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> where
@@ -788,11 +669,6 @@ lemma kraus_map_sample_point_distr: \<open>kraus_equivalent' (kraus_map_sample (
   using kraus_map_sample_point_distr'[of x] kraus_family_remove_0_equivalent'
     kraus_equivalent'_sym kraus_equivalent'_trans
   by metis
-
-lemma cq_map_eqI:
-  assumes \<open>cq_map_rel (rep_cq_map E) (rep_cq_map F)\<close>
-  shows \<open>E = F\<close>
-  using assms Quotient3_cq_map Quotient3_rel_rep by fastforce
 
 lemma cq_map_sample_point_distr: \<open>cq_map_sample (\<lambda>x. point_distr (f x)) = cq_map_classical f\<close>
   apply (transfer' fixing: )

@@ -1021,5 +1021,55 @@ lemma summable_on_in_cong:
   by (simp add: summable_on_in_def has_sum_in_cong[OF assms])
 
 
+lemma max_diff_distrib_left_nat: "max x y - z = max (x - z) (y - z)" for x y z :: nat
+  by (simp add: max_def)
+
+lemma SUP_diff_nat:
+  assumes \<open>finite (f ` I)\<close>
+  shows "(SUP i\<in>I. f i - c :: nat) = (SUP i\<in>I. f i) - c"
+proof (cases \<open>I = {}\<close>)
+  case True
+  then show ?thesis 
+  by simp
+next
+  case False
+  from assms have \<open>bdd_above (f ` I)\<close>
+    by fastforce
+  then have \<open>bdd_above ((\<lambda>i. f i - c) ` I)\<close>
+    by (meson bdd_above_mono2 diff_le_self dual_order.refl)
+  then have fin: \<open>finite ((\<lambda>i. f i - c) ` I)\<close>
+    by (simp add: bdd_above_nat)
+  show ?thesis
+  proof (rule antisym)
+    show \<open>(\<Squnion>i\<in>I. f i - c) \<le> (\<Squnion>i\<in>I. f i) - c\<close>
+      using False assms
+      by (auto intro!: cSUP_least diff_le_mono le_cSup_finite)
+    have \<open>f i - c \<le> (\<Squnion>i\<in>I. f i - c)\<close> if \<open>i \<in> I\<close> for i
+      by (auto intro!: le_cSup_finite that fin)
+    then have \<open>f i \<le> (\<Squnion>i\<in>I. f i - c) + c\<close> if \<open>i \<in> I\<close> for i
+      using that
+      by fastforce
+    then have \<open>(\<Squnion>i\<in>I. f i) \<le> (\<Squnion>i\<in>I. f i - c) + c\<close>
+      by (auto intro!: cSUP_least False simp: )
+    then show \<open>(\<Squnion>i\<in>I. f i) - c \<le> (\<Squnion>i\<in>I. f i - c)\<close>
+      by simp
+  qed
+qed
+
+(* TODO: generalize (not only "type", rep/abs args) *)
+lemma with_type_conj:
+  assumes \<open>\<forall>\<^sub>\<tau> 'a::type = A. P\<close>
+    and \<open>\<forall>\<^sub>\<tau> 'b::type = B. Q\<close>
+  shows \<open>\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P \<and> Q\<close>
+  apply (auto intro!: simp: with_type_def)
+  by (smt (verit, ccfv_threshold) assms(1) assms(2) prod.case_eq_if prod.simps(2) with_type_def)
+
+lemma with_type_mp2:
+  assumes \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (P Rep Abs))\<close>
+  assumes \<open>(\<And>Rep Abs Rep' Abs'. type_definition Rep Abs S \<Longrightarrow> fst CR S p \<Longrightarrow> type_definition Rep' Abs' S' \<Longrightarrow> fst CR' S' p' \<Longrightarrow>
+               P Rep Abs Rep' Abs' \<Longrightarrow> Q Rep Abs Rep' Abs')\<close>
+  shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
+  using assms by (auto simp add: with_type_def case_prod_beta)
+
 
 end

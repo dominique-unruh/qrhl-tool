@@ -709,5 +709,23 @@ proof -
     by auto
 qed
 
+lemma actual_cregister_range_empty[iff]: \<open>actual_cregister_range empty_cregister_range\<close>
+proof (intro actual_cregister_range_def[THEN iffD2] conjI allI)
+  show \<open>valid_cregister_range empty_cregister_range\<close>
+  using valid_empty_cregister_range by blast
+  fix m m' :: 'a
+  show \<open>\<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. (a \<circ>\<^sub>m b) m = Some m'\<close>
+    apply (rule bexI[of _ Some, rotated])
+     apply (simp add: empty_cregister_range_def)
+    apply (rule bexI[of _ \<open>\<lambda>_. Some m'\<close>])
+    by simp_all
+qed
+
+lemma ACTUAL_CREGISTER_CREGISTER_of[iff]: \<open>ACTUAL_CREGISTER (CREGISTER_of F)\<close>
+  apply (cases \<open>cregister F\<close>)
+   apply (simp add: ACTUAL_CREGISTER.rep_eq CREGISTER_of.rep_eq actual_register_range)
+  by (simp add: non_cregister ACTUAL_CREGISTER.rep_eq bot_CREGISTER.rep_eq)
+
+
 
 end

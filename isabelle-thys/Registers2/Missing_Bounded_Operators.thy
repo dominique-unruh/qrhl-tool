@@ -2472,5 +2472,57 @@ proof (rule less_eq_cblinfunI)
     by -
 qed
 
+lemma is_Sup_empty_bot[iff]: \<open>is_Sup {} (\<bottom>::_::order_bot)\<close>
+  by (simp add: is_Sup_def)
+
+lemma OFCLASS_conditionally_complete_lattice_Sup_orderI:
+  assumes \<open>Sup {} = (\<bottom>::'a)\<close>
+  shows \<open>OFCLASS('a::{conditionally_complete_lattice, order_bot}, Sup_order_class)\<close>
+proof
+  show \<open>is_Sup X (\<Squnion> X)\<close> if \<open>has_Sup X\<close> for X :: \<open>'a set\<close>
+  proof (cases \<open>X = {}\<close>)
+    case True
+    then show ?thesis
+      by (simp add: assms)
+  next
+    case False
+    with that show ?thesis
+      by (auto intro!: is_Sup_cSup has_Sup_bdd_above simp: )
+  qed
+  show \<open>is_Sup {x, y} (x \<squnion> y)\<close> if \<open>has_Sup {x, y}\<close> for x y :: 'a
+  by (simp add: is_Sup_def)
+qed
+
+instance nat :: Sup_order
+  apply (rule OFCLASS_conditionally_complete_lattice_Sup_orderI)
+  by (simp add: bot_nat_def)
+
+lemma (in Sup_order) Sup_eqI:
+  "(\<And>y. y \<in> A \<Longrightarrow> y \<le> x) \<Longrightarrow> (\<And>y. (\<And>z. z \<in> A \<Longrightarrow> z \<le> y) \<Longrightarrow> x \<le> y) \<Longrightarrow> \<Squnion>A = x"
+  apply (rule is_Sup_eq_Sup[symmetric])
+  using local.is_SupI by blast
+lemma Sup_upper_has_Sup:
+  fixes x :: "'a :: Sup_order"
+    and A :: "'a set"
+  assumes \<open>has_Sup A\<close>
+  assumes "x \<in> A"
+  shows "x \<le> \<Squnion> A"
+  using assms is_Sup_Sup is_Sup_def by blast
+
+lemma has_Sup_finite:
+  fixes X :: \<open>'a::semilattice_sup set\<close>
+  assumes \<open>finite X\<close> and \<open>X \<noteq> {}\<close>
+  shows \<open>has_Sup X\<close>
+proof -
+  have \<open>x \<in> X \<Longrightarrow> x \<le> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X\<close> for x
+    by (simp add: Sup_fin.coboundedI assms)
+  moreover have \<open> (\<And>x. x \<in> X \<Longrightarrow> x \<le> y) \<Longrightarrow> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X \<le> y\<close> for y
+    by (auto intro!: Sup_fin.boundedI assms)
+  ultimately have \<open>is_Sup X (Sup_fin X)\<close>
+    by (rule is_SupI)
+  then show \<open>has_Sup X\<close>
+    using is_Sup_has_Sup by blast
+qed
+
 
 end

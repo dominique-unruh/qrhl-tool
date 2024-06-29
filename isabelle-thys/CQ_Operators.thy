@@ -564,5 +564,10 @@ lift_definition cq_map_classical :: \<open>('cl1 \<Rightarrow> 'cl2) \<Rightarro
 definition cq_map_while :: \<open>('cl \<Rightarrow> bool) \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map \<Rightarrow> ('cl,'qu,'cl,'qu) cq_map\<close> where
   \<open>cq_map_while c \<EE> = cq_map_seq (cq_map_infsum (\<lambda>n. cq_map_while_n c \<EE> n) UNIV) (cq_map_classical snd)\<close>
 
+lemma cq_map_eqI2:
+  assumes \<open>cq_map_rel (rep_cq_map E) (rep_cq_map F)\<close>
+  shows \<open>E = F\<close>
+  using assms Quotient3_cq_map Quotient3_rel_rep by fastforce
+
 
 end
