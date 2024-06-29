@@ -3,6 +3,7 @@ theory Kraus_Maps
 begin
 
 no_notation  Order.top ("\<top>\<index>")
+no_notation   eq_closure_of ("closure'_of\<index>")
 
 unbundle cblinfun_notation
 
@@ -4277,9 +4278,7 @@ next
     by (simp add: kraus_map_infsum_invalid False False')
 qed
 
-no_notation   eq_closure_of ("closure'_of\<index>")
-
-lemma
+(* lemma
 (* TODO Ref: Nielsen Chuang, Th 2.6, generalized to infdim *)
   assumes \<open>((\<lambda>i. tc_butterfly (\<psi> i) (\<psi> i)) has_sum t) X\<close>
   assumes \<open>((\<lambda>i. tc_butterfly (\<phi> i) (\<phi> i)) has_sum t) Y\<close>
@@ -4302,6 +4301,6 @@ proof -
 lemma
   assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
   shows \<open>Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<EE>) = Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<FF>)\<close>
-
+ *)
 
 end

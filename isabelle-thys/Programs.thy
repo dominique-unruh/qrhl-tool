@@ -58,7 +58,18 @@ fun oracle_number :: \<open>raw_program \<Rightarrow> nat\<close> where
 | \<open>oracle_number (LocalC _ _ c) = oracle_number c\<close>
 | \<open>oracle_number (OracleCall i) = Suc i\<close>
 
-fun no_oracles :: \<open>raw_program \<Rightarrow> bool\<close> where
+inductive no_oracles :: \<open>raw_program \<Rightarrow> bool\<close> where
+\<open>no_oracles c \<Longrightarrow> no_oracles d \<Longrightarrow> no_oracles (Seq c d)\<close>
+| \<open>no_oracles c \<Longrightarrow> no_oracles d \<Longrightarrow> no_oracles (IfThenElse e c d)\<close>
+| \<open>no_oracles c \<Longrightarrow> no_oracles d \<Longrightarrow> no_oracles (While e c)\<close>
+| \<open>no_oracles c \<Longrightarrow> no_oracles d \<Longrightarrow> no_oracles (LocalC C m c)\<close>
+| \<open>no_oracles c \<Longrightarrow> no_oracles d \<Longrightarrow> no_oracles (LocalQ Q t c)\<close>
+| \<open>no_oracles Skip\<close>
+| \<open>no_oracles (Sample d)\<close>
+| \<open>no_oracles (QuantumOp E)\<close>
+| \<open>no_oracles (Measurement M)\<close>
+
+(* fun no_oracles :: \<open>raw_program \<Rightarrow> bool\<close> where
 \<open>no_oracles (Seq c d) \<longleftrightarrow> no_oracles c \<and> no_oracles d\<close>
 | \<open>no_oracles (IfThenElse e c d) \<longleftrightarrow> no_oracles c \<and> no_oracles d\<close>
 | \<open>no_oracles (While e c) \<longleftrightarrow> no_oracles c\<close>
@@ -66,7 +77,7 @@ fun no_oracles :: \<open>raw_program \<Rightarrow> bool\<close> where
 | \<open>no_oracles (LocalC _ _ c) \<longleftrightarrow> no_oracles c\<close>
 | \<open>no_oracles (OracleCall _) \<longleftrightarrow> False\<close>
 | \<open>no_oracles (InstantiateOracles _ _) \<longleftrightarrow> False\<close>
-| \<open>no_oracles p \<longleftrightarrow> True\<close>
+| \<open>no_oracles p \<longleftrightarrow> True\<close> *)
 
 fun substitute_oracles_raw :: \<open>raw_program list \<Rightarrow> raw_program \<Rightarrow> raw_program\<close> where
 \<open>substitute_oracles_raw os (Seq c d) = Seq (substitute_oracles_raw os c) (substitute_oracles_raw os d)\<close>
@@ -122,20 +133,40 @@ lemma (in Sup_order) Sup_eqI:
   using local.is_SupI by blast
 
 lemma SUP_diff_nat:
-  "(SUP i\<in>I. f i - c :: nat) = (SUP i\<in>I. f i) - c"
-  apply (rule antisym)
-apply (rule mono_ccSUP)
-  apply (rule Sup_eqI)
-  thm Sup_eqI
-  apply (auto intro!: SUP_eqI diff_le_mono SUP_least intro: SUP_upper
-           simp: ennreal_minus_cancel_iff ennreal_minus_le_iff less_top[symmetric])
+  assumes \<open>finite (f ` I)\<close>
+  shows "(SUP i\<in>I. f i - c :: nat) = (SUP i\<in>I. f i) - c"
+proof (cases \<open>I = {}\<close>)
+  case True
+  then show ?thesis 
+  by simp
+next
+  case False
+  from assms have \<open>bdd_above (f ` I)\<close>
+    by fastforce
+  then have \<open>bdd_above ((\<lambda>i. f i - c) ` I)\<close>
+    by (meson bdd_above_mono2 diff_le_self dual_order.refl)
+  then have fin: \<open>finite ((\<lambda>i. f i - c) ` I)\<close>
+    by (simp add: bdd_above_nat)
+  show ?thesis
+  proof (rule antisym)
+    show \<open>(\<Squnion>i\<in>I. f i - c) \<le> (\<Squnion>i\<in>I. f i) - c\<close>
+      using False assms
+      by (auto intro!: cSUP_least diff_le_mono le_cSup_finite)
+    have \<open>f i - c \<le> (\<Squnion>i\<in>I. f i - c)\<close> if \<open>i \<in> I\<close> for i
+      by (auto intro!: le_cSup_finite that fin)
+    then have \<open>f i \<le> (\<Squnion>i\<in>I. f i - c) + c\<close> if \<open>i \<in> I\<close> for i
+      using that
+      by fastforce
+    then have \<open>(\<Squnion>i\<in>I. f i) \<le> (\<Squnion>i\<in>I. f i - c) + c\<close>
+      by (auto intro!: cSUP_least False simp: )
+    then show \<open>(\<Squnion>i\<in>I. f i) - c \<le> (\<Squnion>i\<in>I. f i - c)\<close>
+      by simp
+  qed
+qed
 
-try0
-sledgehammer [dont_slice]
-by -
 
-
-lemma oracle_number_substitute_oracles_raw[simp]: \<open>oracle_number (substitute_oracles_raw os p) \<le> max (oracle_number p - length os) (\<Squnion>q\<in>set os. oracle_number q)\<close>
+lemma oracle_number_substitute_oracles_raw[simp]:
+  \<open>oracle_number (substitute_oracles_raw os p) \<le> max (oracle_number p - length os) (\<Squnion>q\<in>set os. oracle_number q)\<close>
 proof (induction p arbitrary: os)
   case (Seq p1 p2)
   then show ?case
@@ -178,7 +209,7 @@ next
     have aux: \<open>max a (max b c) \<le> max (max d e - l) c\<close> 
       if \<open>a \<le> d - l\<close> and \<open>b \<le> max (e - l) c\<close>
       for a b c d e f l :: nat
-      by x
+      using that by force
     have \<open>oracle_number (substitute_oracles_raw os (InstantiateOracles p x2)) \<le> 
       max (oracle_number p - length (map (substitute_oracles_raw os) x2 @ os))
         (\<Squnion>a\<in>set (map (substitute_oracles_raw os) x2 @ os). oracle_number a)\<close>
@@ -199,59 +230,22 @@ next
         by (auto intro!: cSUP_mono)
       also have \<open>\<dots> = max (\<Squnion>a\<in>set x2. oracle_number a - length os) (\<Squnion>a\<in>set x2. \<Squnion>a\<in>set os. oracle_number a)\<close>
         apply (cases \<open>x2 = []\<close>)
-        apply simp
+         apply simp
         apply (simp only: flip: sup_max)
         apply (subst SUP_sup_distrib)
         by auto
       also have \<open>\<dots> \<le> max ((\<Squnion>x\<in>set x2. oracle_number x) - length os) (\<Squnion>a\<in>set os. oracle_number a)\<close>
         apply (cases \<open>x2 = []\<close>, simp)
-        apply (rule max.mono)
-        try0
-        apply auto
-        sledgehammer [dont_slice]
-        by -
-        
+        by (auto intro!: simp: SUP_diff_nat)
       finally show \<open>(\<Squnion>a\<in>set x2. oracle_number (substitute_oracles_raw os a)) \<le> max ((\<Squnion>x\<in>set x2. oracle_number x) - length os) (\<Squnion>a\<in>set os. oracle_number a)\<close>
         by -
-      by x
+    qed
     also have \<open>\<dots> = max (oracle_number (InstantiateOracles p x2) - length os) (\<Squnion>a\<in>set os. oracle_number a)\<close>
       by simp
-  
-  
-  also have \<open>\<dots> \<le> max (oracle_number (InstantiateOracles p x2) - length os)
-        (\<Squnion>a\<in>set (map (substitute_oracles_raw os) x2 @ os). oracle_number a)\<close>
-    apply (rule max.mono[OF _ order.refl])
-    by simp
-  also have \<open>\<dots> \<le> max (oracle_number (InstantiateOracles p x2) - length os) (\<Squnion>a\<in>set os. oracle_number a)\<close>
-  proof (rule max.mono[OF order.refl], cases \<open>x2 = []\<close>)
-    case True
-    then show \<open>(\<Squnion>a\<in>set (map (substitute_oracles_raw os) x2 @ os). oracle_number a) \<le> (\<Squnion>a\<in>set os. oracle_number a)\<close>
-      by simp
-  next
-    case False
-    have \<open>(\<Squnion>a\<in>set (map (substitute_oracles_raw os) x2 @ os). oracle_number a)
-           = max \<close>
-    apply (auto intro!: simp: )
-    try0
-sledgehammer [dont_slice]
-by -
-  also have \<open>\<dots> \<le> (\<Squnion>a\<in>set os. oracle_number a)\<close>
-    apply (rule max.boundedI[OF _ order.refl])
-  proof (rule cSUP_least)
-    show \<open>set x2 \<noteq> {}\<close>
-      using False by simp
-    fix x assume \<open>x \<in> set x2\<close>
-    show \<open>oracle_number (substitute_oracles_raw os x) \<le> (\<Squnion>a\<in>set os. oracle_number a)\<close>
-      using InstantiateOracles.IH(2)[where os=os, OF \<open>x \<in> set x2\<close>]
-try0
-sledgehammer [dont_slice]
-by -
-qed
-  finally    show \<open>(\<Squnion>a\<in>set (map (substitute_oracles_raw os) x2 @ os). oracle_number a) \<le> (\<Squnion>a\<in>set os. oracle_number a)\<close> 
-    by -
-qed
-  finally show ?case
-    by -
+    finally show \<open>oracle_number (substitute_oracles_raw os (InstantiateOracles p x2))
+        \<le> max (oracle_number (InstantiateOracles p x2) - length os) (\<Squnion>a\<in>set os. oracle_number a)\<close>
+      by -
+  qed
 next
   case (LocalQ x1 x2 p)
   then show ?case 
@@ -267,79 +261,292 @@ next
 qed
 
 lemma no_oracles_substitute_oracles_raw:
-  assumes \<open>oracle_number p = 0\<close>
-  shows \<open>no_oracles (substitute_oracles_raw p)\<close>
-  sorry
+  assumes \<open>oracle_number p \<le> length os\<close>
+  assumes \<open>\<And>q. q \<in> set os \<Longrightarrow> no_oracles q\<close>
+  shows \<open>no_oracles (substitute_oracles_raw os p)\<close>
+proof (insert assms, induction p arbitrary: os)
+  case (Seq p1 p2)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case Skip
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (Sample x)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (IfThenElse x1 p1 p2)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (While x1 p)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (QuantumOp x)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (Measurement x)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (InstantiateOracles p x2)
+  from InstantiateOracles.prems
+  have 1: \<open>oracle_number p \<le> length (map (substitute_oracles_raw os) x2 @ os)\<close>
+    by auto
+  have 3: \<open>q \<in> set os \<Longrightarrow> no_oracles q\<close> for q
+    using InstantiateOracles.prems by blast
+  have 2: \<open>no_oracles (substitute_oracles_raw os x)\<close> if \<open>x \<in> set x2\<close> for x
+  proof -
+    have \<open>(\<Squnion>x\<in>set x2. oracle_number x) \<le> length os\<close>
+      using InstantiateOracles.prems(1)
+      by simp
+    then have \<open>oracle_number x \<le> length os\<close>
+      apply (subst (asm) cSUP_le_iff)
+      using that by auto
+    from that this 3 show ?thesis
+      by (rule InstantiateOracles.IH)
+  qed
+  show ?case
+    apply simp
+    using 1 apply (rule InstantiateOracles.IH)
+    using 2 3 by auto
+next
+  case (LocalQ x1 x2 p)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (LocalC x1 x2 p)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+next
+  case (OracleCall x)
+  then show ?case
+    by (auto intro!: no_oracles.intros)
+qed
 
 lemma substitute_oracles_raw_no_oracles:
   assumes \<open>no_oracles p\<close>
-  shows \<open>substitute_oracles_raw p = p\<close>
-  sorry
+  shows \<open>substitute_oracles_raw os p = p\<close>
+  using assms apply induction by auto
 
 
-
-inductive valid_oracle_program :: \<open>raw_program \<Rightarrow> bool\<close> and valid_program :: \<open>raw_program \<Rightarrow> bool\<close> where
-  \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (Seq c d)\<close>
-| \<open>valid_oracle_program Skip\<close>
-| \<open>(\<And>m. weight (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (Sample e)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (IfThenElse e c d)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program (While e c)\<close>
-| \<open>(\<And>m. kraus_family_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
-| \<open>valid_oracle_program (Measurement e)\<close>
-| \<open>(\<And>d. d \<in> set ds \<Longrightarrow> valid_program d) \<Longrightarrow> valid_oracle_program c \<Longrightarrow> 
+inductive valid_oracle_program :: \<open>raw_program \<Rightarrow> bool\<close> (* and valid_program :: \<open>raw_program \<Rightarrow> bool\<close> *) where
+valid_oracle_program_Seq:  \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (Seq c d)\<close>
+| valid_oracle_program_Skip: \<open>valid_oracle_program Skip\<close>
+| valid_oracle_program_Sample: \<open>(\<And>m. weight (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (Sample e)\<close>
+| valid_oracle_program_IfThenElse: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (IfThenElse e c d)\<close>
+| valid_oracle_program_While: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program (While e c)\<close>
+| valid_oracle_program_QuantumOp: \<open>(\<And>m. kraus_family_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
+| valid_oracle_program_Measurement: \<open>valid_oracle_program (Measurement e)\<close>
+| valid_oracle_program_InstantiateOracles: \<open>(\<And>d. d \<in> set ds \<Longrightarrow> valid_oracle_program d \<and> no_oracles d) \<Longrightarrow> valid_oracle_program c \<Longrightarrow> 
   oracle_number c \<le> length ds \<Longrightarrow> valid_oracle_program (InstantiateOracles c ds)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_QREGISTER q \<Longrightarrow> norm \<rho> = 1 \<Longrightarrow> valid_oracle_program (LocalQ q \<rho> c)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_CREGISTER x \<Longrightarrow> valid_oracle_program (LocalC x init c)\<close>
-| \<open>valid_oracle_program c \<Longrightarrow> no_oracles c \<Longrightarrow> valid_program c\<close>
+| valid_oracle_program_LocalQ: \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_QREGISTER q \<Longrightarrow> norm \<rho> = 1 \<Longrightarrow> valid_oracle_program (LocalQ q \<rho> c)\<close>
+| valid_oracle_program_LocalC: \<open>valid_oracle_program c \<Longrightarrow> ACTUAL_CREGISTER x \<Longrightarrow> valid_oracle_program (LocalC x init c)\<close>
+
+definition \<open>valid_program p \<longleftrightarrow> valid_oracle_program p \<and> no_oracles p\<close>
+
+(* | valid_program_no_oracles: \<open>valid_oracle_program c \<Longrightarrow> no_oracles c \<Longrightarrow> valid_program c\<close> *)
+
+lemma Sup_upper_has_Sup:
+  fixes x :: "'a :: Sup_order"
+    and A :: "'a set"
+  assumes \<open>has_Sup A\<close>
+  assumes "x \<in> A"
+  shows "x \<le> \<Squnion> A"
+  using assms is_Sup_Sup is_Sup_def by blast
+
+lemma has_Sup_finite:
+  fixes X :: \<open>'a::semilattice_sup set\<close>
+  assumes \<open>finite X\<close> and \<open>X \<noteq> {}\<close>
+  shows \<open>has_Sup X\<close>
+proof -
+  have \<open>x \<in> X \<Longrightarrow> x \<le> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X\<close> for x
+    by (simp add: Sup_fin.coboundedI assms)
+  moreover have \<open> (\<And>x. x \<in> X \<Longrightarrow> x \<le> y) \<Longrightarrow> \<Squnion>\<^sub>f\<^sub>i\<^sub>n X \<le> y\<close> for y
+    by (auto intro!: Sup_fin.boundedI assms)
+  ultimately have \<open>is_Sup X (Sup_fin X)\<close>
+    by (rule is_SupI)
+  then show \<open>has_Sup X\<close>
+    using is_Sup_has_Sup by blast
+qed
+
+lemma substitute_oracles_raw_relevant_prefix:
+  assumes \<open>oracle_number p \<le> k\<close>
+  assumes \<open>take k os1 = take k os2\<close>
+  shows \<open>substitute_oracles_raw os1 p = substitute_oracles_raw os2 p\<close>
+proof (insert assms, induction p arbitrary: os1 os2 k)
+  case (Seq p1 p2)
+  then show ?case
+    by (metis nle_le oracle_number.simps(1) pre_arith_simps(3) substitute_oracles_raw.simps(1))
+next
+  case Skip
+  then show ?case 
+    by simp
+next
+  case (Sample x)
+  then show ?case 
+    by simp
+next
+  case (IfThenElse x1 p1 p2)
+  then show ?case 
+    by (smt (verit, best) max.absorb_iff2 max.assoc max.commute oracle_number.simps(6) order.refl substitute_oracles_raw.simps(2))
+next
+  case (While x1 p)
+  then show ?case 
+    by (metis oracle_number.simps(7) substitute_oracles_raw.simps(3))
+next
+  case (QuantumOp x)
+  then show ?case 
+    by simp
+next
+  case (Measurement x)
+  then show ?case 
+    by simp
+next
+  case (InstantiateOracles p x2)
+  from InstantiateOracles.prems
+  have 1: \<open>oracle_number p \<le> length x2 + k\<close>
+    by auto
+  have 3: \<open>take (oracle_number x) os1 = take (oracle_number x) os2\<close> if \<open>x \<in> set x2\<close> for x
+  proof -
+    from InstantiateOracles.prems
+    have \<open>oracle_number (InstantiateOracles p x2) \<le> k\<close>
+      by simp
+    then have \<open>(\<Squnion>x\<in>set x2. oracle_number x) \<le> k\<close>
+      by simp
+    moreover have \<open>oracle_number x \<le> (\<Squnion>x\<in>set x2. oracle_number x)\<close>
+      apply (rule Sup_upper_has_Sup)
+      using that by (auto intro!: has_Sup_finite)
+    ultimately have \<open>oracle_number x \<le> k\<close>
+      by simp
+    then show ?thesis
+      using InstantiateOracles(4) take_greater_eqI by blast
+  qed
+  have 2: \<open>take (length x2 + k) (map (substitute_oracles_raw os1) x2 @ os1)
+         = take (length x2 + k) (map (substitute_oracles_raw os2) x2 @ os2)\<close>
+    by (auto simp add: take_add intro!: InstantiateOracles 3)
+  have \<open>substitute_oracles_raw (map (substitute_oracles_raw os1) x2 @ os1) p =
+    substitute_oracles_raw (map (substitute_oracles_raw os2) x2 @ os2) p\<close>
+    using 1 2 by (rule InstantiateOracles.IH(1)[where k=\<open>length x2 + k\<close>])
+  then show ?case
+    by simp
+next
+  case (LocalQ x1 x2 p)
+  then show ?case 
+    by (metis oracle_number.simps(9) substitute_oracles_raw.simps(4))
+next
+  case (LocalC x1 x2 p)
+  then show ?case 
+    by (metis oracle_number.simps(10) substitute_oracles_raw.simps(5))
+next
+  case (OracleCall x)
+  then show ?case
+    apply auto
+    by (metis Suc_le_lessD nth_take)
+qed
+
 
 lemma valid_oracle_program_substitute_oracles_raw[intro]:
   assumes \<open>valid_oracle_program p\<close>
-  shows \<open>valid_oracle_program (substitute_oracles_raw p)\<close>
-  sorry
+  assumes \<open>\<And>q. q \<in> set os \<Longrightarrow> valid_oracle_program q\<close>
+  shows \<open>valid_oracle_program (substitute_oracles_raw os p)\<close>
+  using assms
+proof (induction arbitrary: os)
+  case (valid_oracle_program_Seq c d)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case valid_oracle_program_Skip
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_Sample e)
+  then show ?case 
+by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_IfThenElse c d e)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_While c e)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_QuantumOp e)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_Measurement e)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_LocalQ c q \<rho>)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_LocalC c x init)
+  then show ?case
+    by (simp_all add: valid_oracle_program.intros)
+next
+  case (valid_oracle_program_InstantiateOracles ds c)
+  have \<open>substitute_oracles_raw os (InstantiateOracles c ds) = 
+      substitute_oracles_raw (map (substitute_oracles_raw os) ds @ os) c\<close>
+    by simp
+  moreover have \<open>\<dots> = substitute_oracles_raw (map (substitute_oracles_raw os) ds) c\<close>
+    apply (rule substitute_oracles_raw_relevant_prefix[where k=\<open>length ds\<close>])
+    using valid_oracle_program_InstantiateOracles.hyps
+    by auto
+  moreover have \<open>valid_oracle_program \<dots>\<close>
+    apply (rule valid_oracle_program_InstantiateOracles.IH) 
+    by (simp add: local.valid_oracle_program_InstantiateOracles(1) substitute_oracles_raw_no_oracles)
+  ultimately show ?case
+    by simp
+qed
 
 
 lemma valid_program_substitute_oracles_raw[intro]:
-  assumes \<open>valid_oracle_program p\<close> and \<open>oracle_number p = 0\<close>
-  shows \<open>valid_program (substitute_oracles_raw p)\<close>
-  using assms(1) assms(2) no_oracles_substitute_oracles_raw valid_oracle_program_valid_program.intros(11) by blast
+  assumes \<open>valid_program p\<close>
+  shows \<open>valid_program (substitute_oracles_raw os p)\<close>
+  using assms substitute_oracles_raw_no_oracles valid_program_def by auto
 
   
-
 lemma valid_program_LocalQ: \<open>valid_program c \<Longrightarrow> ACTUAL_QREGISTER q \<Longrightarrow> norm \<rho> = 1 \<Longrightarrow> valid_program (LocalQ q \<rho> c)\<close>
-  by (meson no_oracles.simps(4) valid_oracle_program_valid_program.intros(11) valid_oracle_program_valid_program.intros(9) valid_program.cases)
-
+  using no_oracles.intros(5) valid_oracle_program.intros(9) valid_program_def by blast
 
 lemma valid_program_LocalC: \<open>valid_program c \<Longrightarrow> ACTUAL_CREGISTER x \<Longrightarrow> valid_program (LocalC x init c)\<close>
-  by (simp add: valid_oracle_program_valid_program.intros(10) valid_program.simps)
-
+  using no_oracles.intros(4) valid_oracle_program.intros(10) valid_program_def by blast
 
 typedef program = \<open>Collect valid_program\<close>
   apply (rule exI[of _ Skip])
-  by (simp add: valid_oracle_program_valid_program.intros)
+  by (simp add: valid_oracle_program.intros valid_program_def no_oracles.intros)
 setup_lifting type_definition_program
 
 typedef oracle_program = \<open>Collect valid_oracle_program\<close>
   apply (rule exI[of _ Skip])
-  by (simp add: valid_oracle_program_valid_program.intros)
+  by (simp add: valid_oracle_program.intros)
 setup_lifting type_definition_oracle_program
 
 lift_definition oracle_program_from_program :: \<open>program \<Rightarrow> oracle_program\<close> is id
-  by (simp add: valid_program.simps)
+  by (simp add: valid_program_def)
 
 lift_definition seq :: \<open>program \<Rightarrow> program \<Rightarrow> program\<close> is Seq
 proof -
   fix p q
   assume assms: \<open>p \<in> Collect valid_program\<close> \<open>q \<in> Collect valid_program\<close>
   have \<open>valid_oracle_program (Seq p q)\<close>
-    using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+    using assms by (auto intro!: valid_oracle_program.intros valid_program_def simp: valid_program_def)
   moreover have \<open>no_oracles (Seq p q)\<close>
-    using assms by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+    using assms by (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
   ultimately show \<open>Seq p q \<in> Collect valid_program\<close>
-    by (simp add: valid_oracle_program_valid_program.intros)
+    by (simp add: valid_oracle_program.intros valid_program_def)
 qed
 
 lift_definition skip :: program is Skip
-  by (auto intro!: valid_oracle_program_valid_program.intros)
+  by (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
 
 fun block :: \<open>program list \<Rightarrow> program\<close> where
   block_empty[simp del]: \<open>block [] = skip\<close>
@@ -357,27 +564,27 @@ proof -
   proof (induction ps rule:rev_induct)
     case Nil
     show \<open>valid_oracle_program (fold Seq [] Skip)\<close>
-      by (auto intro!: valid_oracle_program_valid_program.intros)
+      by (auto intro!: valid_oracle_program.intros valid_program_def)
     show \<open>oracle_number (fold Seq [] Skip) = 0\<close>
       by simp
   next
     case (snoc p ps)
     then show \<open>valid_oracle_program (fold Seq (ps @ [p]) Skip)\<close>
       if \<open>list_all valid_program (ps @ [p])\<close>
-      using that apply (auto intro!: valid_oracle_program_valid_program.intros)
-      using valid_program.simps by blast
+      using that apply (auto intro!: valid_oracle_program.intros valid_program_def)
+      using valid_program_def by blast
     show \<open>oracle_number (fold Seq (ps @ [p]) Skip) = 0\<close>
       if \<open>list_all valid_program (ps @ [p])\<close>
       using that snoc apply simp
-      using valid_program.simps by blast
+      using valid_program_def by blast
   qed
   then show \<open>fold Seq ps Skip \<in> Collect valid_program\<close>
-    by (simp add: valid_program.simps)
+    by (simp add: valid_program_def)
 qed *)
 
 lift_definition sample :: \<open>'a cvariable \<Rightarrow> 'a distr expression \<Rightarrow> program\<close> is
   \<open>\<lambda>X e. Sample (\<lambda>m::cl. map_distr (\<lambda>x. setter X x m) (e m))\<close>
-  by (simp add: valid_oracle_program_valid_program.intros(3) valid_program.simps)
+  by (simp add: valid_oracle_program.intros no_oracles.intros valid_program_def)
 
 definition assign :: \<open>'a cvariable \<Rightarrow> 'a expression \<Rightarrow> program\<close> where
   \<open>assign x e = sample x (point_distr o e)\<close>
@@ -385,17 +592,17 @@ definition assign :: \<open>'a cvariable \<Rightarrow> 'a expression \<Rightarro
 lift_definition qapply :: \<open>'a qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program\<close> is
   \<open>\<lambda>Q e. if qregister Q then
       QuantumOp (\<lambda>m. kraus_family_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
-  apply (auto intro!: valid_oracle_program_valid_program.intros)
+  apply (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
   by (simp add: power_le_one)
 
 lift_definition ifthenelse1 :: \<open>bool expression \<Rightarrow> program \<Rightarrow> program \<Rightarrow> program\<close> is IfThenElse
-  by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+  by (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
 
 definition ifthenelse :: \<open>bool expression \<Rightarrow> program list \<Rightarrow> program list \<Rightarrow> program\<close> where
   \<open>ifthenelse c p q = ifthenelse1 c (block p) (block q)\<close>
 
 lift_definition while1 :: \<open>bool expression \<Rightarrow> program \<Rightarrow> program\<close> is While
-  by (auto intro!: valid_oracle_program_valid_program.intros simp: valid_program.simps)
+  by (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
 
 definition while :: \<open>bool expression \<Rightarrow> program list \<Rightarrow> program\<close> where
   \<open>while c p = while1 c (block p)\<close>
@@ -639,6 +846,67 @@ lift_definition qc_map_in_qref :: \<open>('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow
   using kraus_equivalent'_trans kraus_equivalent'_sym
   by meson
 
+lemma qc_map_in_qref_seq:
+  assumes \<open>qc_map_in_qref E Q\<close>
+  assumes \<open>qc_map_in_qref F Q\<close>
+  shows \<open>qc_map_in_qref (cq_map_seq E F) Q\<close>
+  sorry
+
+lemma qc_map_in_qref_if:
+  assumes \<open>qc_map_in_qref E Q\<close>
+  assumes \<open>qc_map_in_qref F Q\<close>
+  shows \<open>qc_map_in_qref (cq_map_if c E F) Q\<close>
+  sorry
+
+lemma qc_map_in_qref_while:
+  assumes \<open>qc_map_in_qref E Q\<close>
+  shows \<open>qc_map_in_qref (cq_map_while c E) Q\<close>
+  sorry
+
+lemma qc_map_in_qref_local_q:
+  assumes \<open>qc_map_in_qref E (Q \<squnion> R)\<close>
+  shows \<open>qc_map_in_qref (cq_map_local_q Q \<rho> E) R\<close>
+  sorry
+
+lemma qc_map_in_qref_local_c:
+  assumes \<open>qc_map_in_qref E Q\<close>
+  shows \<open>qc_map_in_qref (cq_map_local_c X m E) R\<close>
+  sorry
+
+lemma kraus_family_in_qref_map_outcome[iff]:
+  assumes \<open>kraus_family_in_qref E Q\<close>
+  shows \<open>kraus_family_in_qref (kraus_family_map_outcome f E) Q\<close>
+  sorry
+
+lemma kraus_family_in_qref_from_strictI:
+  assumes \<open>kraus_family_in_qref_strict E Q\<close>
+  shows \<open>kraus_family_in_qref E Q\<close>
+  using assms kraus_family_in_qref_def by blast
+
+
+lemma kraus_family_in_qref_strict_of_op[intro]:
+  assumes \<open>A \<in> Rep_QREGISTER Q\<close>
+  shows \<open>kraus_family_in_qref_strict (kraus_family_of_op A) Q\<close>
+  using assms
+  by (simp add: kraus_family_in_qref_strict.rep_eq kraus_family_of_op.rep_eq)
+
+lemma kraus_family_in_qref_of_op[intro]:
+  assumes \<open>A \<in> Rep_QREGISTER Q\<close>
+  shows \<open>kraus_family_in_qref (kraus_family_of_op A) Q\<close>
+  by (simp add: assms kraus_family_in_qref_from_strictI kraus_family_in_qref_strict_of_op)
+
+lemma kraus_family_in_qref_strict_0[iff]: \<open>kraus_family_in_qref_strict 0 Q\<close>
+  by (simp add: kraus_family_in_qref_strict.rep_eq zero_kraus_family.rep_eq)
+
+lemma kraus_family_in_qref_0[iff]: \<open>kraus_family_in_qref 0 Q\<close>
+  by (auto intro!: kraus_family_in_qref_from_strictI)
+
+lemma qc_map_in_qref_quantum_op:
+  assumes \<open>\<And>x. kraus_family_in_qref (E x) Q\<close>
+  shows \<open>qc_map_in_qref (cq_map_quantum_op E) Q\<close>
+  using assms apply (transfer fixing: E Q)
+  by (auto intro!: kraus_family_in_qref_map_outcome)
+
 (* definition fvq_of_cq_map :: \<open>(cl, qu, cl, qu) cq_map \<Rightarrow> QVARIABLE\<close> where
   \<open>fvq_of_cq_map \<EE> = Inf {Q. qc_map_in_qref \<EE> Q}\<close> *)
 
@@ -649,14 +917,176 @@ definition program_in_qref :: \<open>program \<Rightarrow> QVARIABLE \<Rightarro
   \<open>fvq_program p = fvq_of_cq_map (denotation p)\<close> *)
 
 inductive raw_program_in_qref :: \<open>raw_program \<Rightarrow> QVARIABLE \<Rightarrow> bool\<close> where
-  \<open>no_oracles p \<Longrightarrow> qc_map_in_qref (denotation_raw p) Q \<Longrightarrow> raw_program_in_qref p Q\<close>
-| \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref q Q \<Longrightarrow> raw_program_in_qref (Seq p q) Q\<close>
-| \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref q Q \<Longrightarrow> raw_program_in_qref (IfThenElse c p q) Q\<close>
-| \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref (While c p) Q\<close>
-| \<open>fvq_raw_program (InstantiateOracles p qs) = fvq_raw_program p \<squnion> (\<Squnion>q\<in>set qs. fvq_raw_program q)\<close>
+  raw_program_in_qref_no_oracles: \<open>no_oracles p \<Longrightarrow> qc_map_in_qref (denotation_raw p) Q \<Longrightarrow> raw_program_in_qref p Q\<close>
+| raw_program_in_qref_Seq: \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref q Q \<Longrightarrow> raw_program_in_qref (Seq p q) Q\<close>
+| raw_program_in_qref_IfThenElse: \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref q Q \<Longrightarrow> raw_program_in_qref (IfThenElse c p q) Q\<close>
+| raw_program_in_qref_While: \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref (While c p) Q\<close>
+| raw_program_in_qref_LocalQ: \<open>raw_program_in_qref p (Q \<squnion> R) \<Longrightarrow> raw_program_in_qref (LocalQ Q \<rho> p) R\<close>
+| raw_program_in_qref_LocalC: \<open>raw_program_in_qref p Q \<Longrightarrow> raw_program_in_qref (LocalC X m p) Q\<close>
+| raw_program_in_qref_InstantiateOracles: \<open>raw_program_in_qref p Q \<Longrightarrow> (\<And>q. q \<in> set qs \<Longrightarrow> raw_program_in_qref q Q) \<Longrightarrow> raw_program_in_qref (InstantiateOracles p qs) Q\<close>
+| raw_program_in_qref_OracleCall: \<open>raw_program_in_qref (OracleCall i) Q\<close>
+
+lemma kraus_family_in_qref_strict_mono:
+  assumes \<open>Q \<le> R\<close>
+  assumes \<open>kraus_family_in_qref_strict p Q\<close>
+  shows \<open>kraus_family_in_qref_strict p R\<close>
+  using assms
+  apply transfer
+  using less_eq_QREGISTER.rep_eq by fastforce
+
+lemma kraus_family_in_qref_mono:
+  assumes \<open>Q \<le> R\<close>
+  assumes \<open>kraus_family_in_qref p Q\<close>
+  shows \<open>kraus_family_in_qref p R\<close>
+  using assms
+  by (meson kraus_family_in_qref_def kraus_family_in_qref_strict_mono)
+
+lemma qc_map_in_qref_mono:
+  assumes \<open>Q \<le> R\<close>
+  assumes \<open>qc_map_in_qref p Q\<close>
+  shows \<open>qc_map_in_qref p R\<close>
+  using assms
+  apply transfer
+  by (simp add: kraus_family_in_qref_mono)
 
 
-function fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
+lemma raw_program_in_qref_mono:
+  assumes \<open>Q \<le> R\<close>
+  assumes \<open>raw_program_in_qref p Q\<close>
+  shows \<open>raw_program_in_qref p R\<close>
+  using assms(2,1)
+proof (induction arbitrary: R)
+  case (raw_program_in_qref_no_oracles p Q)
+  then show ?case 
+    using qc_map_in_qref_mono raw_program_in_qref.intros by blast
+next
+  case (raw_program_in_qref_Seq p Q q)
+  then show ?case
+    by (auto intro: raw_program_in_qref.intros simp: )
+next
+  case (raw_program_in_qref_IfThenElse p Q q c)
+  then show ?case 
+    by (auto intro: raw_program_in_qref.intros simp: )
+next
+  case (raw_program_in_qref_While p Q c)
+  then show ?case 
+    by (auto intro: raw_program_in_qref.intros simp: )
+next
+  case (raw_program_in_qref_LocalQ p Q R' \<rho>)
+  then have \<open>raw_program_in_qref p (Q \<squnion> R')\<close>
+    by -
+  moreover have \<open>Q \<squnion> R' \<le> Q \<squnion> R\<close>
+    using raw_program_in_qref_LocalQ.prems sup.mono by auto
+  ultimately have \<open>raw_program_in_qref p (Q \<squnion> R)\<close>
+    by (rule_tac raw_program_in_qref_LocalQ.IH)
+  then show ?case 
+    by (rule Programs.raw_program_in_qref_LocalQ)
+next
+  case (raw_program_in_qref_LocalC p X c m)
+  then show ?case
+    by (auto intro: raw_program_in_qref.intros simp: )
+next
+  case (raw_program_in_qref_InstantiateOracles p Q qs)
+  then show ?case 
+    by (auto intro: raw_program_in_qref.intros simp: )
+next
+  case (raw_program_in_qref_OracleCall i Q R)
+  show ?case
+    by (auto intro: raw_program_in_qref.intros)
+qed
+
+
+lemma raw_program_in_qref_subst:
+  assumes \<open>raw_program_in_qref p Q\<close>
+  assumes \<open>\<And>q. q \<in> set qs \<Longrightarrow> raw_program_in_qref q Q\<close>
+  shows \<open>raw_program_in_qref (substitute_oracles_raw qs p) Q\<close>
+  using assms
+proof (induction arbitrary: qs)
+  case (raw_program_in_qref_no_oracles p Q)
+  then show ?case 
+    by (auto intro!: raw_program_in_qref.intros simp: substitute_oracles_raw_no_oracles)
+next
+  case (raw_program_in_qref_Seq p Q q)
+  then show ?case
+    using raw_program_in_qref.intros by force
+next
+  case (raw_program_in_qref_IfThenElse p Q q c)
+  then show ?case 
+    using raw_program_in_qref.intros by force
+next
+  case (raw_program_in_qref_While p Q c)
+  then show ?case 
+    using raw_program_in_qref.intros by force
+next
+  case (raw_program_in_qref_LocalQ p Q R \<rho>)
+  have \<open>raw_program_in_qref (substitute_oracles_raw qs p) (Q \<squnion> R)\<close>
+    apply (rule raw_program_in_qref_LocalQ.IH)
+    apply (rule raw_program_in_qref_mono[rotated])
+     apply (rule raw_program_in_qref_LocalQ.prems)
+    by auto
+  then show ?case
+    by (auto intro!: raw_program_in_qref.intros)
+next
+  case (raw_program_in_qref_LocalC p X c m)
+  then show ?case
+    by (auto intro: raw_program_in_qref.intros)
+next
+  case (raw_program_in_qref_InstantiateOracles p Q qs qs')
+  have \<open>raw_program_in_qref (substitute_oracles_raw qs' q) Q\<close> if \<open>q \<in> set qs\<close> for q
+    using local.raw_program_in_qref_InstantiateOracles(4) local.raw_program_in_qref_InstantiateOracles(5) that by blast
+  then have \<open>raw_program_in_qref q Q\<close> if \<open>q \<in> set (map (substitute_oracles_raw qs') qs @ qs')\<close> for q
+    using that 
+    by (auto intro: local.raw_program_in_qref_InstantiateOracles simp: )
+  then have \<open>raw_program_in_qref (substitute_oracles_raw (map (substitute_oracles_raw qs') qs @ qs') p) Q\<close>
+    by (rule raw_program_in_qref_InstantiateOracles.IH)
+  then show ?case 
+    by (auto intro: raw_program_in_qref.intros)
+next
+  case (raw_program_in_qref_OracleCall i Q)
+  then show ?case
+    by (auto intro: raw_program_in_qref.intros)
+qed
+
+lemma raw_program_in_qref_implies_qc_map_in_qref:
+  assumes \<open>raw_program_in_qref p Q\<close>
+  assumes \<open>no_oracles p\<close>
+  shows \<open>qc_map_in_qref (denotation_raw p) Q\<close>
+  using assms
+proof (induction)
+  case (raw_program_in_qref_no_oracles p Q)
+  then show ?case
+    by simp
+next
+  case (raw_program_in_qref_Seq p Q q)
+  then show ?case
+    using no_oracles.cases qc_map_in_qref_seq by fastforce
+next
+  case (raw_program_in_qref_IfThenElse p Q q c)
+  then show ?case
+    using no_oracles.cases qc_map_in_qref_if by fastforce
+next
+  case (raw_program_in_qref_While p Q c)
+  then show ?case
+    using no_oracles.cases qc_map_in_qref_while by fastforce
+next
+  case (raw_program_in_qref_LocalQ p Q R \<rho>)
+  then show ?case
+    using no_oracles.cases qc_map_in_qref_local_q by fastforce
+next
+  case (raw_program_in_qref_LocalC p Q X m)
+  then show ?case
+  using no_oracles.cases qc_map_in_qref_local_c by fastforce
+next
+  case (raw_program_in_qref_InstantiateOracles p Q qs)
+  then show ?case
+    using no_oracles.cases by fastforce
+next
+  case (raw_program_in_qref_OracleCall i Q)
+  then show ?case
+    using no_oracles.cases by fastforce
+qed
+
+(* function fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> where
  \<open>no_oracles p \<Longrightarrow> fvq_raw_program p = fvq_of_cq_map (denotation_raw p)\<close>
 | \<open>\<not> no_oracles (Seq p q) \<Longrightarrow> fvq_raw_program (Seq p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
 | \<open>\<not> no_oracles (IfThenElse c p q) \<Longrightarrow> fvq_raw_program (IfThenElse c p q) = fvq_raw_program p \<squnion> fvq_raw_program q\<close>
@@ -667,12 +1097,35 @@ function fvq_raw_program :: \<open>raw_program \<Rightarrow> QVARIABLE\<close> w
 | \<open>fvq_raw_program (OracleCall _) = \<bottom>\<close>
                       apply atomize_elim
   by (auto elim: no_oracles.elims)
-termination by lexicographic_order
+termination by lexicographic_order *)
 
-consts fvc_program :: "program \<Rightarrow> CVARIABLE"
-consts fvcw_program :: "program \<Rightarrow> CVARIABLE"
-consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
-consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE"
+lift_definition oracle_program_in_qref :: \<open>oracle_program \<Rightarrow> QVARIABLE \<Rightarrow> bool\<close> is raw_program_in_qref.
+
+lemma program_in_qref_raw_program_in_qref: \<open>program_in_qref p Q \<longleftrightarrow> raw_program_in_qref (Rep_program p) Q\<close>
+proof (rule iffI)
+  define p' where \<open>p' = Rep_program p\<close>
+  assume \<open>program_in_qref p Q\<close>
+  then have \<open>qc_map_in_qref (denotation_raw p') Q\<close>
+    by (simp add: program_in_qref_def denotation.rep_eq p'_def)
+  moreover have \<open>no_oracles p'\<close>
+    using Rep_program p'_def valid_program_def by force
+  ultimately show \<open>raw_program_in_qref p' Q\<close>
+    using raw_program_in_qref.intros(1) by blast
+next
+  define p' where \<open>p' = Rep_program p\<close>
+  assume \<open>raw_program_in_qref p' Q\<close>
+  then have \<open>qc_map_in_qref (denotation_raw p') Q\<close>
+    using Rep_program p'_def raw_program_in_qref_implies_qc_map_in_qref valid_program_def by force
+  then show \<open>program_in_qref p Q\<close>
+    by (simp add: denotation.rep_eq p'_def program_in_qref_def)
+qed
+
+axiomatization program_in_cref :: "program \<Rightarrow> CVARIABLE \<Rightarrow> bool"
+axiomatization expression_in_cref :: "'a expression \<Rightarrow> CVARIABLE \<Rightarrow> bool"
+axiomatization program_write_in_cref :: "program \<Rightarrow> CVARIABLE \<Rightarrow> bool"
+(* consts fvcw_program :: "program \<Rightarrow> CVARIABLE" *)
+(* consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE" *)
+(* consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE" *)
 
 lemma kraus_family_in_qref_strict_map:
   assumes \<open>kraus_family_in_qref_strict \<EE> Q\<close>
@@ -733,17 +1186,45 @@ lemma qc_map_in_qref_id[iff]: \<open>qc_map_in_qref cq_map_id Q\<close>
   apply (transfer fixing: Q)
   by (auto intro!: kraus_family_in_qref_map)
 
-lemma fvq_of_cq_map_id[iff]: \<open>fvq_of_cq_map cq_map_id = \<bottom>\<close>
-  by (simp add: fvq_of_cq_map_def)
+lemma program_in_qref_mono:
+  assumes \<open>Q \<le> R\<close>
+  assumes \<open>program_in_qref p Q\<close>
+  shows \<open>program_in_qref p R\<close>
+  using assms(1) assms(2) program_in_qref_def qc_map_in_qref_mono by auto
 
-lemma fvq_program_skip[simp]: \<open>fvq_program skip = \<bottom>\<close>
-  by (auto intro!: simp: fvq_program_def denotation_skip)
+lemma program_in_qref_seq:
+  assumes \<open>program_in_qref a Q\<close>
+  assumes \<open>program_in_qref b Q\<close>
+  shows \<open>program_in_qref (seq a b) Q\<close>
+  using assms(1) assms(2) program_in_qref_raw_program_in_qref raw_program_in_qref.intros(2) seq.rep_eq by force
 
-(* TODO Truth is \<le> *)
-lemma fvq_program_seq: \<open>fvq_program (seq a b) = fvq_program a \<squnion> fvq_program b\<close>
+(* lemma fvq_program_seq: \<open>fvq_program (seq a b) = fvq_program a \<squnion> fvq_program b\<close>
+  by xxx *)
+lemma program_in_qref_skip[iff]: \<open>program_in_qref skip Q\<close>
+  by (simp add: denotation_skip program_in_qref_def)
+
+lemma program_in_qref_block:
+  assumes \<open>\<And>p. p \<in> set b \<Longrightarrow> program_in_qref p Q\<close>
+  shows \<open>program_in_qref (block b) Q\<close>
+  using assms 
+  apply (induction b)
+  by (auto intro!: qc_map_in_qref_seq simp add: denotation_block program_in_qref_def)
+
+lemma program_in_cref_block:
+  assumes \<open>\<And>p. p \<in> set b \<Longrightarrow> program_in_cref p Q\<close>
+  shows \<open>program_in_cref (block b) Q\<close>
+  using assms 
+  apply (induction b)
   sorry
 
-(* TODO Truth is \<le> *)
+lemma program_write_in_cref_block:
+  assumes \<open>\<And>p. p \<in> set b \<Longrightarrow> program_write_in_cref p Q\<close>
+  shows \<open>program_write_in_cref (block b) Q\<close>
+  using assms 
+  apply (induction b)
+  sorry
+
+(* (* TODO Truth is \<le> *)
 lemma fvq_program_sequence: "fvq_program (block b) 
       = fold (\<lambda>p v. QREGISTER_pair (fvq_program p) v) b QREGISTER_unit"
 proof (induction b rule:induct_list012)
@@ -766,7 +1247,7 @@ next
     by (simp_all add: sup_aci)
   finally show ?case
     by (simp add: yzs_def)
-qed
+qed *)
 
 
 lemma kraus_family_in_qref_strict_sample[iff]: \<open>kraus_family_in_qref_strict (kraus_map_sample f) Q\<close>
@@ -781,165 +1262,237 @@ lemma qc_map_in_qref_sample[iff]: \<open>qc_map_in_qref (cq_map_sample f) Q\<clo
   apply (transfer fixing: Q)
   by (auto intro!: kraus_family_in_qref_map)
 
-lemma fvq_of_cq_map_sample[simp]: \<open>fvq_of_cq_map (cq_map_sample f) = \<bottom>\<close>
-  by (simp add: fvq_of_cq_map_def)
+lemma program_in_qref_sample:
+  shows \<open>program_in_qref (sample X f) Q\<close>
+  apply (simp add: program_in_qref_raw_program_in_qref)
+  by (metis Rep_program denotation.rep_eq denotation_sample mem_Collect_eq qc_map_in_qref_sample raw_program_in_qref_no_oracles valid_program_def)
 
-lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
-  by (simp add: fvq_program_def denotation_sample)
-lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
-  by (simp add: fvq_program_def denotation_assign_sample)
+lemma program_in_cref_sample:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  assumes \<open>expression_in_cref f Y\<close>
+  shows \<open>program_in_cref (sample X f) Q\<close>
+  sorry
+
+lemma program_write_in_cref_sample:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  shows \<open>program_write_in_cref (sample X f) Q\<close>
+  sorry
+
+lemma program_in_qref_assign:
+  shows \<open>program_in_qref (assign X f) Q\<close>
+  by (simp add: denotation_assign_sample program_in_qref_def)
+
+lemma program_in_cref_assign:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  assumes \<open>expression_in_cref f Y\<close>
+  shows \<open>program_in_cref (assign X f) Y\<close>
+  sorry
+
+lemma program_write_in_cref_assign:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  shows \<open>program_write_in_cref (assign X f) Y\<close>
+  sorry
+
+(* lemma fvq_of_cq_map_sample[simp]: \<open>fvq_of_cq_map (cq_map_sample f) = \<bottom>\<close>
+  by (simp add: fvq_of_cq_map_def) *)
+
+(* lemma fvq_program_sample: "fvq_program (sample xs e2) = QREGISTER_unit"
+  by (simp add: fvq_program_def denotation_sample) *)
+(* lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
+  by (simp add: fvq_program_def denotation_assign_sample) *)
 
 lemma kraus_family_in_qref_top[iff]: \<open>kraus_family_in_qref E \<top>\<close>
   by (auto intro!: exI[of _ E] simp add: kraus_family_in_qref_def kraus_family_in_qref_strict_def top_QREGISTER.rep_eq)
 
-lemma
-  assumes \<open>\<close>
-  shows \<open>qc_map_in_qref (cq_map_if c E F) Q\<close>
+lemma program_in_qref_ifthenelse1:
+  assumes \<open>program_in_qref p Q\<close>
+  assumes \<open>program_in_qref q Q\<close>
+  shows \<open>program_in_qref (ifthenelse1 c p q) Q\<close>
+  by (metis assms(1) assms(2) denotation_ifthenelse1 program_in_qref_def qc_map_in_qref_if)
 
-lemma fvq_of_cq_map_if: \<open>fvq_of_cq_map (cq_map_if c E F) \<le> fvq_of_cq_map E \<squnion> fvq_of_cq_map F\<close>
+lemma program_in_cref_ifthenelse1:
+  assumes \<open>program_in_cref p X\<close>
+  assumes \<open>program_in_cref q X\<close>
+  assumes \<open>expression_in_cref c X\<close>
+  shows \<open>program_in_cref (ifthenelse1 c p q) X\<close>
+  sorry
 
-  by xxx
-proof (unfold fvq_of_cq_map_def, transfer' fixing: c)
-  fix E F :: \<open>cl \<Rightarrow> (qu ell2, qu ell2, cl) kraus_family\<close>
+lemma program_write_in_cref_ifthenelse1:
+  assumes \<open>program_write_in_cref p X\<close>
+  assumes \<open>program_write_in_cref q X\<close>
+  shows \<open>program_write_in_cref (ifthenelse1 c p q) X\<close>
+  sorry
 
-  have aux: \<open>A \<subseteq> commutant (commutant B)\<close> if \<open>A \<subseteq> B\<close> for A B
-try0
-sledgehammer [dont_slice]
-  using double_commutant_grows that by blast
-by -
+lemma program_in_qref_ifthenelse:
+  assumes \<open>program_in_qref (block p) Q\<close>
+  assumes \<open>program_in_qref (block q) Q\<close>
+  shows \<open>program_in_qref (ifthenelse c p q) Q\<close>
+  by (metis assms(1) assms(2) denotation_ifthenelse program_in_qref_def qc_map_in_qref_if)
 
+lemma program_in_cref_ifthenelse:
+  assumes \<open>program_in_cref (block p) Q\<close>
+  assumes \<open>program_in_cref (block q) Q\<close>
+  assumes \<open>expression_in_cref c Q\<close>
+  shows \<open>program_in_cref (ifthenelse c p q) Q\<close>
+  sorry
 
-  show \<open>\<Sqinter> {Q. \<forall>x. kraus_family_in_qref (if c x then E x else F x) Q}
-           \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}\<close>
-    apply (simp add: less_eq_QREGISTER_def Inf_QREGISTER.rep_eq sup_QREGISTER.rep_eq)
-    apply (rule aux)
-    apply (auto intro!: simp: )
-try0
-sledgehammer [dont_slice]
-by -
+lemma program_write_in_cref_ifthenelse:
+  assumes \<open>program_write_in_cref (block p) Q\<close>
+  assumes \<open>program_write_in_cref (block q) Q\<close>
+  shows \<open>program_write_in_cref (ifthenelse c p q) Q\<close>
+  sorry
 
-apply (transfer' fixing: )
-
-    
-    
-    by -
-
-
-
-  have \<open>\<Sqinter> {Q. \<forall>x. kraus_family_in_qref (if c x then E x else F x) Q}
-\<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q \<or> kraus_family_in_qref (F x) Q}\<close>
-apply (rule Inf_superset_mono)
-try0
-sledgehammer [dont_slice]
-by -
-  also have \<open>\<dots> \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}\<close>
-  by (simp add: Inf_superset_mono Set.basic_monos(6) sup.coboundedI2)
-  finally 
-  show \<open>\<Sqinter> {Q. \<forall>x. kraus_family_in_qref (if c x then E x else F x) Q}
-           \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}\<close>
-    by -
+(* lemma fvq_of_cq_map_if: \<open>fvq_of_cq_map (cq_map_if c E F) \<le> fvq_of_cq_map E \<squnion> fvq_of_cq_map F\<close> *)
 
 
-  proof (rule Inf_less_eq, rename_tac Q)
-    show \<open>{Q. \<forall>x. kraus_family_in_qref (if c x then E x else F x) Q} \<noteq> {}\<close>
-      by (auto intro!: exI[of _ \<top>])
-    fix Q assume asm: \<open>Q \<in> {Q. \<forall>x. kraus_family_in_qref (if c x then E x else F x) Q}\<close>
-    then have \<open>kraus_family_in_qref (E x) Q\<close> if \<open>c x\<close> for x
-      using that by (smt (verit, ccfv_threshold) mem_Collect_eq)
-    moreover from asm have \<open>kraus_family_in_qref (F x) Q\<close> if \<open>\<not> c x\<close> for x
-      by (smt (verit, ccfv_SIG) mem_Collect_eq that)
-    ultimately have \<open>Q \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q \<or> kraus_family_in_qref (F x) Q}\<close>
-apply (auto intro!: Inf_greatest simp: )
-try0
-sledgehammer [dont_slice]
-by -
-  also have \<open>\<dots> \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}\<close>
-  by (simp add: Inf_superset_mono Set.basic_monos(6) sup.coboundedI2)
-by -
-
-
-  have \<open>\<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}
-      = (\<Sqinter>x. Collect (kraus_family_in_qref (E x))) \<squnion> (\<Sqinter>x. Collect (kraus_family_in_qref (F x)))\<close>
-try0
-sledgehammer [dont_slice]
-by -
-
-    show \<open>Q \<le> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (E x) Q} \<squnion> \<Sqinter> {Q. \<forall>x. kraus_family_in_qref (F x) Q}\<close>
-
-  apply (auto intro!: simp: fvq_of_cq_map_def)
-  apply (transfer' fixing: )
-apply (auto intro!: Inf_less_eq simp: )
-
-  by x
-lemma fvq_program_ifthenelse1: "fvq_program (ifthenelse1 c p1 p2) \<le>
+(* lemma fvq_program_ifthenelse1: "fvq_program (ifthenelse1 c p1 p2) \<le>
   QREGISTER_pair (fvq_program p1) (fvq_program p2)"
   by (auto intro!: fvq_of_cq_map_if simp: fvq_program_def denotation_ifthenelse1)
 lemma fvq_program_ifthenelse: "fvq_program (ifthenelse c p1 p2) \<le>
   QREGISTER_pair (fvq_program (block p1)) (fvq_program (block p2))"
-  using fvq_program_ifthenelse1 ifthenelse_def by presburger
-(* TODO Truth is \<le> *)
+  using fvq_program_ifthenelse1 ifthenelse_def by presburger *)
+
+lemma program_in_qref_while1:
+  assumes \<open>program_in_qref p Q\<close>
+  shows \<open>program_in_qref (while1 c p) Q\<close>
+  using assms program_in_qref_raw_program_in_qref raw_program_in_qref.intros(4) while1.rep_eq by auto
+
+lemma program_in_cref_while1:
+  assumes \<open>program_in_cref p Q\<close>
+  assumes \<open>expression_in_cref c Q\<close>
+  shows \<open>program_in_cref (while1 c p) Q\<close>
+  sorry
+
+lemma program_write_in_cref_while1:
+  assumes \<open>program_write_in_cref p Q\<close>
+  shows \<open>program_write_in_cref (while1 c p) Q\<close>
+  sorry
+
+lemma program_in_qref_while:
+  assumes \<open>program_in_qref (block p) Q\<close>
+  shows \<open>program_in_qref (while c p) Q\<close>
+  by (simp add: assms program_in_qref_while1 while_def)
+
+lemma program_in_cref_while:
+  assumes \<open>program_in_cref (block p) Q\<close>
+  assumes \<open>expression_in_cref c Q\<close>
+  shows \<open>program_in_cref (while c p) Q\<close>
+  by (simp add: assms program_in_cref_while1 while_def)
+
+
+lemma program_write_in_cref_while:
+  assumes \<open>program_write_in_cref (block p) Q\<close>
+  shows \<open>program_write_in_cref (while c p) Q\<close>
+  by (simp add: assms program_write_in_cref_while1 while_def)
+
+
+(* (* TODO Truth is \<le> *)
 lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
+  by xxx *)
+
+lemma program_in_qref_qapply[iff]: \<open>program_in_qref (qapply Q e) (QREGISTER_of Q)\<close>
+  by (auto intro!: qc_map_in_qref_quantum_op kraus_family_in_qref_of_op
+      simp add: program_in_qref_def denotation.rep_eq qapply.rep_eq QREGISTER_of.rep_eq)
+
+lemma program_in_cref_qapply[intro]: 
+  assumes \<open>expression_in_cref e X\<close>
+  shows \<open>program_in_cref (qapply Q e) X\<close>
   sorry
-(* TODO Truth is \<le>. Or is = correct? *)
+
+lemma program_write_in_cref_qapply[iff]: \<open>program_write_in_cref (qapply Q e) X\<close>
+  sorry
+
+lemma program_in_qref_qinit[iff]: \<open>program_in_qref (qinit Q e) (QREGISTER_of Q)\<close>
+  sorry
+
+lemma program_in_cref_qinit[intro]: 
+  assumes \<open>expression_in_cref e X\<close>
+  shows \<open>program_in_cref (qinit Q e) X\<close>
+  sorry
+
+lemma program_write_in_cref_qinit[iff]: \<open>program_write_in_cref (qinit Q e) X\<close>
+  sorry
+
+
+lemma program_in_qref_measurement: \<open>program_in_qref (measurement X Q e) (QREGISTER_of Q)\<close>
+  sorry
+
+lemma program_in_cref_measurement:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  assumes \<open>expression_in_cref e Y\<close>
+  shows \<open>program_in_cref (measurement X Q e) Y\<close>
+  sorry
+
+
+
+lemma program_write_in_cref_measurement:
+  assumes \<open>CREGISTER_of X \<le> Y\<close>
+  shows \<open>program_write_in_cref (measurement X Q e) Y\<close>
+  sorry
+
+
+
+(* (* TODO Truth is \<le>. Or is = correct? *)
 lemma fvq_program_qinit: "fvq_program (qinit Q e3) = QREGISTER_of Q"
-  sorry
-(* TODO Truth is \<le> *)
+  by xxx *)
+
+(* (* TODO Truth is \<le> *)
 lemma fvq_program_qapply: "fvq_program (qapply Q e4) = QREGISTER_of Q"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvq_program_measurement: "fvq_program (measurement x R e5) = QREGISTER_of R"
-  sorry
+  by xxx *)
 
 (* TODO Truth is \<le> *)
-lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvc_program p) v) b CREGISTER_unit"
-  sorry
+(* lemma fvc_program_sequence: "fvc_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvc_program p) v) b CREGISTER_unit"
+  by xxx *)
 (* TODO Truth is \<le> *)
-lemma fvc_program_assign: "fvc_program (assign x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
+(* lemma fvc_program_assign: "fvc_program (assign x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  by xxx *)
 (* TODO Truth is \<le> *)
-lemma fvc_program_sample: "fvc_program (sample x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
+(* lemma fvc_program_sample: "fvc_program (sample x e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
+  by xxx *)
 (* TODO Truth is \<le> *)
-lemma fvc_program_ifthenelse: "fvc_program (ifthenelse c p1 p2) =
+(* lemma fvc_program_ifthenelse: "fvc_program (ifthenelse c p1 p2) =
   CREGISTER_pair (fv_expression c) (CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2)))"
-  sorry
+  by xxx *)
 (* TODO Truth is \<le> *)
-lemma fvc_program_while: "fvc_program (while c b) = 
+(* lemma fvc_program_while: "fvc_program (while c b) = 
   CREGISTER_pair (fv_expression c) (fvc_program (block b))"
-  sorry
+  by xxx *)
 (* TODO Truth is \<le> *)
-lemma fvc_program_qinit: "fvc_program (qinit Q e3) = fv_expression e3"
-  sorry
+(* lemma fvc_program_qinit: "fvc_program (qinit Q e3) = fv_expression e3"
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvc_program_qapply: "fvc_program (qapply Q e4) = fv_expression e4"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvc_program_measurement: "fvc_program (measurement x R e) = CREGISTER_pair (CREGISTER_of x) (fv_expression e)"
-  sorry
+  by xxx *)
 
-(* TODO Truth is \<le> *)
+(* (* TODO Truth is \<le> *)
 lemma fvcw_program_sequence: "fvcw_program (block b) = fold (\<lambda>p v. CREGISTER_pair (fvcw_program p) v) b CREGISTER_unit"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvcw_program_assign: "fvcw_program (assign x e) = CREGISTER_of x"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvcw_program_sample: "fvcw_program (sample x e2) = CREGISTER_of x"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvcw_program_ifthenelse: "fvcw_program (ifthenelse c p1 p2) =
   CREGISTER_pair (fvc_program (block p1)) (fvc_program (block p2))"
-  sorry
+  by xxxx
 (* TODO Truth is \<le> *)
 lemma fvcw_program_while: "fvcw_program (while c b) = fvcw_program (block b)"
-  sorry
+  by xxxx
 lemma fvcw_program_qinit: "fvcw_program (qinit Q e3) = CREGISTER_unit"
-  sorry
+  by xxx
 lemma fvcw_program_qapply: "fvcw_program (qapply Q e4) = CREGISTER_unit"
-  sorry
+  by xxx
 (* TODO Truth is \<le> *)
 lemma fvcw_program_measurement: "fvcw_program (measurement x R e5) = CREGISTER_of x"
-  sorry
+  by xxx *)
 
 definition probability :: "bool expression \<Rightarrow> program \<Rightarrow> (cl,qu) cq_operator \<Rightarrow> real" where
   "probability e p \<rho> = Prob (cq_operator_distrib (cq_map_apply (denotation p) \<rho>)) (Collect e)"
