@@ -465,17 +465,17 @@ proof (rule with_typeI)
   define S where \<open>S = permute_and_tensor1_cblinfun_basis R\<close>
   show \<open>fst (S, ()) \<noteq> {}\<close>
     by (simp add: permute_and_tensor1_cblinfun_basis_def S_def equiv_R equivp_reflp)
-  show \<open>fst with_type_type_class (fst (S, ())) (snd (S, ()))\<close>
-    by (auto simp: with_type_type_class_def)
-  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (S, ())) (snd with_type_type_class)\<close>
-    by (auto simp: with_type_type_class_def with_type_compat_rel_def)
+  show \<open>WITH_TYPE_CLASS_type (fst (S, ())) (snd (S, ()))\<close>
+    by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
+  show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (S, ())) (WITH_TYPE_REL_type)\<close>
+    by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_compat_rel_def)
   fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and Abs abs_ops
 
   assume \<open>type_definition Rep Abs (fst (S, ()))\<close>
   then interpret type_definition Rep Abs S
     by simp
 
-  assume \<open>snd with_type_type_class (\<lambda>x y. x = Rep y) (snd (S, ())) abs_ops\<close>
+  assume \<open>WITH_TYPE_REL_type (\<lambda>x y. x = Rep y) (snd (S, ())) abs_ops\<close>
   define U where \<open>U = permute_and_tensor1_cblinfun_U Rep f R\<close>
 
   have \<open>Collect (R a) \<in> UNIV // {(x, y). R x y}\<close> for a

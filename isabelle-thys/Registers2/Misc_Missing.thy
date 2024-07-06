@@ -1061,8 +1061,8 @@ lemma with_type_conj:
   assumes \<open>\<forall>\<^sub>\<tau> 'a::type = A. P\<close>
     and \<open>\<forall>\<^sub>\<tau> 'b::type = B. Q\<close>
   shows \<open>\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P \<and> Q\<close>
-  apply (auto intro!: simp: with_type_def)
-  by (smt (verit, ccfv_threshold) assms(1) assms(2) prod.case_eq_if prod.simps(2) with_type_def)
+  using assms
+  by (simp add: with_type_def)
 
 lemma with_type_mp2:
   assumes \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (P Rep Abs))\<close>

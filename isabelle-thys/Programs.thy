@@ -7,7 +7,7 @@ no_notation Order.bottom ("\<bottom>\<index>")
 
 lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> is
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
-  by (simp add: cq_map_rel_def kraus_map_sample_norm prob_summable )
+  by (simp add: cq_map_rel_def kraus_map_sample_norm prob_summable)
 
 lift_definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr" is
   \<open>\<lambda>\<rho> c. norm (\<rho> c)\<close>

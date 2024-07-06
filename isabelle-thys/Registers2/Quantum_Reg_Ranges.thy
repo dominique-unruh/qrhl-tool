@@ -580,7 +580,7 @@ lemma with_type_swap:
   assumes \<open>A \<noteq> {}\<close> and \<open>B \<noteq> {}\<close>
   shows \<open>(\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P) \<longleftrightarrow> (\<forall>\<^sub>\<tau> 'b::type = B. \<forall>\<^sub>\<tau> 'a::type = A. P)\<close>
   apply (cases \<open>\<exists>(Rep::'a\<Rightarrow>'c) Abs. type_definition Rep Abs A\<close>; cases \<open>\<exists>(Rep::'b\<Rightarrow>'d) Abs. type_definition Rep Abs B\<close>)
-  using assms by (auto simp add: with_type_def with_type_type_class_def with_type_compat_rel_def)
+  using assms by (auto simp add: with_type_def WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_compat_rel_def)
 
 
 lemma Collect_actual_qregister_range_aux_id:
@@ -725,10 +725,10 @@ proof (rule with_typeI)
     by auto
   then show \<open>fst (L, ()) \<noteq> {}\<close>
     by simp
-  show \<open>fst with_type_type_class (fst (L, ())) (snd (L, ()))\<close>
-    by (simp add: with_type_type_class_def)
-  show \<open>with_type_compat_rel (fst with_type_type_class) (fst (L, ()))
-     (snd with_type_type_class)\<close>
+  show \<open>WITH_TYPE_CLASS_type (fst (L, ())) (snd (L, ()))\<close>
+    by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
+  show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (L, ()))
+     (WITH_TYPE_REL_type)\<close>
     by (simp add: with_type_compat_rel_type)
   fix RepL :: \<open>'l \<Rightarrow> 'b\<close> and AbsL
   assume \<open>type_definition RepL AbsL (fst (L, ()))\<close>
@@ -739,9 +739,9 @@ proof (rule with_typeI)
   proof (rule with_typeI)
     from \<open>R \<noteq> {}\<close> show \<open>fst (R, ()) \<noteq> {}\<close>
       by simp
-    show \<open>fst with_type_type_class (fst (R, ())) (snd (R, ()))\<close>
-      by (simp add: with_type_type_class_def)
-    show \<open>with_type_compat_rel (fst with_type_type_class) (fst (R, ())) (snd with_type_type_class)\<close>
+    show \<open>WITH_TYPE_CLASS_type (fst (R, ())) (snd (R, ()))\<close>
+      by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
+    show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (R, ())) (WITH_TYPE_REL_type)\<close>
       by (simp add: with_type_compat_rel_type)
     fix RepR :: \<open>'r \<Rightarrow> 'c\<close> and AbsR
     assume \<open>type_definition RepR AbsR (fst (R, ()))\<close>
