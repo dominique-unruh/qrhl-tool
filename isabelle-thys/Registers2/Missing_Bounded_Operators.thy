@@ -461,14 +461,10 @@ lemma permute_and_tensor1_cblinfun_as_register:
             (\<forall>A. sandwich (permute_and_tensor1_cblinfun_U rep_c f R) (A \<otimes>\<^sub>o id_cblinfun) =
             permute_and_tensor1_cblinfun f R A)
             \<and> unitary (permute_and_tensor1_cblinfun_U rep_c f R)\<close>
-proof (rule with_typeI)
+proof with_type_intro
   define S where \<open>S = permute_and_tensor1_cblinfun_basis R\<close>
   show \<open>S \<noteq> {}\<close>
     by (simp add: permute_and_tensor1_cblinfun_basis_def S_def equiv_R equivp_reflp)
-  show \<open>WITH_TYPE_CLASS_type S ()\<close>
-    by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-  show \<open>with_type_compat_rel WITH_TYPE_CLASS_type S WITH_TYPE_REL_type\<close>
-    by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_compat_rel_def)
   fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and Abs abs_ops
 
   assume \<open>type_definition Rep Abs S\<close>

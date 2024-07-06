@@ -720,28 +720,20 @@ lemma actual_qregister_range_ex_register_aux:
   shows \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
               F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l abs_r o f))*)) qFst\<close>
-proof (rule with_typeI)
+proof with_type_intro
   from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
     by auto
   then show \<open>L \<noteq> {}\<close>
     by simp
-  show \<open>WITH_TYPE_CLASS_type L ()\<close>
-    by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-  show \<open>with_type_compat_rel WITH_TYPE_CLASS_type L WITH_TYPE_REL_type\<close>
-    by (simp add: with_type_compat_rel_type)
   fix RepL :: \<open>'l \<Rightarrow> 'b\<close> and AbsL
   assume \<open>type_definition RepL AbsL L\<close>
   then interpret L: type_definition RepL AbsL L
     by simp
   show \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
           F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL abs_r o f))*)) qFst\<close>
-  proof (rule with_typeI)
+  proof with_type_intro
     from \<open>R \<noteq> {}\<close> show \<open>R \<noteq> {}\<close>
       by simp
-    show \<open>WITH_TYPE_CLASS_type R ()\<close>
-      by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-    show \<open>with_type_compat_rel WITH_TYPE_CLASS_type R WITH_TYPE_REL_type\<close>
-      by (simp add: with_type_compat_rel_type)
     fix RepR :: \<open>'r \<Rightarrow> 'c\<close> and AbsR
     assume \<open>type_definition RepR AbsR R\<close>
     then interpret R: type_definition RepR AbsR R
