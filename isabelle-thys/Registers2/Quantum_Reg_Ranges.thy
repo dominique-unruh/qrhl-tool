@@ -723,28 +723,27 @@ lemma actual_qregister_range_ex_register_aux:
 proof (rule with_typeI)
   from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
     by auto
-  then show \<open>fst (L, ()) \<noteq> {}\<close>
+  then show \<open>L \<noteq> {}\<close>
     by simp
-  show \<open>WITH_TYPE_CLASS_type (fst (L, ())) (snd (L, ()))\<close>
+  show \<open>WITH_TYPE_CLASS_type L ()\<close>
     by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-  show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (L, ()))
-     (WITH_TYPE_REL_type)\<close>
+  show \<open>with_type_compat_rel WITH_TYPE_CLASS_type L WITH_TYPE_REL_type\<close>
     by (simp add: with_type_compat_rel_type)
   fix RepL :: \<open>'l \<Rightarrow> 'b\<close> and AbsL
-  assume \<open>type_definition RepL AbsL (fst (L, ()))\<close>
+  assume \<open>type_definition RepL AbsL L\<close>
   then interpret L: type_definition RepL AbsL L
     by simp
   show \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
           F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL abs_r o f))*)) qFst\<close>
   proof (rule with_typeI)
-    from \<open>R \<noteq> {}\<close> show \<open>fst (R, ()) \<noteq> {}\<close>
+    from \<open>R \<noteq> {}\<close> show \<open>R \<noteq> {}\<close>
       by simp
-    show \<open>WITH_TYPE_CLASS_type (fst (R, ())) (snd (R, ()))\<close>
+    show \<open>WITH_TYPE_CLASS_type R ()\<close>
       by (simp add: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-    show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (R, ())) (WITH_TYPE_REL_type)\<close>
+    show \<open>with_type_compat_rel WITH_TYPE_CLASS_type R WITH_TYPE_REL_type\<close>
       by (simp add: with_type_compat_rel_type)
     fix RepR :: \<open>'r \<Rightarrow> 'c\<close> and AbsR
-    assume \<open>type_definition RepR AbsR (fst (R, ()))\<close>
+    assume \<open>type_definition RepR AbsR R\<close>
     then interpret R: type_definition RepR AbsR R
       by simp
     define f' where \<open>f' = map_prod AbsL AbsR o f\<close>

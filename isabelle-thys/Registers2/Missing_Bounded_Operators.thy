@@ -463,19 +463,19 @@ lemma permute_and_tensor1_cblinfun_as_register:
             \<and> unitary (permute_and_tensor1_cblinfun_U rep_c f R)\<close>
 proof (rule with_typeI)
   define S where \<open>S = permute_and_tensor1_cblinfun_basis R\<close>
-  show \<open>fst (S, ()) \<noteq> {}\<close>
+  show \<open>S \<noteq> {}\<close>
     by (simp add: permute_and_tensor1_cblinfun_basis_def S_def equiv_R equivp_reflp)
-  show \<open>WITH_TYPE_CLASS_type (fst (S, ())) (snd (S, ()))\<close>
+  show \<open>WITH_TYPE_CLASS_type S ()\<close>
     by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def)
-  show \<open>with_type_compat_rel (WITH_TYPE_CLASS_type) (fst (S, ())) (WITH_TYPE_REL_type)\<close>
+  show \<open>with_type_compat_rel WITH_TYPE_CLASS_type S WITH_TYPE_REL_type\<close>
     by (auto simp: WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_compat_rel_def)
   fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and Abs abs_ops
 
-  assume \<open>type_definition Rep Abs (fst (S, ()))\<close>
+  assume \<open>type_definition Rep Abs S\<close>
   then interpret type_definition Rep Abs S
     by simp
 
-  assume \<open>WITH_TYPE_REL_type (\<lambda>x y. x = Rep y) (snd (S, ())) abs_ops\<close>
+  assume \<open>WITH_TYPE_REL_type (\<lambda>x y. x = Rep y) () abs_ops\<close>
   define U where \<open>U = permute_and_tensor1_cblinfun_U Rep f R\<close>
 
   have \<open>Collect (R a) \<in> UNIV // {(x, y). R x y}\<close> for a
