@@ -2783,19 +2783,6 @@ lift_definition constant_kraus_family :: \<open>('b,'b) trace_class \<Rightarrow
     (\<lambda>v. (vector_to_cblinfun v,())) ` spectral_dec_vecs_tc t
   else {}\<close>
 proof (rule CollectI, rename_tac t)
-(* TODO why does this wlog not work:
-
-  fix t :: \<open>('b,'b) trace_class\<close>
-  let ?thesis = \<open>kraus_family (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
-  wlog self_adjoint: \<open>selfadjoint_tc t\<close> 
-    goal ?thesis
-    using hypothesis by auto
-  fix t :: \<open>('b,'b) trace_class\<close>
-  assume  \<open>selfadjoint_tc t\<close> 
-  show \<open>kraus_family
-          (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
-  show \<open>kraus_family (if selfadjoint_tc t then range (\<lambda>n. (vector_to_cblinfun (spectral_dec_vec_tc t n) :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b, n)) else {})\<close>
-*)
   fix t :: \<open>('b,'b) trace_class\<close>
   show \<open>kraus_family (if t \<ge> 0 then (\<lambda>v. (vector_to_cblinfun v :: 'a\<Rightarrow>\<^sub>C\<^sub>L'b,())) ` spectral_dec_vecs_tc t else {})\<close>
   proof (cases \<open>t \<ge> 0\<close>)
@@ -3736,7 +3723,7 @@ proof -
       apply (rule has_sum_in_cong[THEN iffD1, rotated])
       by (simp add: assms(1))
     then have \<open>has_sum_in euclidean (\<lambda>x. \<psi> \<bullet>\<^sub>C (p x *\<^sub>R id_cblinfun) \<psi>) UNIV (\<psi> \<bullet>\<^sub>C B \<psi>)\<close>
-      apply (rule has_sum_in_comm_additive[rotated 3, OF cweak_operator_topology_continuous_evaluation, unfolded o_def])
+      apply (rule has_sum_in_comm_additive[rotated 3, OF cweak_operator_topology_cinner_continuous, unfolded o_def])
       by (simp_all add: Modules.additive_def cblinfun.add_left cinner_simps)
     then have \<open>((\<lambda>x. of_real (p x)) has_sum (\<psi> \<bullet>\<^sub>C B \<psi>)) UNIV\<close>
       apply (simp add: scaleR_scaleC has_sum_euclidean_iff)
@@ -4278,29 +4265,5 @@ next
     by (simp add: kraus_map_infsum_invalid False False')
 qed
 
-(* lemma
-(* TODO Ref: Nielsen Chuang, Th 2.6, generalized to infdim *)
-  assumes \<open>((\<lambda>i. tc_butterfly (\<psi> i) (\<psi> i)) has_sum t) X\<close>
-  assumes \<open>((\<lambda>i. tc_butterfly (\<phi> i) (\<phi> i)) has_sum t) Y\<close>
-  shows \<open>xx\<close>
-proof -
-  thm butterfly_spectral_dec_vec_tc_has_sum
-  have \<open>is_orthogonal \<gamma> (\<psi> i)\<close> if \<open>\<And>k. k \<in> spectral_dec_vecs_tc t \<Longrightarrow> is_orthogonal \<gamma> k\<close> for \<gamma> i
-    by x
-  have \<open>\<psi> i \<in> closure (cspan (spectral_dec_vecs_tc t))\<close> for i
-    by (metis \<open>\<And>i \<gamma>. (\<And>k. k \<in> spectral_dec_vecs_tc t \<Longrightarrow> is_orthogonal \<gamma> k) \<Longrightarrow> is_orthogonal \<gamma> (\<psi> i)\<close> is_orthogonal_sym orthogonal_complementI orthogonal_complement_orthoI orthogonal_complement_orthogonal_complement_closure_cspan)
-by -
-  then obtain c where \<open>\<psi> i = \<close>
-
-lemma
-  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
-  shows \<open>xxx\<close>
-proof -
-
-
-lemma
-  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
-  shows \<open>Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<EE>) = Abstract_Topology.closure_of XXX (fst ` Rep_kraus_family \<FF>)\<close>
- *)
 
 end

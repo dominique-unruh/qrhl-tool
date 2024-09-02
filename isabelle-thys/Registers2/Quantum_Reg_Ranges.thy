@@ -33,7 +33,7 @@ lemma valid_qregister_rangeI: \<open>(\<And>a. a\<in>A \<Longrightarrow> a* \<in
 lemma register_range_double_commutant: \<open>commutant (commutant (range F)) = range F\<close> if \<open>qregister_raw F\<close>
 proof -
   from complement_exists
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis F.
+  have \<open>let 'c::type = register_decomposition_basis F in
         commutant (commutant (range F)) = range F\<close>
   proof (rule with_type_mp)
     from that show \<open>qregister_raw F\<close>
@@ -110,7 +110,7 @@ proof -
   have \<open>qregister_raw (apply_qregister F)\<close>
     using assms qregister.rep_eq by blast
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. ?thesis\<close>
+  have \<open>let 'c::type = qregister_decomposition_basis F in ?thesis\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
     then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
@@ -578,9 +578,9 @@ qed
 lemma with_type_swap:
   fixes A :: \<open>'c set\<close> and B :: \<open>'d set\<close>
   assumes \<open>A \<noteq> {}\<close> and \<open>B \<noteq> {}\<close>
-  shows \<open>(\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P) \<longleftrightarrow> (\<forall>\<^sub>\<tau> 'b::type = B. \<forall>\<^sub>\<tau> 'a::type = A. P)\<close>
+  shows \<open>(let 'a::type = A in let 'b::type = B in P) \<longleftrightarrow> (let 'b::type = B in let 'a::type = A in P)\<close>
   apply (cases \<open>\<exists>(Rep::'a\<Rightarrow>'c) Abs. type_definition Rep Abs A\<close>; cases \<open>\<exists>(Rep::'b\<Rightarrow>'d) Abs. type_definition Rep Abs B\<close>)
-  using assms by (auto simp add: with_type_def WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_compat_rel_def)
+  using assms by (auto simp add: with_type_def WITH_TYPE_CLASS_type_def WITH_TYPE_REL_type_def with_type_wellformed_def)
 
 
 lemma Collect_actual_qregister_range_aux_id:
@@ -614,7 +614,7 @@ proof -
   have \<open>qregister_raw (apply_qregister F)\<close>
     using assms by (simp add: qregister_raw_apply_qregister)
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+  have \<open>let 'c::type = qregister_decomposition_basis F in
         actual_qregister_range \<FF>\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>V :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary V \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich V *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun))\<close>
@@ -717,27 +717,30 @@ lemma actual_qregister_range_ex_register_aux:
   fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close> and f :: \<open>'a \<Rightarrow> 'b\<times>'c\<close> and L R
   assumes \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close> 
   assumes \<FF>_eq: \<open>\<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+  shows \<open>let 'l::type = L in let 'r::type = R in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
-              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l abs_r o f))*)) qFst\<close>
+              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod (inv rep_l) (inv rep_r) o f))*)) qFst\<close>
 proof with_type_intro
   from range_f have \<open>L \<noteq> {}\<close> and \<open>R \<noteq> {}\<close>
     by auto
   then show \<open>L \<noteq> {}\<close>
     by simp
-  fix RepL :: \<open>'l \<Rightarrow> 'b\<close> and AbsL
-  assume \<open>type_definition RepL AbsL L\<close>
-  then interpret L: type_definition RepL AbsL L
-    by simp
-  show \<open>\<forall>\<^sub>\<tau> 'r::type = R. \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
-          F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL abs_r o f))*)) qFst\<close>
+  fix RepL :: \<open>'l \<Rightarrow> 'b\<close>
+  assume bijL: \<open>bij_betw RepL UNIV L\<close>
+  define AbsL where \<open>AbsL = inv RepL\<close>
+  with bijL interpret L: type_definition RepL AbsL L
+    by (simp add: type_definition_bij_betw_iff)
+  show \<open>let 'r::type = R in
+          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
+          F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod AbsL (inv rep_r) o f))*)) qFst\<close>
   proof with_type_intro
     from \<open>R \<noteq> {}\<close> show \<open>R \<noteq> {}\<close>
       by simp
-    fix RepR :: \<open>'r \<Rightarrow> 'c\<close> and AbsR
-    assume \<open>type_definition RepR AbsR R\<close>
-    then interpret R: type_definition RepR AbsR R
-      by simp
+    fix RepR :: \<open>'r \<Rightarrow> 'c\<close>
+    assume bij_R: \<open>bij_betw RepR UNIV R\<close>
+    define AbsR where \<open>AbsR = inv RepR\<close>
+    with bij_R interpret R: type_definition RepR AbsR R
+      using type_definition_bij_betw_iff by blast
     define f' where \<open>f' = map_prod AbsL AbsR o f\<close>
     have \<open>bij f'\<close>
     proof -
@@ -746,8 +749,8 @@ proof with_type_intro
         by (simp add: \<open>inj f\<close> bij_betw_def range_f)
       also have \<open>bij_betw (map_prod AbsL AbsR) (L \<times> R) (UNIV \<times> UNIV)\<close>
         apply (rule bij_betw_map_prod)
-         apply (metis bij_betw_def inj_on_def L.Abs_image L.Abs_inject)
-        by (metis bij_betw_def inj_on_def R.Abs_image R.Abs_inject)
+         apply (simp add: AbsL_def bijL bij_betw_inv_into)
+        by (smt (verit) R.Abs_inject R.univ UNIV_I bij_betwI' imageE)
       finally show ?thesis
         by (simp add: f'_def)
     qed
@@ -805,7 +808,7 @@ qed
 lemma actual_qregister_range_ex_register:
   fixes \<FF> :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
   assumes \<open>actual_qregister_range \<FF>\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = actual_qregister_range_content \<FF>.
+  shows \<open>let 'l::type = actual_qregister_range_content \<FF> in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
 proof -
   define L where \<open>L = actual_qregister_range_content \<FF>\<close>
@@ -818,12 +821,12 @@ proof -
   then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and U R where \<open>unitary U\<close> and \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
     and \<FF>_eq: \<open>\<FF> = {sandwich U a | a. actual_qregister_range_aux f a}\<close>
     by auto
-  then have \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+  then have \<open>let 'l::type = L in let 'r::type = R in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF> \<and>
-              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod abs_l abs_r o f))*)) qFst\<close>
+              F = qregister_chain (transform_qregister (U o\<^sub>C\<^sub>L (classical_operator (Some o map_prod (inv rep_l) (inv rep_r) o f))*)) qFst\<close>
     apply (rule_tac actual_qregister_range_ex_register_aux)
     by (auto simp: L_def)
-  then have *: \<open>\<forall>\<^sub>\<tau> 'l::type = L. \<forall>\<^sub>\<tau> 'r::type = R.
+  then have *: \<open>let 'l::type = L in let 'r::type = R in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close> for xxx :: \<open>'r\<close>
     apply (rule with_type_mp)
     apply (rule with_type_mp)
@@ -832,7 +835,7 @@ proof -
     by auto
   note *[THEN with_type_swap[OF this, THEN iffD1]]
   from this[cancel_with_type]
-  show \<open>\<forall>\<^sub>\<tau> 'l::type = L.
+  show \<open>let 'l::type = L in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
     by -
 qed
@@ -843,7 +846,8 @@ lemma actual_qregister_range_is_valid:
   shows \<open>valid_qregister_range \<FF>\<close>
 proof -
   from actual_qregister_range_ex_register[OF assms]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = actual_qregister_range_content \<FF>. valid_qregister_range \<FF>\<close>
+  have \<open>let 'c::type = actual_qregister_range_content \<FF> in
+        valid_qregister_range \<FF>\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>F :: ('b, 'a) qregister. qregister F \<and> range (apply_qregister F) = \<FF>\<close>
     then obtain F :: \<open>('b, 'a) qregister\<close> where \<open>qregister F\<close> and \<open>range (apply_qregister F) = \<FF>\<close>
@@ -963,7 +967,7 @@ proof -
   have \<open>qregister_raw (apply_qregister F)\<close>
     using assms qregister.rep_eq by blast
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. ?thesis\<close>
+  have \<open>let 'c::type = qregister_decomposition_basis F in ?thesis\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
     then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where [simp]: \<open>unitary U\<close> and F_decomp: \<open>apply_qregister F \<theta> = sandwich U *\<^sub>V (\<theta> \<otimes>\<^sub>o id_cblinfun)\<close> for \<theta>
@@ -1080,7 +1084,7 @@ definition \<open>ACTUAL_QREGISTER_content \<FF> = actual_qregister_range_conten
 lemma ACTUAL_QREGISTER_ex_register:
   fixes \<FF> :: \<open>'a QREGISTER\<close>
   assumes \<open>ACTUAL_QREGISTER \<FF>\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'l::type = ACTUAL_QREGISTER_content \<FF>.
+  shows \<open>let 'l::type = ACTUAL_QREGISTER_content \<FF> in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
   by (smt (verit, ccfv_threshold) ACTUAL_QREGISTER.rep_eq ACTUAL_QREGISTER_content_def QREGISTER_of.rep_eq Rep_QREGISTER_inject actual_qregister_range_ex_register assms with_type_mp)
 
@@ -1092,7 +1096,7 @@ proof -
   have \<open>actual_qregister_range (Rep_QREGISTER \<GG>)\<close>
     using assms by transfer
   from ACTUAL_QREGISTER_ex_register[OF assms(2)]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = ACTUAL_QREGISTER_content \<GG>.
+  have \<open>let 'c::type = ACTUAL_QREGISTER_content \<GG> in
        ACTUAL_QREGISTER (QREGISTER_chain F \<GG>)\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>G :: ('c, 'a) qregister. qregister G \<and> QREGISTER_of G = \<GG>\<close>
@@ -1155,14 +1159,14 @@ lemma ACTUAL_QREGISTER_pair[simp]:
   shows \<open>ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
 proof -
   from ACTUAL_QREGISTER_ex_register[OF actualF]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content \<FF>.
+  have \<open>let 'f::type = ACTUAL_QREGISTER_content \<FF> in
        ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>F :: ('f, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
     then obtain F :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister F\<close> and qregF: \<open>QREGISTER_of F = \<FF>\<close>
       by auto
     from ACTUAL_QREGISTER_ex_register[OF actualG]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content \<GG>.
+    have \<open>let 'g::type = ACTUAL_QREGISTER_content \<GG> in
        ACTUAL_QREGISTER (QREGISTER_pair \<FF> \<GG>)\<close>
     proof (rule with_type_mp)
       assume \<open>\<exists>G :: ('g, 'a) qregister. qregister G \<and> QREGISTER_of G = \<GG>\<close>
@@ -1190,13 +1194,13 @@ lemma ACTUAL_QREGISTER_pair_fst_snd: \<open>ACTUAL_QREGISTER (QREGISTER_pair (QR
 proof -
   let ?goal = ?thesis
   from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
+  have \<open>let 'f::type = ACTUAL_QREGISTER_content F in ?goal\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
     then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
       by auto
     from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
+    have \<open>let 'g::type = ACTUAL_QREGISTER_content G in ?goal\<close>
     proof (rule with_type_mp)
       assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
       then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
@@ -1226,13 +1230,13 @@ lemma ACTUAL_QREGISTER_complement: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>)\<
 proof -
   let ?goal = ?thesis
   from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER \<FF>\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content \<FF>. ?goal\<close>
+  have \<open>let 'f::type = ACTUAL_QREGISTER_content \<FF> in ?goal\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>F :: ('f, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
     then obtain F :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister F\<close> and qregF: \<open>QREGISTER_of F = \<FF>\<close>
       by auto
     from qcomplement_exists[OF \<open>qregister F\<close>]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis F. ?goal\<close>
+    have \<open>let 'g::type = qregister_decomposition_basis F in ?goal\<close>
     proof (rule with_type_mp)
       assume \<open>\<exists>G :: ('g, 'a) qregister. qcomplements F G\<close>
       then obtain G :: \<open>('g, 'a) qregister\<close> where \<open>qcomplements F G\<close>
@@ -1470,25 +1474,25 @@ text \<open>The assumptions \<^term>\<open>ACTUAL_QREGISTER F\<close> \<^term>\<
 proof -
   let ?goal = ?thesis
   from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER F\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'f::type = ACTUAL_QREGISTER_content F. ?goal\<close>
+  have \<open>let 'f::type = ACTUAL_QREGISTER_content F in ?goal\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>A :: ('f, 'a) qregister. qregister A \<and> QREGISTER_of A = F\<close>
     then obtain A :: \<open>('f, 'a) qregister\<close> where [simp]: \<open>qregister A\<close> and qregF: \<open>QREGISTER_of A = F\<close>
       by auto
     from ACTUAL_QREGISTER_ex_register[OF \<open>ACTUAL_QREGISTER G\<close>]
-    have \<open>\<forall>\<^sub>\<tau> 'g::type = ACTUAL_QREGISTER_content G. ?goal\<close>
+    have \<open>let 'g::type = ACTUAL_QREGISTER_content G in ?goal\<close>
     proof (rule with_type_mp)
       assume \<open>\<exists>B :: ('g, 'b) qregister. qregister B \<and> QREGISTER_of B = G\<close>
       then obtain B :: \<open>('g, 'b) qregister\<close> where [simp]: \<open>qregister B\<close> and qregG: \<open>QREGISTER_of B = G\<close>
         by auto
       from qcomplement_exists[OF \<open>qregister A\<close>]
-      have \<open>\<forall>\<^sub>\<tau> 'i::type = qregister_decomposition_basis A. ?goal\<close>
+      have \<open>let 'i::type = qregister_decomposition_basis A in ?goal\<close>
       proof (rule with_type_mp)
         assume \<open>\<exists>AC :: ('i, 'a) qregister. qcomplements A AC\<close>
         then obtain AC :: \<open>('i, 'a) qregister\<close> where \<open>qcomplements A AC\<close>
           by auto
         from qcomplement_exists[OF \<open>qregister B\<close>]
-        have \<open>\<forall>\<^sub>\<tau> 'j::type = qregister_decomposition_basis B. ?goal\<close>
+        have \<open>let 'j::type = qregister_decomposition_basis B in ?goal\<close>
         proof (rule with_type_mp)
           assume \<open>\<exists>BC :: ('j, 'b) qregister. qcomplements B BC\<close>
           then obtain BC :: \<open>('j, 'b) qregister\<close> where \<open>qcomplements B BC\<close>
@@ -1602,7 +1606,8 @@ lemma range_apply_qregister_factor[iff]:
   shows \<open>von_neumann_factor (range (apply_qregister F))\<close>
 proof -
   from qcomplement_exists[OF assms]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F. von_neumann_factor (range (apply_qregister F))\<close>
+  have \<open>let 'c::type = qregister_decomposition_basis F in
+        von_neumann_factor (range (apply_qregister F))\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>G::('c, 'b) qregister. qcomplements F G\<close>
     then obtain G :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements F G\<close>
@@ -1834,7 +1839,7 @@ proof (unfold is_swap_on_qupdate_set_def, intro conjI ballI allI impI)
     then obtain \<psi> \<phi> where \<open>b = butterfly \<psi> \<phi>\<close>
       by (auto intro!: simp: rank1_iff_butterfly)
     then have \<open>swap_ell2 o\<^sub>C\<^sub>L (b \<otimes>\<^sub>o b) = b \<otimes>\<^sub>o b\<close>
-      by (auto intro!: tensor_ell2_extensionality simp: cblinfun.scaleC_right)
+      by (auto intro!: tensor_ell2_extensionality simp: cblinfun.scaleC_right tensor_butterfly)
     then have \<open>(apply_qregister (qregister_tensor Q Q) swap_ell2) o\<^sub>C\<^sub>L 
                   (apply_qregister (qregister_tensor Q Q) (b \<otimes>\<^sub>o b)) 
                 = apply_qregister (qregister_tensor Q Q) (b \<otimes>\<^sub>o b)\<close>
@@ -1916,7 +1921,8 @@ lemma is_swap_on_qupdate_set_swap_QREGISTER:
   shows \<open>is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
 proof -
   from ACTUAL_QREGISTER_ex_register[OF assms]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = ACTUAL_QREGISTER_content Q. is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
+  have \<open>let 'c::type = ACTUAL_QREGISTER_content Q in
+        is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>F::('c, 'a) qregister. qregister F \<and> QREGISTER_of F = Q\<close>
     then obtain F :: \<open>('c, 'a) qregister\<close> where [iff]: \<open>qregister F\<close> and Q_def: \<open>Q = QREGISTER_of F\<close>

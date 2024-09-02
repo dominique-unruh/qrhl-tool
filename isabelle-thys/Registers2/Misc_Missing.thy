@@ -867,7 +867,7 @@ lemma summable_on_in_finite:
 
 lemma infsum_in_finite:
   assumes "finite F"
-  assumes \<open>hausdorff T\<close>
+  assumes \<open>Hausdorff_space T\<close>
   assumes \<open>sum f F \<in> topspace T\<close>
   shows "infsum_in T f F = sum f F"
   using has_sum_in_finite[OF assms(1,3)]
@@ -1058,18 +1058,19 @@ qed
 
 (* TODO: generalize (not only "type", rep/abs args) *)
 lemma with_type_conj:
-  assumes \<open>\<forall>\<^sub>\<tau> 'a::type = A. P\<close>
-    and \<open>\<forall>\<^sub>\<tau> 'b::type = B. Q\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'a::type = A. \<forall>\<^sub>\<tau> 'b::type = B. P \<and> Q\<close>
+  assumes \<open>let 'a::type = A in P\<close>
+    and \<open>let 'b::type = B in Q\<close>
+  shows \<open>let 'a::type = A in let 'b::type = B in P \<and> Q\<close>
   using assms
   by (simp add: with_type_def)
 
 lemma with_type_mp2:
-  assumes \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (P Rep Abs))\<close>
-  assumes \<open>(\<And>Rep Abs Rep' Abs'. type_definition Rep Abs S \<Longrightarrow> fst CR S p \<Longrightarrow> type_definition Rep' Abs' S' \<Longrightarrow> fst CR' S' p' \<Longrightarrow>
-               P Rep Abs Rep' Abs' \<Longrightarrow> Q Rep Abs Rep' Abs')\<close>
-  shows \<open>with_type CR (S,p) (\<lambda>Rep Abs. with_type CR' (S',p') (Q Rep Abs))\<close>
-  using assms by (auto simp add: with_type_def case_prod_beta)
+  assumes \<open>with_type C R S p (\<lambda>Rep abs_ops. with_type C' R' S' p' (P Rep abs_ops))\<close>
+  assumes \<open>(\<And>Rep abs_ops Rep' Abs' abs_ops'. type_definition Rep (inv Rep) S \<Longrightarrow> C S p \<Longrightarrow> type_definition Rep' (inv Rep') S' \<Longrightarrow> C' S' p' \<Longrightarrow>
+               P Rep abs_ops Rep' abs_ops' \<Longrightarrow> Q Rep abs_ops Rep' abs_ops')\<close>
+  shows \<open>with_type C R S p (\<lambda>Rep abs_ops. with_type C' R' S' p' (Q Rep abs_ops))\<close>
+  using assms by (auto simp add: with_type_def case_prod_beta type_definition_bij_betw_iff)
+
 
 
 end

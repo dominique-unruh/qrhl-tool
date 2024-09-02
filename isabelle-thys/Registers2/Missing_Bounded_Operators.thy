@@ -457,7 +457,7 @@ lemma permute_and_tensor1_cblinfun_as_register:
   fixes R :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
   assumes equiv_R: \<open>equivp R\<close>
   assumes bij_f: \<open>\<And>a. bij_betw f (Collect (R a)) UNIV\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'c::type = permute_and_tensor1_cblinfun_basis R. 
+  shows \<open>let 'c::type = permute_and_tensor1_cblinfun_basis R in
             (\<forall>A. sandwich (permute_and_tensor1_cblinfun_U rep_c f R) (A \<otimes>\<^sub>o id_cblinfun) =
             permute_and_tensor1_cblinfun f R A)
             \<and> unitary (permute_and_tensor1_cblinfun_U rep_c f R)\<close>
@@ -465,11 +465,11 @@ proof with_type_intro
   define S where \<open>S = permute_and_tensor1_cblinfun_basis R\<close>
   show \<open>S \<noteq> {}\<close>
     by (simp add: permute_and_tensor1_cblinfun_basis_def S_def equiv_R equivp_reflp)
-  fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and Abs abs_ops
+  fix Rep :: \<open>'c \<Rightarrow> 'a set\<close> and abs_ops
 
-  assume \<open>type_definition Rep Abs S\<close>
-  then interpret type_definition Rep Abs S
-    by simp
+  assume \<open>bij_betw Rep UNIV S\<close>
+  then interpret type_definition Rep \<open>inv Rep\<close> S
+    using type_definition_bij_betw_iff by blast
 
   assume \<open>WITH_TYPE_REL_type (\<lambda>x y. x = Rep y) () abs_ops\<close>
   define U where \<open>U = permute_and_tensor1_cblinfun_U Rep f R\<close>
@@ -766,15 +766,6 @@ lemmas bounded_clinear_tc_tensor_left[bounded_clinear] = bounded_cbilinear.bound
 lemmas bounded_clinear_tc_tensor_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_tensor]
 
 
-(* TODO move *)
-lemma bounded_cbilinear_tc_compose: \<open>bounded_cbilinear tc_compose\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  apply (auto intro!: exI[of _ 1] simp: cblinfun_compose_add_left cblinfun_compose_add_right)
-  by (meson Unsorted_HSTP.norm_leq_trace_norm dual_order.trans mult_right_mono trace_norm_comp_right trace_norm_nneg)
-lemmas bounded_clinear_tc_compose_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_compose]
-lemmas bounded_clinear_tc_compose_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_compose]
-
 lemma abs_op_one_dim: \<open>abs_op x = one_dim_iso (abs (one_dim_iso x :: complex))\<close>
   by (metis (mono_tags, lifting) abs_opI abs_op_scaleC of_complex_def one_cblinfun_adj one_comp_one_cblinfun one_dim_iso_is_of_complex one_dim_iso_of_one one_dim_iso_of_zero one_dim_loewner_order one_dim_scaleC_1 zero_less_one_class.zero_le_one)
 
@@ -942,7 +933,7 @@ lemma summable_cblinfun_compose_right:
 (* TODO move *)
 lemma from_trace_class_abs_summable: \<open>f abs_summable_on X \<Longrightarrow> (\<lambda>x. from_trace_class (f x)) abs_summable_on X\<close>
     apply (rule abs_summable_on_comparison_test[where g=\<open>f\<close>])
-    by (simp_all add: Unsorted_HSTP.norm_leq_trace_norm norm_trace_class.rep_eq)
+    by (simp_all add: norm_leq_trace_norm norm_trace_class.rep_eq)
 
 (* TODO move *)
 lemma from_trace_class_summable: \<open>f summable_on X \<Longrightarrow> (\<lambda>x. from_trace_class (f x)) summable_on X\<close>
@@ -1833,7 +1824,7 @@ lemma bounded_cbilinear_tc_apply: \<open>bounded_cbilinear tc_apply\<close>
   apply (rule bounded_cbilinear.intro; transfer)
       apply (auto intro!: simp: )
   apply (auto intro!: exI[of _ 1] cblinfun.add_left cblinfun.add_right cblinfun.scaleC_right)
-  by (smt (verit, del_insts) Unsorted_HSTP.norm_leq_trace_norm mult_hom.hom_zero mult_less_cancel_right norm_cblinfun norm_not_less_zero not_square_less_zero ordered_field_class.sign_simps(5) ordered_field_class.sign_simps(50) rel_simps(70) vector_space_over_itself.scale_eq_0_iff vector_space_over_itself.scale_left_commute vector_space_over_itself.vector_space_assms(3))
+  by (smt (verit, del_insts) norm_leq_trace_norm mult_hom.hom_zero mult_less_cancel_right norm_cblinfun norm_not_less_zero not_square_less_zero ordered_field_class.sign_simps(5) ordered_field_class.sign_simps(50) rel_simps(70) vector_space_over_itself.scale_eq_0_iff vector_space_over_itself.scale_left_commute vector_space_over_itself.vector_space_assms(3))
 
 
 (* TODO move *)
@@ -1935,7 +1926,7 @@ lemma Hausdorff_space_hausdorff: \<open>Hausdorff_space T \<longleftrightarrow> 
 
 
 lemma infsum_in_0:
-  assumes \<open>hausdorff T\<close> and \<open>0 \<in> topspace T\<close>
+  assumes \<open>Hausdorff_space T\<close> and \<open>0 \<in> topspace T\<close>
   assumes \<open>\<And>x. x\<in>M \<Longrightarrow> f x = 0\<close>
   shows \<open>infsum_in T f M = 0\<close>
 proof -

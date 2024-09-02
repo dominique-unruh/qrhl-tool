@@ -469,7 +469,7 @@ proof (rule notI)
     have \<open>continuous_map weak_star_topology cweak_operator_topology (\<lambda>f :: 'a qupdate. f)\<close>
       by (simp add: wot_weaker_than_weak_star)
     also have \<open>continuous_map cweak_operator_topology euclidean (\<lambda>a. ket x \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
-      by (simp add: cweak_operator_topology_continuous_evaluation)
+      by (simp add: cweak_operator_topology_cinner_continuous)
     also have \<open>continuous_map euclidean euclidean (\<lambda>c. c *\<^sub>C (id_cblinfun :: 'b qupdate))\<close>
       by (auto intro!: continuous_map_iff_continuous2[THEN iffD2] continuous_at_imp_continuous_on)
     also have \<open>continuous_map euclidean weak_star_topology (\<lambda>f :: 'b qupdate. f)\<close>
@@ -605,10 +605,9 @@ next
   then have \<open>qregister_raw (apply_qregister Q)\<close>
     by (simp add: qregister.rep_eq)
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'c::type = register_decomposition_basis (apply_qregister Q). ?goal\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>U :: ('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2. 
-              unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
+  have \<open>let 'c::type = register_decomposition_basis (apply_qregister Q) in ?goal\<close>
+  proof with_type_mp
+    with_type_case
     then obtain U :: \<open>('b \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> where
       [simp]: \<open>unitary U\<close> and decomp: \<open>apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun\<close> for \<theta>
       by auto
@@ -694,7 +693,7 @@ next
   have [simp]: \<open>qregister_raw (apply_qregister Q)\<close>
     using assms qregister.rep_eq by blast
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister Q). A \<le> B\<close>
+  have \<open>let 'z::type = register_decomposition_basis (apply_qregister Q) in A \<le> B\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister Q \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
     then obtain U :: \<open>('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where
@@ -748,7 +747,7 @@ next
   have \<open>qregister_raw (apply_qregister F)\<close>
     using assms qregister.rep_eq by blast
   from register_decomposition[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'z::type = register_decomposition_basis (apply_qregister F).
+  have \<open>let 'z::type = register_decomposition_basis (apply_qregister F) in
         ?goal\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>U::('a \<times> 'z) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> (\<forall>\<theta>. apply_qregister F \<theta> = sandwich U *\<^sub>V \<theta> \<otimes>\<^sub>o id_cblinfun)\<close>
@@ -1026,7 +1025,7 @@ proof (cases \<open>qregister G\<close>)
   have \<open>qregister_raw (apply_qregister F)\<close>
     using assms(1) by (auto simp: qregister_raw_apply_qregister)
   from complement_exists[OF this]
-  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis F. qcomplements F G\<close>
+  have \<open>let 'g::type = qregister_decomposition_basis F in qcomplements F G\<close>
   proof (rule with_type_mp)
     assume \<open>\<exists>G :: 'g qupdate \<Rightarrow> _. complements (apply_qregister F) G\<close>
     then obtain G' :: \<open>'g qupdate \<Rightarrow> _\<close> where compl: \<open>complements (apply_qregister F) G'\<close>
@@ -1060,7 +1059,7 @@ qed
 lemma qcomplement_exists:
   fixes F :: \<open>('a,'b) qregister\<close>
   assumes \<open>qregister F\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+  shows \<open>let 'c::type = qregister_decomposition_basis F in
           \<exists>G :: ('c,'b) qregister. qcomplements F G\<close>
 proof -
   have *: \<open>(\<exists>G :: 'c qupdate \<Rightarrow> 'b qupdate. complements (apply_qregister F) G)
@@ -1129,7 +1128,7 @@ lemma qregister_qregister_tensor:
 lemma qregister_decomposition:
   fixes F :: \<open>('a,'b) qregister\<close>
   assumes \<open>qregister F\<close>
-  shows \<open>\<forall>\<^sub>\<tau> 'c::type = qregister_decomposition_basis F.
+  shows \<open>let 'c::type = qregister_decomposition_basis F in
          (\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> 
             F = qregister_chain (transform_qregister U) qFst)\<close>
 proof -

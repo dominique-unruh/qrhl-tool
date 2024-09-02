@@ -882,11 +882,11 @@ lemma leq_space_div[simp]:
   shows "(A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)"
 proof -
   from qcomplement_exists[OF \<open>qregister Q\<close>]
-  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis Q.
+  have \<open>let 'g::type = qregister_decomposition_basis Q in
         (A \<le> B \<div> \<psi>\<guillemotright>Q) \<longleftrightarrow> (A \<sqinter> ccspan {\<psi>}\<guillemotright>Q \<le> B)\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>R. qcomplements Q R\<close>
-    then obtain R :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+  proof with_type_mp
+    with_type_case
+    then obtain R :: \<open>('g, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
       by auto
     then have \<open>qcomplements R Q\<close>
       by (meson complements_sym qcomplements.rep_eq)
@@ -961,11 +961,11 @@ qed
 lemma top_div[simp]: "top \<div> \<psi>\<guillemotright>Q = top" if \<open>qregister Q\<close>
 proof -
   from qcomplement_exists[OF that]
-  have \<open>\<forall>\<^sub>\<tau> 'g::type = qregister_decomposition_basis Q.
+  have \<open>let 'g::type = qregister_decomposition_basis Q in
         top \<div> \<psi>\<guillemotright>Q = top\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>R. qcomplements Q R\<close>
-    then obtain R :: \<open>('c, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+  proof with_type_mp
+    with_type_case
+    then obtain R :: \<open>('g, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
       by auto
     then have [simp]: \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
       using iso_qregister_def qcomplements_def' by blast
