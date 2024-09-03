@@ -3,7 +3,6 @@ theory Missing_Bounded_Operators
     Complex_Bounded_Operators.Cblinfun_Code
     Tensor_Product.Hilbert_Space_Tensor_Product
     With_Type.With_Type Misc_Missing
-    Tensor_Product.Unsorted_HSTP
     Tensor_Product.Partial_Trace
 begin
 
