@@ -664,24 +664,6 @@ instance
 end
 
 
-(* TODO move *)
-lemma trace_norm_tensor: \<open>trace_norm (a \<otimes>\<^sub>o b) = trace_norm a * trace_norm b\<close>
-  apply (rule of_real_hom.injectivity[where 'a=complex])
-  by (simp add: abs_op_tensor trace_tensor flip: trace_abs_op)
-
-
-(* TODO move *)
-lemma bounded_cbilinear_tc_tensor: \<open>bounded_cbilinear tc_tensor\<close>
-  unfolding bounded_cbilinear_def
-  apply transfer
-  by (auto intro!: exI[of _ 1]
-      simp: trace_norm_tensor tensor_op_left_add tensor_op_right_add tensor_op_scaleC_left tensor_op_scaleC_right)
-lemmas bounded_clinear_tc_tensor_left[bounded_clinear] = bounded_cbilinear.bounded_clinear_left[OF bounded_cbilinear_tc_tensor]
-lemmas bounded_clinear_tc_tensor_right[bounded_clinear] = bounded_cbilinear.bounded_clinear_right[OF bounded_cbilinear_tc_tensor]
-
-
-
-(* TODO move *)
 (* TODO: generalize original is_ortho_set_ket to this *) thm is_ortho_set_ket 
 lemma is_ortho_set_ket[simp]: \<open>is_ortho_set (ket ` A)\<close>
   using is_ortho_set_def by fastforce
@@ -1100,7 +1082,7 @@ proof -
 qed
 
 
-(* TODO replace original *)
+(* TODO replace original *) thm infsum_nonneg_complex
 lemma infsum_nonneg_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
