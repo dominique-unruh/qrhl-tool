@@ -14,6 +14,7 @@ hide_const (open) Finite_Cartesian_Product.vec
 hide_const (open) Finite_Cartesian_Product.mat
 hide_const (open) Order.top
 hide_const (open) Coset.kernel
+hide_fact (open) Infinite_Set_Sum.abs_summable_on_comparison_test
 
 lemma enum_idx_enum_index[simp]: \<open>enum_idx = enum_index\<close>
 proof (rule ext)
@@ -1522,7 +1523,7 @@ proof -
     by (simp add: C_def)
 
   from \<open>is_onb B\<close>
-  have \<open>trace_class (Proj S) \<longleftrightarrow> ((\<lambda>x. cmod (x \<bullet>\<^sub>C (abs_op (Proj S) *\<^sub>V x))) abs_summable_on B)\<close>
+  have \<open>trace_class (Proj S) \<longleftrightarrow> ((\<lambda>x. x \<bullet>\<^sub>C (abs_op (Proj S) *\<^sub>V x)) abs_summable_on B)\<close>
     by (rule trace_class_iff_summable)
   also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>x. cmod (x \<bullet>\<^sub>C (Proj S *\<^sub>V x))) abs_summable_on B)\<close>
     by simp

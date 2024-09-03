@@ -19,7 +19,7 @@ lift_definition kraus_family_bound :: \<open>('a::chilbert_space, 'b::chilbert_s
   \<open>\<lambda>\<EE>. infsum_in cweak_operator_topology (\<lambda>(E,x). E* o\<^sub>C\<^sub>L E) \<EE>\<close> .
 
 lemma kraus_family_bound_def':
-  \<open>kraus_family_bound \<EE> = Rep_cblinfun_wot (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
+  \<open>kraus_family_bound \<EE> = Rep_cblinfun_wot (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
   unfolding kraus_family_bound.rep_eq infsum_euclidean_eq[symmetric]
   apply transfer'
   by simp
@@ -96,13 +96,13 @@ lemma kraus_family_bound_summable:
   using kraus_family_bound_has_sum summable_on_in_def by blast
 
 lemma kraus_family_bound_has_sum':
-  shows \<open>((\<lambda>(E,x). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) has_sum Abs_cblinfun_wot (kraus_family_bound \<EE>)) (Rep_kraus_family \<EE>)\<close>
+  shows \<open>((\<lambda>(E,x). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) has_sum Abs_cblinfun_wot (kraus_family_bound \<EE>)) (Rep_kraus_family \<EE>)\<close>
   using kraus_family_bound_has_sum[of \<EE>]
   apply transfer'
   by auto
 
 lemma kraus_family_bound_summable':
-  \<open>((\<lambda>(E,x). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on Rep_kraus_family \<EE>)\<close>
+  \<open>((\<lambda>(E,x). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on Rep_kraus_family \<EE>)\<close>
   using has_sum_imp_summable kraus_family_bound_has_sum' by blast
 
 
@@ -3939,10 +3939,10 @@ lemma kraus_family_bound_kraus_map_infsum:
   assumes \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (f a)) A\<close>
   shows \<open>kraus_family_bound (kraus_map_infsum f A) = infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (f a)) A\<close>
 proof -
-  have pos: \<open>0 \<le> cblinfun_compose_wot (adj_wot a) a\<close> for a :: \<open>('b,'c) cblinfun_wot\<close>
+  have pos: \<open>0 \<le> compose_wot (adj_wot a) a\<close> for a :: \<open>('b,'c) cblinfun_wot\<close>
     apply transfer'
     using positive_cblinfun_squareI by blast
-  have sum3: \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>(E,_)\<in>Rep_kraus_family (f x). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on A\<close>
+  have sum3: \<open>(\<lambda>x. \<Sum>\<^sub>\<infinity>(E,_)\<in>Rep_kraus_family (f x). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on A\<close>
   proof -
     define b where \<open>b x = kraus_family_bound (f x)\<close> for x
     have \<open>(\<lambda>x. Abs_cblinfun_wot (b x)) summable_on A\<close>
@@ -3953,10 +3953,10 @@ proof -
     then show ?thesis
       by (simp add: Rep_cblinfun_wot_inverse kraus_family_bound_def' b_def)
   qed
-  have sum2: \<open>(\<lambda>(E, _). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on
+  have sum2: \<open>(\<lambda>(E, _). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on
          Rep_kraus_family (f x)\<close> if \<open>x \<in> A\<close> for x
     by (rule kraus_family_bound_summable')
-  have sum1: \<open>(\<lambda>(_, E, _). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on
+  have sum1: \<open>(\<lambda>(_, E, _). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E)) summable_on
     (SIGMA a:A. Rep_kraus_family (f a))\<close>
     apply (rule summable_on_Sigma_wotI)
     using sum3 sum2
@@ -3964,15 +3964,15 @@ proof -
 
   have \<open>Abs_cblinfun_wot (kraus_family_bound (kraus_map_infsum f A)) =
         (\<Sum>\<^sub>\<infinity>(E, x)\<in>Rep_kraus_family (kraus_map_infsum f A).
-               cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
+               compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
     by (simp add: kraus_family_bound_def' Rep_cblinfun_wot_inverse)
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E, x)\<in>(\<lambda>(a, E, xa). (E, a, xa)) ` (SIGMA a:A. Rep_kraus_family (f a)).
-       cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
+       compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
     using assms by (simp add: kraus_map_infsum.rep_eq)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(a, E, x)\<in>(SIGMA a:A. Rep_kraus_family (f a)). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(a, E, x)\<in>(SIGMA a:A. Rep_kraus_family (f a)). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
     apply (subst infsum_reindex)
     by (auto intro!: inj_onI simp: o_def case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>a\<in>A. \<Sum>\<^sub>\<infinity>(E, x)\<in>Rep_kraus_family (f a). cblinfun_compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>a\<in>A. \<Sum>\<^sub>\<infinity>(E, x)\<in>Rep_kraus_family (f a). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
     apply (subst infsum_Sigma)
     using sum1 sum2 by auto
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>a\<in>A. Abs_cblinfun_wot (kraus_family_bound (f a)))\<close>
