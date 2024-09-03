@@ -1,5 +1,7 @@
 theory Kraus_Maps
-  imports Tensor_Product.Trace_Class Registers2.Missing_Bounded_Operators Wlog.Wlog "HOL-Library.Rewrite"
+  imports Tensor_Product.Trace_Class Wlog.Wlog "HOL-Library.Rewrite"
+    Registers2.Missing2 Tensor_Product.Hilbert_Space_Tensor_Product
+    Tensor_Product.Partial_Trace
 begin
 
 no_notation  Order.top ("\<top>\<index>")
@@ -1535,7 +1537,7 @@ proof (rename_tac \<EE> \<FF>)
   then have \<open>kraus_family \<EE>\<close> and \<open>kraus_family \<FF>\<close>
     by auto
   then have \<open>kraus_family ((\<lambda>(E, x). (E, Inl x)) ` \<EE> \<union> (\<lambda>(F, y). (F, Inr y)) ` \<FF>)\<close>
-    by (auto intro!: summable_on_Un_disjoint 
+    by (auto intro!: summable_on_Un_disjoint
       summable_on_reindex[THEN iffD2] inj_onI
       simp: kraus_family_def2' o_def case_prod_unfold conj_commute)
   then show \<open>(\<lambda>(E, x). (E, Inl x)) ` \<EE> \<union> (\<lambda>(F, y). (F, Inr y)) ` \<FF> \<in> Collect kraus_family\<close>

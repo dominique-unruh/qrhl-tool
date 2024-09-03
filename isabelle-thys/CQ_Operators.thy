@@ -1,5 +1,5 @@
 theory CQ_Operators
-  imports Kraus_Maps
+  imports Kraus_Maps Registers2.Missing_Bounded_Operators
 begin
 
 definition \<open>cq_map_rel \<EE> \<FF> \<longleftrightarrow> (\<forall>x. kraus_family_norm (\<EE> x) \<le> 1 \<and> kraus_equivalent' (\<EE> x) (\<FF> x))\<close>

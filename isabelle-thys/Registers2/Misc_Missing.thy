@@ -1,7 +1,7 @@
 theory Misc_Missing
   imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" 
     (* Missing_Bounded_Operators *) Registers.Misc
-    Registers.Axioms_Classical
+    Registers.Axioms_Classical Missing2
 begin                                                                         
 
 section \<open>Misc\<close>
@@ -763,33 +763,10 @@ lemma of_nat_0_le_iff: \<open>of_nat x \<ge> (0::_::{ordered_ab_semigroup_add,ze
    apply auto
   by (metis add_mono semiring_norm(50) zero_less_one_class.zero_le_one)
 
-lemma bdd_above_mono2:
-  assumes \<open>bdd_above (g ` B)\<close>
-  assumes \<open>A \<subseteq> B\<close>
-  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
-  shows \<open>bdd_above (f ` A)\<close>
-  by (smt (verit, del_insts) Set.basic_monos(7) assms(1) assms(2) assms(3) basic_trans_rules(23) bdd_above.I2 bdd_above.unfold imageI)
-
 instance complex :: ordered_complex_vector
   apply intro_classes
   by (auto simp: less_eq_complex_def mult_left_mono mult_right_mono)
 
-
-lemma abs_summable_on_add:
-  assumes \<open>f abs_summable_on A\<close> and \<open>g abs_summable_on A\<close>
-  shows \<open>(\<lambda>x. f x + g x) abs_summable_on A\<close>
-proof -
-  from assms have \<open>(\<lambda>x. norm (f x) + norm (g x)) summable_on A\<close>
-    using summable_on_add by blast
-  then show ?thesis
-    apply (rule Infinite_Sum.abs_summable_on_comparison_test')
-    using norm_triangle_ineq by blast
-qed
-
-lemma abs_summable_norm:
-  assumes \<open>f abs_summable_on A\<close>
-  shows \<open>(\<lambda>x. norm (f x)) abs_summable_on A\<close>
-  using assms by simp
 
 
 lemma abs_summable_product':
@@ -851,97 +828,6 @@ proof (rule less_eq_complexI)
   qed
 qed
 
-lemma has_sum_in_finite:
-  assumes "finite F"
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "has_sum_in T f F (sum f F)"
-  using assms
-  by (simp add: finite_subsets_at_top_finite has_sum_in_def limitin_def eventually_principal)
-
-lemma summable_on_in_finite:
-  fixes f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,topological_space}\<close>
-  assumes "finite F"
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "summable_on_in T f F"
-  using assms summable_on_in_def has_sum_in_finite by blast
-
-lemma infsum_in_finite:
-  assumes "finite F"
-  assumes \<open>Hausdorff_space T\<close>
-  assumes \<open>sum f F \<in> topspace T\<close>
-  shows "infsum_in T f F = sum f F"
-  using has_sum_in_finite[OF assms(1,3)]
-  using assms(2) has_sum_in_infsum_in has_sum_in_unique summable_on_in_def by blast
-
-lemma tendsto_le_complex:
-  fixes x y :: complex
-  assumes F: "\<not> trivial_limit F"
-    and x: "(f \<longlongrightarrow> x) F"
-    and y: "(g \<longlongrightarrow> y) F"
-    and ev: "eventually (\<lambda>x. g x \<le> f x) F"
-  shows "y \<le> x"
-proof (rule less_eq_complexI)
-  note F
-  moreover have \<open>((\<lambda>x. Re (f x)) \<longlongrightarrow> Re x) F\<close>
-    by (simp add: assms tendsto_Re)
-  moreover have \<open>((\<lambda>x. Re (g x)) \<longlongrightarrow> Re y) F\<close>
-    by (simp add: assms tendsto_Re)
-  moreover from ev have "eventually (\<lambda>x. Re (g x) \<le> Re (f x)) F"
-    apply (rule eventually_mono)
-    by (simp add: less_eq_complex_def)
-  ultimately show \<open>Re y \<le> Re x\<close>
-    by (rule tendsto_le)
-next
-  note F
-  moreover have \<open>((\<lambda>x. Im (g x)) \<longlongrightarrow> Im y) F\<close>
-    by (simp add: assms tendsto_Im)
-  moreover 
-  have \<open>((\<lambda>x. Im (g x)) \<longlongrightarrow> Im x) F\<close>
-  proof -
-    have \<open>((\<lambda>x. Im (f x)) \<longlongrightarrow> Im x) F\<close>
-      by (simp add: assms tendsto_Im)
-    moreover from ev have \<open>\<forall>\<^sub>F x in F. Im (f x) = Im (g x)\<close>
-      apply (rule eventually_mono)
-      by (simp add: less_eq_complex_def)
-    ultimately show ?thesis
-      by (rule Lim_transform_eventually)
-  qed
-  ultimately show \<open>Im y = Im x\<close>
-    by (rule tendsto_unique)
-qed
-
-lemma bdd_above_transform_mono_pos:
-  assumes bdd: \<open>bdd_above ((\<lambda>x. g x) ` M)\<close>
-  assumes gpos: \<open>\<And>x. x \<in> M \<Longrightarrow> g x \<ge> 0\<close>
-  assumes mono: \<open>mono_on (Collect ((\<le>) 0)) f\<close>
-  shows \<open>bdd_above ((\<lambda>x. f (g x)) ` M)\<close>
-proof (cases \<open>M = {}\<close>)
-  case True
-  then show ?thesis
-    by simp
-next
-  case False
-  from bdd obtain B where B: \<open>g x \<le> B\<close> if \<open>x \<in> M\<close> for x
-  by (meson bdd_above.unfold imageI)
-  with gpos False have \<open>B \<ge> 0\<close>
-    using dual_order.trans by blast
-  have \<open>f (g x) \<le> f B\<close> if \<open>x \<in> M\<close> for x
-    using mono _ _ B
-    apply (rule mono_onD)
-    by (auto intro!: gpos that  \<open>B \<ge> 0\<close>)
-  then show ?thesis
-    by fast
-qed
-
-(* TODO move *)
-lemma has_sum_Sigma'_banach:
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::banach\<close>
-  assumes "((\<lambda>(x,y). f x y) has_sum S) (Sigma A B)"
-  shows \<open>((\<lambda>x. infsum (f x) (B x)) has_sum S) A\<close>
-  by (metis (no_types, lifting) assms has_sum_cong has_sum_imp_summable has_sum_infsum infsumI infsum_Sigma'_banach summable_on_Sigma_banach)
-
-(* TODO move *)
 lemma Ex_impI:
   assumes \<open>\<And>x. P x \<Longrightarrow> Q (f x)\<close>
   shows \<open>Ex P \<Longrightarrow> Ex Q\<close>
@@ -962,22 +848,6 @@ lemma infsum_product':
   using assms
   by (simp add: abs_summable_times infsum_cmult_right infsum_cmult_left abs_summable_summable flip: infsum_Sigma'_banach)
 
-lemma summable_on_bdd_above_real: \<open>bdd_above (f ` M)\<close> if \<open>f summable_on M\<close> for f :: \<open>'a \<Rightarrow> real\<close>
-proof -
-  from that have \<open>f abs_summable_on M\<close>
-    unfolding summable_on_iff_abs_summable_on_real[symmetric]
-    by -
-  then have \<open>bdd_above (sum (\<lambda>x. norm (f x)) ` {F. F \<subseteq> M \<and> finite F})\<close>
-    unfolding abs_summable_iff_bdd_above by simp
-  then have \<open>bdd_above (sum (\<lambda>x. norm (f x)) ` (\<lambda>x. {x}) ` M)\<close>
-    apply (rule bdd_above_mono)
-    by auto
-  then have \<open>bdd_above ((\<lambda>x. norm (f x)) ` M)\<close>
-    by (simp add: image_image)
-  then show ?thesis
-    by (simp add: bdd_above_mono2)
-qed
-
 lemma rewrite_via_subgoal: \<open>x = y \<Longrightarrow> x = y\<close>
   by -
 
@@ -986,39 +856,12 @@ lemma limitin_principal_singleton:
   shows "limitin T f (f x) (principal {x})"
   using assms by (simp add: limitin_def eventually_principal)
 
-lemma infsum_Sigma:
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{topological_comm_monoid_add, t3_space}\<close>
-  assumes summableAB: "f summable_on (Sigma A B)"
-  assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> (\<lambda>y. f (x, y)) summable_on (B x)\<close>
-  shows "infsum f (Sigma A B) = (\<Sum>\<^sub>\<infinity>x\<in>A. \<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))"
-proof -
-  have 1: \<open>(f has_sum infsum f (Sigma A B)) (Sigma A B)\<close>
-    by (simp add: assms)
-  define b where \<open>b x = (\<Sum>\<^sub>\<infinity>y\<in>B x. f (x, y))\<close> for x
-  have 2: \<open>((\<lambda>y. f (x, y)) has_sum b x) (B x)\<close> if \<open>x \<in> A\<close> for x
-    using b_def assms(2) that by auto
-  have 3: \<open>(b has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) A\<close>
-    using 1 2 by (metis has_sum_SigmaD infsumI)
-  have 4: \<open>(f has_sum (\<Sum>\<^sub>\<infinity>x\<in>A. b x)) (Sigma A B)\<close>
-    using 2 3 apply (rule has_sum_SigmaI)
-    using assms by auto
-  from 1 4 show ?thesis
-    using b_def[abs_def] infsumI by blast
-qed
-
-
 lemma redundant_option_case: \<open>(case a of None \<Rightarrow> None | Some x \<Rightarrow> Some x) = a\<close>
   apply (cases a)
   by auto
 
 lemma map_commutant_empty[simp]: \<open>map_commutant {Map.empty} = UNIV\<close>
   by (auto simp: map_commutant_def)
-
-lemma summable_on_in_cong:
-  assumes "\<And>x. x\<in>A \<Longrightarrow> f x = g x"
-  shows "summable_on_in T f A \<longleftrightarrow> summable_on_in T g A"
-  by (simp add: summable_on_in_def has_sum_in_cong[OF assms])
 
 
 lemma max_diff_distrib_left_nat: "max x y - z = max (x - z) (y - z)" for x y z :: nat
