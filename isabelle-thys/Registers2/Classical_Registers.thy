@@ -155,7 +155,7 @@ lemma apply_cregister_id[simp]: \<open>apply_cregister cregister_id = id\<close>
 lemma cregister_id[simp]: \<open>cregister cregister_id\<close>
   apply transfer by simp
 
-definition \<open>empty_cregister_raw = register_from_getter_setter (\<lambda>_. undefined) (\<lambda>_::_::CARD_1. id)\<close> 
+definition \<open>empty_cregister_raw = register_from_getter_setter (\<lambda>_::'b. undefined :: 'a) (\<lambda>_::'a::CARD_1. id)\<close> 
 lemma cregister_raw_empty_cregister_raw: \<open>cregister_raw empty_cregister_raw\<close>
   apply (auto intro!: exI simp add: Axioms_Classical.register_def empty_cregister_raw_def)
   by (simp add: valid_getter_setter_def)

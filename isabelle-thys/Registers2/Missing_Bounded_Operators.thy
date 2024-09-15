@@ -1,9 +1,9 @@
 theory Missing_Bounded_Operators
   imports Complex_Bounded_Operators.Complex_L2
     Complex_Bounded_Operators.Cblinfun_Code
-    Tensor_Product.Hilbert_Space_Tensor_Product
+    Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
     With_Type.With_Type Misc_Missing
-    Tensor_Product.Partial_Trace
+    Hilbert_Space_Tensor_Product.Partial_Trace
     Missing2
 begin
 
@@ -11,7 +11,7 @@ unbundle cblinfun_notation
 no_notation m_inv ("inv\<index> _" [81] 80)
 unbundle jnf_notation
 hide_const (open) Finite_Cartesian_Product.vec
-hide_const (open) Finite_Cartesian_Product.mat
+hide_const (open) Finite_Cartesian_Product.mat                      
 hide_const (open) Order.top
 hide_const (open) Coset.kernel
 hide_fact (open) Infinite_Set_Sum.abs_summable_on_comparison_test

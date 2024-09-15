@@ -1,7 +1,7 @@
 theory Kraus_Maps
-  imports Tensor_Product.Trace_Class Wlog.Wlog "HOL-Library.Rewrite"
-    Registers2.Missing2 Tensor_Product.Hilbert_Space_Tensor_Product
-    Tensor_Product.Partial_Trace
+  imports Hilbert_Space_Tensor_Product.Trace_Class Wlog.Wlog "HOL-Library.Rewrite"
+    Registers2.Missing2 Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
+    Hilbert_Space_Tensor_Product.Partial_Trace
 begin
 
 no_notation  Order.top ("\<top>\<index>")
@@ -1521,13 +1521,16 @@ lemma kraus_map_kraus_family_map[iff]: \<open>kraus_map (kraus_family_map \<EE>)
 
 definition \<open>kraus_family_id = kraus_family_of_op id_cblinfun\<close>
 
+lemma kraus_family_of_op_id[simp]: \<open>kraus_family_of_op id_cblinfun = kraus_family_id\<close>
+  by (simp add: kraus_family_id_def)
+
 lemma kraus_family_norm_id_le: \<open>kraus_family_norm kraus_family_id \<le> 1\<close>
-  apply (simp add: kraus_family_id_def)
+  apply (simp add: kraus_family_id_def del: kraus_family_of_op_id)
   apply transfer
   by (auto intro!: power_le_one onorm_pos_le onorm_id_le)
 
 lemma kraus_map_norm_id[simp]: \<open>kraus_family_norm (kraus_family_id :: ('a :: {chilbert_space, not_singleton},'a,unit) kraus_family) = 1\<close>
-  by (auto intro!: antisym kraus_family_norm_id_le simp: kraus_family_id_def)
+  by (auto intro!: antisym kraus_family_norm_id_le simp: kraus_family_id_def simp del: kraus_family_of_op_id)
 
 lift_definition kraus_family_plus :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a,'b,'y) kraus_family \<Rightarrow> ('a,'b,'x+'y) kraus_family\<close> is
   \<open>\<lambda>\<EE> \<FF>. (\<lambda>(E,x). (E, Inl x)) ` \<EE> \<union> (\<lambda>(F,y). (F, Inr y)) ` \<FF>\<close>
@@ -1689,7 +1692,7 @@ lemma kraus_family_of_op_apply: \<open>kraus_family_map (kraus_family_of_op E) \
   by (simp add: kraus_family_of_op_apply) *)
 
 lemma kraus_family_id_apply[simp]: \<open>kraus_family_map kraus_family_id \<rho> = \<rho>\<close>
-  by (simp add: kraus_family_id_def kraus_family_of_op_apply)
+  by (simp add: kraus_family_id_def kraus_family_of_op_apply del: kraus_family_of_op_id)
 
 (* lemma kraus_family_rep_kraus_map[simp]: \<open>kraus_family (rep_kraus_map \<EE>)\<close>
   using Quotient_rep_reflp[OF Quotient_kraus_map]
@@ -4165,7 +4168,7 @@ lemma kraus_family_bound_of_op[simp]: \<open>kraus_family_bound (kraus_family_of
   by (simp add: kraus_family_bound_def kraus_family_of_op.rep_eq infsum_in_finite)
 
 lemma kraus_family_bound_id[simp]: \<open>kraus_family_bound kraus_family_id = id_cblinfun\<close>
-  by (simp add: kraus_family_id_def)
+  by (simp add: kraus_family_id_def del: kraus_family_of_op_id)
 
 lemma kraus_family_norm_trace:
   fixes B :: \<open>'a::{chilbert_space, not_singleton} set\<close>

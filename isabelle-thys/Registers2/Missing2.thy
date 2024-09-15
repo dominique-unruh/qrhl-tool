@@ -1,8 +1,8 @@
 theory Missing2
   imports Complex_Bounded_Operators.Cblinfun_Code
-    Tensor_Product.Weak_Operator_Topology
-    Tensor_Product.Trace_Class
-    Tensor_Product.Hilbert_Space_Tensor_Product
+    Hilbert_Space_Tensor_Product.Weak_Operator_Topology
+    Hilbert_Space_Tensor_Product.Trace_Class
+    Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
 begin
 
 unbundle cblinfun_notation
