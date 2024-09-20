@@ -24,7 +24,7 @@ lemma cq_norm_raw_trace:
   by (auto intro!: infsum_cong norm_tc_pos simp: cq_norm_raw_def simp flip: infsum_of_real)
 
 typedef ('cl,'qu) cq_operator = \<open>{\<rho> :: 'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class. (\<forall>c. \<rho> c \<ge> 0) \<and> 
-                          (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1}\<close>
+                          \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1}\<close>
   apply (rule exI[of _ \<open>\<lambda>_. 0\<close>])
   by auto
 setup_lifting type_definition_cq_operator
@@ -35,10 +35,10 @@ proof (rename_tac c \<rho>, intro conjI allI)
   fix c d :: 'cl and \<rho> :: \<open>('qu ell2, 'qu ell2) trace_class\<close>
   show \<open>0 \<le> (if \<rho> \<ge> 0 \<and> trace_tc \<rho> \<le> 1 then of_bool (c = d) *\<^sub>R \<rho> else 0)\<close>
     by simp
-  show \<open>(\<lambda>d. trace_tc (if \<rho> \<ge> 0 \<and> trace_tc \<rho> \<le> 1 then of_bool (c = d) *\<^sub>R \<rho> else 0)) summable_on UNIV\<close>
+  show \<open>(\<lambda>d. if \<rho> \<ge> 0 \<and> trace_tc \<rho> \<le> 1 then of_bool (c = d) *\<^sub>R \<rho> else 0) abs_summable_on UNIV\<close>
   proof (cases \<open>\<rho> \<ge> 0 \<and> trace_tc \<rho> \<le> 1\<close>)
     case True
-    have \<open>(\<lambda>d. trace_tc (of_bool (c = d) *\<^sub>R \<rho>)) summable_on UNIV\<close>
+    have \<open>(\<lambda>d. of_bool (c = d) *\<^sub>R \<rho>) abs_summable_on UNIV\<close>
       apply (rule finite_nonzero_values_imp_summable_on)
       by auto
     with True show ?thesis
@@ -109,14 +109,15 @@ proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
   then have norm_\<EE>: \<open>kraus_family_norm (\<EE> x) \<le> 1\<close> for x
     unfolding cq_map_rel_def by blast
   fix \<rho> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu1 ell2) trace_class\<close> and c
-  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
-  then have \<rho>_pos: \<open>0 \<le> \<rho> c\<close> and \<rho>_sum: \<open>(\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV\<close> and norm_leq1: \<open>cq_norm_raw \<rho> \<le> 1\<close> for c
+  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
+  then have \<rho>_pos: \<open>0 \<le> \<rho> c\<close> and \<rho>_sum: \<open>\<rho> abs_summable_on UNIV\<close> and norm_leq1: \<open>cq_norm_raw \<rho> \<le> 1\<close> for c
     by auto
   from \<rho>_pos
   show \<open>0 \<le> (\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d))\<close>
     by (auto intro!: infsum_nonneg_traceclass kraus_family_map'_pos)
-  from norm_leq1 \<rho>_pos \<rho>_sum have \<rho>_leq1: \<open>(\<Sum>\<^sub>\<infinity>x. trace_tc (\<rho> x)) \<le> 1\<close>
-    by (metis Infinite_Sum.infsum_nonneg_complex Re_complex_of_real cq_norm_raw_trace less_eq_complex_def one_complex.sel(1) trace_tc_0 trace_tc_mono zero_less_one_class.zero_le_one)
+(*   from norm_leq1 \<rho>_pos \<rho>_sum have \<rho>_leq1: \<open>(\<Sum>\<^sub>\<infinity>x. norm (\<rho> x)) \<le> 1\<close>
+    unfolding
+    by (metis cq_norm_raw_def) *)
 
   from \<rho>_pos
   have 9: \<open>trace_tc (kraus_family_map (\<EE> d) (\<rho> d)) \<le> kraus_family_norm (\<EE> d) * trace_tc (\<rho> d)\<close> for d
@@ -156,7 +157,7 @@ proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
   have 13: \<open>0 \<le> Re (trace_tc (kraus_family_map (\<EE> d) (\<rho> d)))\<close> for d
     by (metis Re_complex_of_real \<rho>_pos kraus_family_map_pos norm_cblinfun_mono_trace_class norm_tc_pos norm_zero order_eq_refl)
   from \<rho>_sum   have 12:  \<open>(\<lambda>d. Re (trace_tc (\<rho> d))) summable_on UNIV\<close>
-    using summable_on_Re by blast
+    by (meson \<rho>_pos norm_tc_pos_Re summable_on_cong)
   from 9 10 have 14: \<open>Re (trace_tc (kraus_family_map (\<EE> d) (\<rho> d))) \<le> Re (trace_tc (\<rho> d))\<close> for d
     apply (auto intro!: Re_mono)
     using basic_trans_rules(23) by blast
@@ -171,11 +172,8 @@ proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
   have 27: \<open>\<rho> summable_on UNIV\<close>
     apply (rule abs_summable_summable)
     using 12 28 by auto
-  have 15: \<open>(\<Sum>\<^sub>\<infinity>d. Re (trace_tc (\<rho> d))) \<le> 1\<close>
-    apply (subst infsum_bounded_linear[where h=\<open>Re o trace_tc\<close>, unfolded o_def])
-    using 16 27 28 \<rho>_sum \<rho>_leq1 \<rho>_pos
-      apply auto
-    by (smt (verit) Infinite_Sum.infsum_nonneg_complex abs_summable_on_comparison_test cmod_mono complex_Re_le_cmod infsum_Re infsum_cong norm_infsum_bound norm_one summable_on_iff_abs_summable_on_complex trace_tc_norm trace_tc_pos)
+  from "12" "27" "28" \<rho>_pos have 15: \<open>(\<Sum>\<^sub>\<infinity>d. Re (trace_tc (\<rho> d))) \<le> 1\<close>
+    by (smt (z3) cq_norm_raw_def infsum_mono norm_leq1 summable_abs_summable_tc)
   from 5 6 have 2: \<open>(\<lambda>d. \<Sum>\<^sub>\<infinity>c. Re (trace_tc (kraus_family_map' {c} (\<EE> d) (\<rho> d)))) summable_on UNIV\<close>
     by simp
   have 17: \<open>(\<Sum>\<^sub>\<infinity>d. \<Sum>\<^sub>\<infinity>c. Re (trace_tc (kraus_family_map' {c} (\<EE> d) (\<rho> d)))) \<le> 1\<close>
@@ -213,10 +211,8 @@ proof (rename_tac \<EE> \<EE>' \<rho>, intro conjI allI ext)
     using 16 34 by (rule infsum_bounded_linear[unfolded o_def])
   have 25: \<open>(\<Sum>\<^sub>\<infinity>c. \<Sum>\<^sub>\<infinity>d. trace_tc (kraus_family_map' {c} (\<EE> d) (\<rho> d))) \<ge> 0\<close>
     by (auto intro!: infsum_nonneg_complex trace_tc_pos kraus_family_map'_pos \<rho>_pos)
-  from 23 show \<open>(\<lambda>c. trace_tc (\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d))) summable_on UNIV\<close>
-    apply (rewrite at \<open>trace_tc _\<close> of_real_Re[symmetric])
-    by (auto intro!: nonnegative_complex_is_real summable_on_bounded_linear[where h=of_real]
-        bounded_linear_of_real trace_tc_pos  infsum_nonneg_traceclass kraus_family_map'_pos \<rho>_pos)
+  from 23 \<rho>_pos show \<open>(\<lambda>c. \<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d)) abs_summable_on UNIV\<close>
+    by (simp add: infsum_nonneg_traceclass kraus_family_map'_pos norm_tc_pos_Re)
   have 26: \<open>(\<Sum>\<^sub>\<infinity>c. Re (trace_tc (\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (\<EE> d) (\<rho> d)))) \<le> 1\<close>
     apply (subst infsum_bounded_linear[OF 16, symmetric, unfolded o_def])
     using 19 34 by auto
@@ -454,7 +450,7 @@ proof (transfer, intro ext)
   fix s :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close>
     and t :: \<open>'cl2 \<Rightarrow> ('qu2 ell2, 'qu3 ell2, 'cl3) kraus_family\<close>
     and \<rho> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu1 ell2) trace_class\<close> and c :: 'cl3
-  assume assms: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
+  assume assms: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
   assume \<open>cq_map_rel s s\<close>
   assume \<open>cq_map_rel t t\<close>
   then have bdd_t: \<open>bdd_above (range (kraus_family_norm \<circ> t))\<close>

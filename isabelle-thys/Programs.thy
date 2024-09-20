@@ -11,20 +11,7 @@ lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Righta
 
 lift_definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr" is
   \<open>\<lambda>\<rho> c. norm (\<rho> c)\<close>
-proof -
-  fix \<rho> :: \<open>'cl \<Rightarrow> ('qu ell2, 'qu ell2) trace_class\<close>
-  assume asm: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
-  have \<open>(\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV\<close>
-    by (metis asm)
-  then have Re_sum: \<open>(\<lambda>c. Re (trace_tc (\<rho> c))) summable_on UNIV\<close>
-    using summable_on_Re by blast
-  then have abs_sum: \<open>(\<lambda>c. \<rho> c) abs_summable_on UNIV\<close>
-    by (meson asm norm_tc_pos_Re summable_on_cong)
-  have \<open>(\<Sum>\<^sub>\<infinity>c. norm (\<rho> c)) \<le> 1\<close>
-    by (metis asm cq_norm_raw_def)
-  with abs_sum show \<open>is_distribution (\<lambda>c. norm (\<rho> c))\<close>
-    by (simp add: is_distribution_def)
-qed
+  by (simp add: is_distribution_def cq_norm_raw_def)
 
 
 datatype raw_program =
@@ -853,6 +840,18 @@ lemma kraus_family_map'_map_outcome[simp]:
   \<open>kraus_family_map' X (kraus_family_map_outcome f E) \<rho> = kraus_family_map' (f -` X) E \<rho>\<close>
   by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome)
 
+lemma kraus_family_map'_map_outcome_inj[simp]:
+  (* assumes \<open>inj_on f (Set.filter (\<lambda>x. f x \<in> X) (kraus_map_domain E)) \<close> *)
+  assumes \<open>inj_on f ((f -` X) \<inter> kraus_map_domain E)\<close>
+  shows  \<open>kraus_family_map' X (kraus_family_map_outcome_inj f E) \<rho> = kraus_family_map' (f -` X) E \<rho>\<close>
+proof -
+  from assms
+  have \<open>inj_on f (Set.filter (\<lambda>x. f x \<in> X) (kraus_map_domain E))\<close>
+    by (smt (verit, del_insts) IntI Set.member_filter inj_onD inj_onI vimage_eq)
+  then show ?thesis
+    by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome_inj)
+qed
+
 lemma kraus_family_map'_empty[simp]:
   \<open>kraus_family_map' {} E = 0\<close>
   by (simp add: kraus_family_map'_def)
@@ -864,7 +863,7 @@ lemma Rep_cq_map_apply_quantum_op:
   shows \<open>Rep_cq_operator (cq_map_apply (cq_map_quantum_op E) \<rho>) c = kraus_family_map (E c) (Rep_cq_operator \<rho> c)\<close>
 proof (transfer fixing: E c)
   fix \<rho> :: \<open>'c \<Rightarrow> ('q ell2, 'q ell2) trace_class\<close>
-  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
+  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
   have \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome (\<lambda>_. d) (if kraus_family_norm (E d) \<le> 1 then E d else 0)) (\<rho> d))
       = (\<Sum>\<^sub>\<infinity>d. kraus_family_map' (if d = c then UNIV else {}) (if kraus_family_norm (E d) \<le> 1 then E d else 0) (\<rho> d))\<close>
     by (simp add: kraus_family_map'_map_outcome)
@@ -898,24 +897,8 @@ lemma Rep_cq_map_apply_partial_trace: \<open>Rep_cq_operator (cq_map_apply cq_ma
   apply (subst infsum_single[of c])
   by auto
 
-lemma \<open>Rep_cq_operator (cq_map_apply (cq_map_tensor_id_right E) \<rho>) c
-  = xxx (Rep_cq_operator (cq_map_apply E xxxx))\<close>
-  apply (transfer' fixing: c)
-  apply (subst infsum_single)
-
-  apply (subst infsum_single[of c])
-  apply (auto intro!: simp: )
-
-
-
-
-lemma cq_map_partial_trace_tensor_id_right:
-  fixes E :: \<open>('c1,'q1,'c2,'q2) cq_map\<close> and \<rho> :: \<open>('c1,'q1\<times>'r) cq_operator\<close>
-  shows \<open>cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) \<rho>)
-        = cq_map_apply E (cq_map_apply cq_map_partial_trace \<rho>)\<close>
-  apply (rule cq_operator_eqI)
-apply (simp add: Rep_cq_map_apply_partial_trace)
-  by x
+lemma cq_norm_raw_pos[iff]: \<open>cq_norm_raw \<rho> \<ge> 0\<close>
+  by (auto intro!: infsum_nonneg simp: cq_norm_raw_def)
 
 instantiation cq_operator :: (type,type) norm begin
 lift_definition norm_cq_operator :: \<open>('a, 'b) cq_operator \<Rightarrow> real\<close> is cq_norm_raw.
@@ -924,6 +907,249 @@ end
 
 setup \<open>Sign.add_const_constraint
   (\<^const_name>\<open>norm\<close>, SOME \<^typ>\<open>'a::norm \<Rightarrow> real\<close>)\<close>
+
+
+lift_definition cq_tensor :: \<open>('c1,'q1) cq_operator \<Rightarrow> ('c2,'q2) cq_operator \<Rightarrow> ('c1\<times>'c2, 'q1\<times>'q2) cq_operator\<close> is
+  \<open>\<lambda>\<rho>1 \<rho>2 (c1,c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)\<close>
+proof (intro conjI allI)
+  fix \<rho>1 :: \<open>'c1 \<Rightarrow> ('q1 ell2, 'q1 ell2) trace_class\<close> and \<rho>2 :: \<open>'c2 \<Rightarrow> ('q2 ell2, 'q2 ell2) trace_class\<close> and c :: \<open>'c1\<times>'c2\<close>
+  assume asm1: \<open>(\<forall>c. 0 \<le> \<rho>1 c) \<and> \<rho>1 abs_summable_on UNIV \<and> cq_norm_raw \<rho>1 \<le> 1\<close>
+  assume asm2: \<open>(\<forall>c. 0 \<le> \<rho>2 c) \<and> \<rho>2 abs_summable_on UNIV \<and> cq_norm_raw \<rho>2 \<le> 1\<close>
+  from asm1 asm2 show \<open>0 \<le> (case c of (c1, c2) \<Rightarrow> tc_tensor (\<rho>1 c1) (\<rho>2 c2))\<close>
+    apply (cases c)
+    by (simp add: tc_tensor_pos)
+  from asm1 have sum1: \<open>(\<lambda>x. norm (\<rho>1 x)) abs_summable_on UNIV\<close>
+    by simp
+  from asm2 have sum2: \<open>(\<lambda>x. norm (\<rho>2 x)) abs_summable_on UNIV\<close>
+    by simp
+  show \<open>(\<lambda>(c1, c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)) abs_summable_on UNIV\<close>
+  proof -
+    from abs_summable_times[OF sum1 sum2]
+    show ?thesis
+      by (simp add: norm_tc_tensor case_prod_beta)
+  qed
+  show \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)) \<le> 1\<close>
+  proof -
+    have \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)) = (\<Sum>\<^sub>\<infinity>(c1,c2). norm (\<rho>1 c1) * norm (\<rho>2 c2))\<close>
+      by (simp add: cq_norm_raw_def norm_tc_tensor case_prod_unfold)
+    also
+    from abs_summable_times[OF sum1 sum2]
+    have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>c1. norm (\<rho>1 c1)) * (\<Sum>\<^sub>\<infinity>c2. norm (\<rho>2 c2))\<close>
+      apply (subst infsum_product)
+      by (auto intro!: simp: case_prod_unfold)
+    also have \<open>\<dots> = cq_norm_raw \<rho>1 * cq_norm_raw \<rho>2\<close>
+      by (metis cq_norm_raw_def)
+    also have \<open>\<dots> \<le> 1\<close>
+      apply (rule mult_le_one)
+      using asm1 asm2 by auto
+    finally show ?thesis
+      by -
+  qed
+qed
+
+lemma norm_cq_tensor: \<open>norm (cq_tensor \<rho> \<sigma>) = norm \<rho> * norm \<sigma>\<close>
+proof transfer
+  fix \<rho> :: \<open>'e \<Rightarrow> ('g ell2, 'g ell2) trace_class\<close> and \<sigma> :: \<open>'b \<Rightarrow> ('d ell2, 'd ell2) trace_class\<close>
+  assume asm1: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
+  assume asm2: \<open>(\<forall>c. 0 \<le> \<sigma> c) \<and> \<sigma> abs_summable_on UNIV \<and> cq_norm_raw \<sigma> \<le> 1\<close>
+  from asm1 have sum1: \<open>(\<lambda>x. norm (\<rho> x)) abs_summable_on UNIV\<close>
+    by simp
+  from asm2 have sum2: \<open>(\<lambda>x. norm (\<sigma> x)) abs_summable_on UNIV\<close>
+    by simp
+  have \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho> c1) (\<sigma> c2)) = (\<Sum>\<^sub>\<infinity>(c1,c2). norm (\<rho> c1) * norm (\<sigma> c2))\<close>
+    by (simp add: cq_norm_raw_def norm_tc_tensor case_prod_unfold)
+  also
+  from abs_summable_times[OF sum1 sum2]
+  have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>c1. norm (\<rho> c1)) * (\<Sum>\<^sub>\<infinity>c2. norm (\<sigma> c2))\<close>
+    apply (subst infsum_product)
+    by (auto intro!: simp: case_prod_unfold)
+  also have \<open>\<dots> = cq_norm_raw \<rho> * cq_norm_raw \<sigma>\<close>
+    by (metis cq_norm_raw_def)
+  finally show \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho> c1) (\<sigma> c2)) = cq_norm_raw \<rho> * cq_norm_raw \<sigma>\<close>
+    by -
+qed
+
+
+definition \<open>cq_tensor_left \<rho> \<sigma> = cq_map_apply (cq_map_classical fst) (cq_tensor \<rho> (fixed_cl_cq_operator () \<sigma>))\<close>
+definition \<open>cq_tensor_right \<rho> \<sigma> = cq_map_apply (cq_map_classical snd) (cq_tensor (fixed_cl_cq_operator () \<rho>) \<sigma>)\<close>
+
+lift_definition cq_classical_carrier :: \<open>('c,'q) cq_operator \<Rightarrow> 'c set\<close> is
+  \<open>\<lambda>\<rho>. {c. \<rho> c \<noteq> 0}\<close>.
+
+lemma Rep_cq_map_classical_inj:
+  assumes inj: \<open>inj_on f X\<close>
+  assumes carrier: \<open>cq_classical_carrier \<rho> \<subseteq> X\<close>
+  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_classical f) \<rho>) c
+       = of_bool (c \<in> f ` X) *\<^sub>C Rep_cq_operator \<rho> (inv_into X f c)\<close>
+proof (insert carrier, transfer' fixing: c f X)
+  fix \<rho> :: \<open>'a \<Rightarrow> ('c ell2, 'c ell2) trace_class\<close>
+  define c' where \<open>c' = inv_into X f c\<close>
+  assume carrier: \<open>{c. \<rho> c \<noteq> 0} \<subseteq> X\<close>
+  then have 1: \<open>\<rho> j = 0\<close> if \<open>c = f j\<close> and \<open>j \<noteq> c'\<close> for j
+    apply (transfer' fixing: j f X)
+    using that inj by (auto simp: c'_def)
+  have \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome_inj (\<lambda>_. f d) kraus_family_id) (\<rho> d))
+      = (\<Sum>\<^sub>\<infinity>d. kraus_family_map' ((\<lambda>_::unit. f d) -` {c}) kraus_family_id (\<rho> d))\<close>
+    by (simp add: kraus_family_map'_map_outcome_inj inj_on_def)
+  also have \<open>\<dots> = kraus_family_map' ((\<lambda>_. f c') -` {c}) kraus_family_id (\<rho> c')\<close>
+    apply (subst infsum_single[where i=\<open>inv_into X f c\<close>])
+    using 1 by (simp_all add: c'_def)
+  also from carrier inj have \<open>\<dots> = of_bool (c \<in> f ` X) *\<^sub>C \<rho> c'\<close>
+    by (force simp: c'_def)
+  finally show \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome_inj (\<lambda>_. f d) kraus_family_id) (\<rho> d)) = \<dots>\<close>
+    by -
+qed
+
+
+lemma Rep_cq_tensor[simp]:
+  \<open>Rep_cq_operator (cq_tensor \<rho> \<sigma>) (c,d) = tc_tensor (Rep_cq_operator \<rho> c) (Rep_cq_operator \<sigma> d)\<close>
+  apply (transfer' fixing: c d)
+  by auto
+
+lemma Rep_fixed_cl_cq_operator[simp]:
+  shows \<open>Rep_cq_operator (fixed_cl_cq_operator c \<rho>) d = of_bool (\<rho> \<ge> 0 \<and> trace_tc \<rho> \<le> 1 \<and> c=d) *\<^sub>C \<rho>\<close>
+  apply (transfer' fixing: c d \<rho>)
+  by auto
+
+
+
+lemma Rep_cq_tensor_left[simp]:
+  assumes \<open>\<sigma> \<ge> 0\<close> and \<open>trace_tc \<sigma> \<le> 1\<close>
+  shows \<open>Rep_cq_operator (cq_tensor_left \<rho> \<sigma>) c = tc_tensor (Rep_cq_operator \<rho> c) \<sigma>\<close>
+proof -
+  have [simp]: \<open>inv fst c = (c,())\<close>
+    by (metis range_fst split_pairs surj_f_inv_f unit.exhaust)
+  show ?thesis
+    unfolding cq_tensor_left_def
+    apply (subst Rep_cq_map_classical_inj[where X=UNIV])
+    using assms
+    by (auto simp: inj_def)
+qed
+
+lemma cq_apply_map_tensor_id_right:
+  fixes \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
+    and E :: \<open>('c, 'a, 'd, 'e) cq_map\<close>
+  assumes \<open>\<rho> \<ge> 0\<close> and \<open>trace_tc \<rho> \<le> 1\<close>
+  assumes \<open>\<sigma> \<ge> 0\<close> and \<open>trace_tc \<sigma> \<le> 1\<close>
+  shows \<open>cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))
+        = cq_tensor_left (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) \<sigma>\<close>
+proof (rule cq_operator_eqI)
+  fix d :: 'd
+  have [simp]: \<open>0 \<le> tc_tensor \<rho> \<sigma>\<close>
+    using assms tc_tensor_pos by blast
+  then have [simp]: \<open>trace_tc (tc_tensor \<rho> \<sigma>) \<le> 1\<close>
+    using assms
+    by (metis complex_of_real_mono_iff less_eq_complex_def mult_le_one norm_tc_pos norm_tc_pos_Re norm_tc_tensor of_real_hom.hom_zero one_complex.sel(1) trace_tc_pos)
+  obtain E' where [transfer_rule]: \<open>cr_cq_map E' E\<close>
+    using cq_map.right_total
+    by (auto simp: right_total_def)
+  have \<open>Rep_cq_operator (cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))) d
+    = (\<Sum>\<^sub>\<infinity>e. kraus_family_map' (fst -` {d}) (kraus_family_tensor (E' e) kraus_family_id) (of_bool (c = e) *\<^sub>R tc_tensor \<rho> \<sigma>))\<close>
+    apply (transfer' fixing: c d \<sigma> \<rho>)
+    by simp
+  also have \<open>\<dots> = kraus_family_map' (fst -` {d}) (kraus_family_tensor (E' c) kraus_family_id) (tc_tensor \<rho> \<sigma>)\<close>
+    apply (subst infsum_single[where i=c])
+    by simp_all
+  also have \<open>\<dots> = kraus_family_map (kraus_family_tensor (kraus_family_filter (\<lambda>x. x=d) (E' c)) (kraus_family_filter (\<lambda>_. True) kraus_family_id)) (tc_tensor \<rho> \<sigma>)\<close>
+    apply (subst kraus_family_filter_tensor[symmetric])
+    by (simp add: kraus_family_map'_def case_prod_unfold)
+  also have \<open>\<dots> = tc_tensor (kraus_family_map (kraus_family_filter (\<lambda>x. x = d) (E' c)) \<rho>) \<sigma>\<close>
+    by (simp add: kraus_family_map_tensor)
+  also have \<open>\<dots> = tc_tensor (kraus_family_map' {d} (E' c) \<rho>) \<sigma>\<close>
+    by (simp add: kraus_family_map'_def)
+  also have \<open>\<dots> = tc_tensor (\<Sum>\<^sub>\<infinity>da. kraus_family_map' {d} (E' da) (of_bool (c = da) *\<^sub>R \<rho>)) \<sigma>\<close>
+    apply (subst infsum_single[where i=c])
+    by auto
+  also have \<open>\<dots> = tc_tensor (Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d) \<sigma>\<close>
+    apply (transfer' fixing: \<rho> \<sigma> c d)
+    by (simp add: assms)
+  also have \<open>\<dots> = Rep_cq_operator (cq_tensor_left (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) \<sigma>) d\<close>
+    apply (subst Rep_cq_tensor_left)
+    by (simp_all add: assms)
+  finally show \<open>Rep_cq_operator (cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))) d = \<dots>\<close>
+    by -
+qed
+
+lemma Rep_apply_fixed_cl_cq_operator:
+  assumes \<open>cr_cq_map E' E\<close>
+  shows \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d = kraus_family_map' {d} (E' c) \<rho>\<close>
+  by x
+
+lemma kraus_equivalent_from_separatingI:
+  fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
+  assumes \<open>separating_set (bounded_clinear :: (('q,'q) trace_class \<Rightarrow> ('r,'r) trace_class) \<Rightarrow> bool) S\<close>
+  assumes \<open>\<And>\<rho>. \<rho> \<in> S \<Longrightarrow> kraus_family_map E \<rho> = kraus_family_map F \<rho>\<close>
+  shows \<open>kraus_equivalent E F\<close>
+proof -
+  have \<open>kraus_family_map E = kraus_family_map F\<close>
+    by (metis assms(1) assms(2) kraus_family_map_bounded_clinear separating_set_def)
+  then show ?thesis
+    by (simp add: kraus_equivalentI)
+qed
+
+lemma kraus_equivalent'_from_separatingI:
+  fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
+  assumes \<open>separating_set (bounded_clinear :: (('q,'q) trace_class \<Rightarrow> ('r,'r) trace_class) \<Rightarrow> bool) S\<close>
+  assumes \<open>\<And>x \<rho>. \<rho> \<in> S \<Longrightarrow> kraus_family_map' {x} E \<rho> = kraus_family_map' {x} F \<rho>\<close>
+  shows \<open>kraus_equivalent' E F\<close>
+proof -
+  have \<open>kraus_family_map' {x} E = kraus_family_map' {x} F\<close> for x
+    by (metis (mono_tags, lifting) assms(1) assms(2) kraus_family_map'_bounded_clinear separating_set_def)
+  then show ?thesis
+    by (simp add: kraus_equivalent'I)
+qed
+
+lemma cq_map_eq_from_separatingI:
+  fixes E F :: \<open>('c1,'q1,'c2,'q2) cq_map\<close>
+  assumes \<open>separating_set (bounded_clinear :: (('q1 ell2,'q1 ell2) trace_class \<Rightarrow> ('q2 ell2,'q2 ell2) trace_class) \<Rightarrow> bool) S\<close>
+  assumes \<open>\<And>c \<rho>. \<rho> \<in> S \<Longrightarrow> cq_map_apply E (fixed_cl_cq_operator c \<rho>) = cq_map_apply F (fixed_cl_cq_operator c \<rho>)\<close>
+  shows \<open>E = F\<close>
+proof -
+  obtain E' where [transfer_rule]: \<open>cr_cq_map E' E\<close>
+    using cq_map.right_total
+    by (auto simp: right_total_def)
+  obtain F' where [transfer_rule]: \<open>cr_cq_map F' F\<close>
+    using cq_map.right_total
+    by (auto simp: right_total_def)
+  have \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d
+     = Rep_cq_operator (cq_map_apply F (fixed_cl_cq_operator c \<rho>)) d\<close> if \<open>\<rho> \<in> S\<close> for c d \<rho>
+    using assms(2) that by presburger
+  then have \<open>kraus_family_map' {x} (E' c) \<rho> = kraus_family_map' {x} (F' c) \<rho>\<close> if \<open>\<rho> \<in> S\<close> for c x \<rho>
+    by (simp add: Rep_apply_fixed_cl_cq_operator[OF \<open>cr_cq_map E' E\<close>] Rep_apply_fixed_cl_cq_operator[OF \<open>cr_cq_map F' F\<close>] that)
+  with assms(1) have \<open>kraus_equivalent' (E' c) (F' c)\<close> for c
+    by (rule kraus_equivalent'_from_separatingI)
+  then have \<open>kraus_family_map' {d} (E' c) \<rho> = kraus_family_map' {d} (F' c) \<rho>\<close> for c d \<rho>
+    by (simp add: kraus_family_map'_eqI)
+  then have \<open>cq_map_apply E \<rho> = cq_map_apply F \<rho>\<close> for \<rho>
+    apply transfer'
+    by simp
+  then show \<open>E = F\<close>
+    by (rule cq_map_eqI)
+qed
+
+lemma \<open>cq_map_apply cq_map_partial_trace (cq_tensor_left \<rho> \<sigma>) = trace_tc \<sigma> *\<^sub>R \<rho>\<close>
+
+lemma cq_map_partial_trace_tensor_id_right:
+  fixes E :: \<open>('c1,'q1,'c2,'q2) cq_map\<close> and \<rho> :: \<open>('c1,'q1\<times>'r) cq_operator\<close>
+  shows \<open>cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) \<rho>)
+        = cq_map_apply E (cq_map_apply cq_map_partial_trace \<rho>)\<close>
+proof -
+  have *: \<open>cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))) =
+           cq_map_apply E (cq_map_apply cq_map_partial_trace (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>)))\<close>
+    if \<open>\<rho> \<ge> 0\<close> and \<open>trace_tc \<rho> \<le> 1\<close> and \<open>\<sigma> \<ge> 0\<close> and \<open>trace_tc \<sigma> \<le> 1\<close>
+    for c \<rho> and \<sigma> :: \<open>('r ell2,'r ell2) trace_class\<close>
+    apply (rule cq_operator_eqI)
+    apply (simp add: cq_apply_map_tensor_id_right that (* Rep_cq_map_apply_partial_trace *))
+        apply (simp add: that)+
+try0
+sledgehammer [dont_slice]
+by -
+
+    by x
+  then have \<open>cq_map_seq (cq_map_tensor_id_right E :: (_,_\<times>'r,_,_) cq_map) cq_map_partial_trace = cq_map_seq cq_map_partial_trace E\<close>
+    apply (rule_tac cq_map_eq_from_separatingI)
+     apply (rule separating_set_bounded_clinear_tc_tensor)
+    by (auto simp add: cq_map_apply_seq)
 
 (* TODO move *)
 lemma trace_tc_scaleR: \<open>trace_tc (r *\<^sub>R t) = r *\<^sub>R trace_tc t\<close>
@@ -935,16 +1161,20 @@ lift_definition scaleR_cq_operator :: \<open>real \<Rightarrow> ('a, 'b) cq_oper
   \<open>\<lambda>r \<rho> c. if r \<ge> 0 \<and> r * cq_norm_raw \<rho> \<le> 1 then r *\<^sub>R \<rho> c else 0\<close>
 proof (rename_tac r \<rho>, intro conjI allI)
   fix r :: real and \<rho> :: \<open>'a \<Rightarrow> ('b ell2, 'b ell2) trace_class\<close> and c :: 'a
-  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> (\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
-  then have pos: \<open>0 \<le> \<rho> c\<close> and summable: \<open>(\<lambda>c. trace_tc (\<rho> c)) summable_on UNIV\<close>
+  assume \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV \<and> cq_norm_raw \<rho> \<le> 1\<close>
+  then have pos: \<open>0 \<le> \<rho> c\<close> and summable: \<open>\<rho> abs_summable_on UNIV\<close>
     and leq1: \<open>cq_norm_raw \<rho> \<le> 1\<close> for c
     by auto
   show \<open>0 \<le> (if 0 \<le> r \<and> r * cq_norm_raw \<rho> \<le> 1 then r *\<^sub>R \<rho> c else 0)\<close>
     apply (auto intro!: simp: )
     using pos scaleR_nonneg_nonneg by blast
-  show \<open>(\<lambda>c. trace_tc (if 0 \<le> r \<and> r * cq_norm_raw \<rho> \<le> 1 then r *\<^sub>R \<rho> c else 0)) summable_on UNIV\<close>
+  show \<open>(\<lambda>c. if 0 \<le> r \<and> r * cq_norm_raw \<rho> \<le> 1 then r *\<^sub>R \<rho> c else 0) abs_summable_on UNIV\<close>
     apply (cases \<open>0 \<le> r \<and> r * cq_norm_raw \<rho> \<le> 1\<close>)
-    using summable by (auto intro!: simp: trace_tc_scaleR)
+    using summable apply (auto intro!: simp: trace_tc_scaleR)
+try0
+sledgehammer [dont_slice]
+by -
+
   have \<open>(\<Sum>\<^sub>\<infinity>c. trace_tc (r *\<^sub>R \<rho> c)) \<le> 1\<close> if \<open>r * cq_norm_raw \<rho> \<le> 1\<close> and \<open>r \<ge> 0\<close>
   proof -
     have \<open>(\<Sum>\<^sub>\<infinity>c. trace_tc (r *\<^sub>R \<rho> c)) = r *\<^sub>R (\<Sum>\<^sub>\<infinity>c. trace_tc (\<rho> c))\<close>

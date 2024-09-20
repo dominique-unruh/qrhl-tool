@@ -2026,6 +2026,12 @@ proof -
     by blast
 qed
 
+lemma kraus_family_filter_map_outcome_inj:
+  fixes \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'x) kraus_family\<close>
+  shows \<open>kraus_family_filter P (kraus_family_map_outcome_inj f \<EE>) = kraus_family_map_outcome_inj f (kraus_family_filter (\<lambda>x. P (f x)) \<EE>)\<close>
+  apply (transfer' fixing: P f)
+  by (force simp: case_prod_beta image_iff)
+
 
 (* TODO: delete fact later *)
 lemma kraus_family_tensor_raw_bound_aux:
