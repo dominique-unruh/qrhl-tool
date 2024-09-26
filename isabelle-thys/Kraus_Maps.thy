@@ -457,12 +457,12 @@ lemma kraus_equivalent_reflI: \<open>kraus_equivalent x x\<close>
   by (simp add: kraus_equivalent_def)
 
 lemma kraus_equivalentI: 
-  assumes \<open>\<And>\<rho>. kraus_family_map \<EE> \<rho> = kraus_family_map \<FF> \<rho>\<close>
+  assumes \<open>\<And>\<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map \<EE> \<rho> = kraus_family_map \<FF> \<rho>\<close>
   shows \<open>kraus_equivalent \<EE> \<FF>\<close>
   using assms by (auto simp: kraus_equivalent_def)
 
 lemma kraus_equivalent'I: 
-  assumes \<open>\<And>x \<rho>. kraus_family_map' {x} \<EE> \<rho> = kraus_family_map' {x} \<FF> \<rho>\<close>
+  assumes \<open>\<And>x \<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map' {x} \<EE> \<rho> = kraus_family_map' {x} \<FF> \<rho>\<close>
   shows \<open>kraus_equivalent' \<EE> \<FF>\<close>
   using assms by (auto simp: kraus_equivalent'_def)
 
@@ -3850,6 +3850,10 @@ proof (rule CollectI, rename_tac \<EE> A)
   qed
 qed
 
+
+lift_definition has_kraus_map_infsum :: \<open>('a \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'x) kraus_family) \<Rightarrow> 'a set \<Rightarrow> bool\<close> is
+  \<open>\<lambda>\<EE> A. summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>.
+
 (* (* TODO move *)
 instantiation cblinfun_wot :: (complex_normed_vector, complex_inner) uniform_space begin
 lift_definition uniformity_cblinfun_wot :: \<open>(('a, 'b) cblinfun_wot \<times> ('a, 'b) cblinfun_wot) filter\<close> is
@@ -3947,7 +3951,7 @@ qed *)
 
 lemma kraus_family_bound_kraus_map_infsum:
   fixes f :: \<open>'a \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'x) kraus_family\<close>
-  assumes \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (f a)) A\<close>
+  assumes \<open>has_kraus_map_infsum f A\<close>
   shows \<open>kraus_family_bound (kraus_map_infsum f A) = infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (f a)) A\<close>
 proof -
   have pos: \<open>0 \<le> compose_wot (adj_wot a) a\<close> for a :: \<open>('b,'c) cblinfun_wot\<close>
@@ -3957,7 +3961,7 @@ proof -
   proof -
     define b where \<open>b x = kraus_family_bound (f x)\<close> for x
     have \<open>(\<lambda>x. Abs_cblinfun_wot (b x)) summable_on A\<close>
-      using assms 
+      using assms unfolding has_kraus_map_infsum.rep_eq 
       apply (subst (asm) b_def[symmetric])
       apply (transfer' fixing: b A)
       by simp
@@ -3979,7 +3983,7 @@ proof -
     by (simp add: kraus_family_bound_def' Rep_cblinfun_wot_inverse)
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E, x)\<in>(\<lambda>(a, E, xa). (E, a, xa)) ` (SIGMA a:A. Rep_kraus_family (f a)).
        compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
-    using assms by (simp add: kraus_map_infsum.rep_eq)
+    using assms by (simp add: kraus_map_infsum.rep_eq has_kraus_map_infsum.rep_eq)
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(a, E, x)\<in>(SIGMA a:A. Rep_kraus_family (f a)). compose_wot (adj_wot (Abs_cblinfun_wot E)) (Abs_cblinfun_wot E))\<close>
     apply (subst infsum_reindex)
     by (auto intro!: inj_onI simp: o_def case_prod_unfold)
@@ -4196,7 +4200,8 @@ lemma kraus_family_norm_partial_trace[simp]:
   using assms by (simp add: kraus_family_norm_def)
 
 lemma kraus_family_filter_infsum:
-  assumes \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
+  assumes \<open>has_kraus_map_infsum \<EE> A\<close>
+  (* assumes \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close> *)
   shows \<open>kraus_family_filter P (kraus_map_infsum \<EE> A) 
            = kraus_map_infsum (\<lambda>a. kraus_family_filter (\<lambda>x. P (a,x)) (\<EE> a)) {a\<in>A. \<exists>x. P (a,x)}\<close>
     (is \<open>?lhs = ?rhs\<close>)
@@ -4213,7 +4218,7 @@ proof -
       by (auto intro!: \<open>finite F\<close>)
     also have \<open>\<dots> \<le> infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
       apply (rule infsum_mono_neutral_wot)
-      using F_subset by (auto intro!:  \<open>finite F\<close> assms intro: summable_on_in_finite simp:)
+      using F_subset by (auto intro!:  \<open>finite F\<close> assms intro: summable_on_in_finite simp: has_kraus_map_infsum.rep_eq)
     finally show \<open>(\<Sum>a\<in>F. kraus_family_bound (kraus_family_filter (\<lambda>x. P (a, x)) (\<EE> a))) \<le> \<dots>\<close>
       by -
   next
@@ -4221,7 +4226,7 @@ proof -
       by simp
   qed
   have \<open>Rep_kraus_family ?lhs = Rep_kraus_family ?rhs\<close>
-    by (force simp add: kraus_family_filter.rep_eq kraus_map_infsum.rep_eq assms summ)
+    by (force simp add: kraus_family_filter.rep_eq kraus_map_infsum.rep_eq assms summ has_kraus_map_infsum.rep_eq)
   then show \<open>?lhs = ?rhs\<close>
     by (simp add: Rep_kraus_family_inject)
 qed
@@ -4234,7 +4239,7 @@ lemma kraus_map_infsum_singleton[simp]: \<open>kraus_map_infsum \<EE> {a} = krau
   by (force simp add: kraus_map_infsum.rep_eq summable_on_in_finite kraus_family_map_outcome_inj.rep_eq)
 
 lemma kraus_map_infsum_invalid: 
-  assumes \<open>\<not> summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
+  assumes \<open>\<not> has_kraus_map_infsum \<EE> A\<close>
   shows \<open>kraus_map_infsum \<EE> A = 0\<close>
   using assms
   apply transfer'
@@ -4276,5 +4281,11 @@ next
     by (simp add: kraus_map_infsum_invalid False False')
 qed
 
+lemma kraus_family_map'_map_outcome[simp]:
+  \<open>kraus_family_map' X (kraus_family_map_outcome f E) \<rho> = kraus_family_map' (f -` X) E \<rho>\<close>
+  by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome)
+
+lemma kraus_family_map'_empty[simp]: \<open>kraus_family_map' {} E \<rho> = 0\<close>
+  by (simp add: kraus_family_map'_def)
 
 end
