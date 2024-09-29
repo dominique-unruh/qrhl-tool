@@ -1,6 +1,542 @@
 theory CQ_Operators
-  imports Kraus_Maps Registers2.Missing_Bounded_Operators
+  imports Kraus_Maps Registers2.Missing_Bounded_Operators Registers2.Quantum_Registers
 begin
+
+
+lemma apply_qregister_trace_class_transfer:
+  assumes \<open>\<rho> \<noteq> 0\<close>
+  assumes \<open>trace_class (apply_qregister Q \<rho>)\<close>
+  assumes \<open>trace_class \<sigma>\<close>
+  shows \<open>trace_class (apply_qregister Q \<sigma>)\<close>
+proof -
+  wlog \<open>qregister Q\<close>
+    using negation by (simp add: non_qregister)
+  from qregister_decomposition[OF this]
+  have \<open>let 'c::type = qregister_decomposition_basis Q in
+        trace_class (apply_qregister Q \<sigma>)\<close>
+  proof with_type_mp
+    with_type_case
+    from with_type_mp.premise
+    obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+      where \<open>unitary U\<close> and QU: \<open>Q = qregister_chain (transform_qregister U) qFst\<close>
+      by auto
+    let ?idc = \<open>id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close>
+    have \<open>trace_class ?idc\<close>
+    proof -
+      from assms 
+      have \<open>trace_class (sandwich U (\<rho> \<otimes>\<^sub>o ?idc))\<close>
+        by (simp add: QU \<open>unitary U\<close> apply_qregister_fst transform_qregister.rep_eq)
+      then have \<open>trace_class (sandwich (U*) (sandwich U (\<rho> \<otimes>\<^sub>o ?idc)))\<close>
+        using trace_class_sandwich by blast
+      then have \<open>trace_class (\<rho> \<otimes>\<^sub>o ?idc)\<close>
+        by (simp add: unitaryD1 \<open>unitary U\<close> flip: cblinfun_apply_cblinfun_compose sandwich_compose)
+      then show \<open>trace_class ?idc\<close>
+        by (simp add: assms(1) trace_class_tensor_iff)
+    qed
+    then show \<open>trace_class (apply_qregister Q \<sigma>)\<close>
+      by (auto intro!: trace_class_sandwich trace_class_tensor assms simp add: QU apply_qregister_fst transform_qregister.rep_eq \<open>unitary U\<close>)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+definition qregister_co_dim :: \<open>('a,'b) qregister \<Rightarrow> real\<close> where
+  \<open>qregister_co_dim Q = trace_norm (apply_qregister Q (selfbutter (ket undefined)))\<close>
+
+
+
+
+(* definition trace_class_qregister :: \<open>('a,'b) qregister \<Rightarrow> bool\<close> where
+  \<open>trace_class_qregister Q = trace_class (apply_qregister Q (selfbutter (ket undefined)))\<close> *)
+
+lift_definition apply_qregister_tc :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> ('b ell2, 'b ell2) trace_class\<close> is
+  \<open>\<lambda>Q. if qregister_co_dim Q \<noteq> 0 then apply_qregister Q else 0\<close>
+proof (erule CollectE, rule CollectI, rename_tac Q t)
+  fix Q :: \<open>('a, 'b) qregister\<close> and t :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+  assume \<open>trace_class t\<close>
+  have \<open>trace_class (apply_qregister Q t)\<close> if \<open>qregister_co_dim Q \<noteq> 0\<close>
+  proof -
+    from that have norm: \<open>trace_norm (apply_qregister Q (selfbutter (ket undefined))) \<noteq> 0\<close>
+      by (simp add: qregister_co_dim_def)
+    then have \<open>trace_class (apply_qregister Q (selfbutter (ket undefined)))\<close>
+      apply (rule_tac ccontr)
+      by (simp_all add: trace_norm_def)
+    then show \<open>trace_class (apply_qregister Q t)\<close>
+      apply (rule apply_qregister_trace_class_transfer[rotated])
+      using norm \<open>trace_class t\<close> by auto
+  qed
+  then show \<open>trace_class ((if qregister_co_dim Q \<noteq> 0 then apply_qregister Q else 0) t)\<close>
+    by simp
+qed
+
+(* TODO move *)
+lemma iso_qregister_decomposition:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>\<exists>U. unitary U \<and> apply_qregister X = sandwich U\<close>
+proof -
+  have \<open>iso_register (apply_qregister X)\<close>
+    using assms
+    unfolding iso_qregister_def iso_register_def
+    apply (transfer' fixing: )
+    by auto
+  from iso_register_decomposition[OF this]
+  show ?thesis
+    apply transfer' by auto
+qed
+
+lemma trace_norm_sandwich_isometry: \<open>trace_norm (sandwich e t) = trace_norm t\<close> if \<open>isometry e\<close>
+proof -
+  have \<open>trace_norm (sandwich e t) = cmod (trace (abs_op (sandwich e t)))\<close>
+    by simp
+  also have \<open>\<dots> = cmod (trace (sandwich e (abs_op t)))\<close>
+    by (metis (no_types, lifting) abs_op_def abs_op_id_on_pos abs_op_pos abs_op_square sandwich_apply_adj sandwich_arg_compose sandwich_pos that)
+  also have \<open>\<dots> = cmod (trace (abs_op t))\<close>
+    by (simp add: that)
+  also have \<open>\<dots> = trace_norm t\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+
+lemma iso_qregister_co_dim: 
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>qregister_co_dim X = 1\<close>
+proof -
+  from iso_qregister_decomposition[OF assms(1)]
+  obtain U where \<open>unitary U\<close> and \<open>apply_qregister X = sandwich U\<close>
+    by auto
+  with assms show ?thesis
+    by (simp add: trace_class_sandwich qregister_co_dim_def trace_butterfly trace_norm_sandwich_isometry trace_norm_butterfly)
+qed
+
+lemma apply_qregister_tc_codim0: \<open>qregister_co_dim Q = 0 \<Longrightarrow> apply_qregister_tc Q t = 0\<close>
+  by (metis (mono_tags, lifting) apply_qregister_tc.rep_eq from_trace_class_inverse func_zero zero_trace_class_def)
+
+
+(* TODO move *)
+lemma apply_qregister_trace_class:
+  assumes \<open>qregister_co_dim X \<noteq> 0\<close>
+  assumes \<open>trace_class t\<close>
+  shows \<open>trace_class (apply_qregister X t)\<close>
+proof -
+  from assms have norm: \<open>trace_norm (apply_qregister X (selfbutter (ket undefined))) \<noteq> 0\<close>
+    by (simp add: qregister_co_dim_def)
+  then have \<open>trace_class (apply_qregister X (selfbutter (ket undefined)))\<close>
+    apply (rule_tac ccontr)
+    by (simp_all add: trace_norm_def)
+  then show \<open>trace_class (apply_qregister X t)\<close>
+    apply (rule apply_qregister_trace_class_transfer[rotated])
+    using norm \<open>trace_class t\<close> by auto
+qed
+
+
+(* TODO move *)
+lemma apply_iso_qregister_trace_norm:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>trace_norm (apply_qregister X t) = trace_norm t\<close>
+proof -
+  from iso_qregister_decomposition[OF assms(1)]
+  obtain U where \<open>unitary U\<close> and \<open>apply_qregister X = sandwich U\<close>
+    by auto
+  with assms show ?thesis
+    by (metis apply_qregister_abs_op of_real_hom.injectivity trace_abs_op trace_sandwich_isometry unitary_isometry)
+qed
+
+lemma apply_qregister_tc_0[simp]: \<open>apply_qregister_tc Q 0 = 0\<close>
+  apply (transfer' fixing: Q)
+  by auto
+
+
+lift_definition apply_qregister_kraus_map :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2, 'x) kraus_family \<Rightarrow> ('b ell2, 'b ell2, 'x) kraus_family\<close> is
+  \<open>\<lambda>(Q :: ('a,'b) qregister). image (\<lambda>(E,x). (apply_qregister Q E, x))\<close>
+proof (rule CollectI, erule CollectE, rename_tac Q E)
+  fix Q :: \<open>('a,'b) qregister\<close> and E :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2 \<times> 'x) set\<close>
+  assume \<open>kraus_family E\<close>
+  show \<open>kraus_family ((\<lambda>(E, y). (apply_qregister Q E, y)) ` E)\<close>
+  proof -
+    wlog [simp]: \<open>qregister Q\<close> goal \<open>kraus_family ((\<lambda>(E, y). (apply_qregister Q E, y)) ` E)\<close>
+      using negation
+      by (auto intro!: kraus_familyI_0 simp: non_qregister)
+    from \<open>kraus_family E\<close> obtain B where B: \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> B\<close> if \<open>finite F\<close> and \<open>F \<subseteq> E\<close> for F
+      by (auto simp: kraus_family_def bdd_above_def)
+    have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> apply_qregister Q B\<close>
+      if \<open>finite F\<close> and \<open>F \<subseteq> (\<lambda>(E, y). (apply_qregister Q E, y)) ` E\<close> for F
+    proof -
+      from that
+      obtain G where FG: \<open>F = (\<lambda>(E, y). (apply_qregister Q E, y)) ` G\<close> and \<open>finite G\<close> and \<open>G \<subseteq> E\<close>
+        by (meson finite_subset_image)
+      have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) = (\<Sum>(E, x)\<in>(\<lambda>(E, y). (apply_qregister Q E, y)) ` G. E* o\<^sub>C\<^sub>L E)\<close>
+        using FG by force
+      also have \<open>\<dots> = (\<Sum>(E, x)\<in>G. apply_qregister Q (E* o\<^sub>C\<^sub>L E))\<close>
+        apply (subst sum.reindex)
+        by (auto intro!: inj_onI simp: case_prod_unfold qregister_compose apply_qregister_adj apply_qregister_inject')
+      also have \<open>\<dots> = apply_qregister Q (\<Sum>(E, x)\<in>G. E* o\<^sub>C\<^sub>L E)\<close>
+        apply (subst complex_vector.linear_sum[where f=\<open>apply_qregister Q\<close>]) 
+        by (simp_all add: case_prod_beta)
+      also have \<open>\<dots> \<le> apply_qregister Q B\<close>
+        using \<open>qregister Q\<close> apply (rule apply_qregister_mono[THEN iffD2])
+        using \<open>finite G\<close> and \<open>G \<subseteq> E\<close> by (rule B)
+      finally show ?thesis
+        by -
+    qed
+    then show ?thesis
+      by (auto intro!: bdd_aboveI simp: kraus_family_def)
+  qed
+qed
+
+(* TODO move *)
+lemma qregister_inv_non_qregister[simp]: \<open>qregister_inv non_qregister = non_qregister\<close>
+  apply transfer
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  using iso_register_is_register by auto
+
+lemma qregister_inv_non_iso_qregister: 
+  assumes \<open>\<not> iso_qregister Q\<close>
+  shows \<open>qregister_inv Q = non_qregister\<close>
+  using assms
+  apply transfer'
+  by simp
+
+definition classical_on :: \<open>('c,'a) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> bool\<close> where
+  \<open>classical_on C \<rho> \<longleftrightarrow> \<rho> = kraus_family_map (apply_qregister_kraus_map C (complete_measurement (range ket))) \<rho>\<close>
+
+lift_definition cq_operator_at :: \<open>('c,'a) qregister \<Rightarrow> ('q,'a) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> 'c \<Rightarrow> ('q ell2, 'q ell2) trace_class\<close> is
+  \<open>\<lambda>C Q \<rho> c. sandwich (tensor_ell2_left (ket c)*) (apply_qregister (qregister_inv (qregister_pair C Q)) \<rho>)\<close>
+proof (rule CollectI, erule CollectE, rename_tac C Q \<rho> c)
+  fix C :: \<open>('c, 'a) qregister\<close> and Q :: \<open>('q, 'a) qregister\<close> and \<rho> :: \<open> 'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close> and c :: 'c
+  assume [iff]: \<open>trace_class \<rho>\<close>
+  show \<open>trace_class (sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister (qregister_inv (qregister_pair C Q)) \<rho>)\<close>
+  proof -
+    wlog \<open>iso_qregister (qregister_pair C Q)\<close>
+      using negation
+      by (simp add: qregister_inv_non_iso_qregister)
+    then have \<open>qregister_co_dim (qregister_inv (qregister_pair C Q)) = 1\<close>
+      by (simp add: iso_qregister_co_dim iso_qregister_inv_iso)
+    then have \<open>trace_class (apply_qregister (qregister_inv (qregister_pair C Q)) \<rho>)\<close>
+      by (auto intro!: apply_qregister_trace_class iso_qregister_inv_iso)
+    then show \<open>trace_class (sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister (qregister_inv (qregister_pair C Q)) \<rho>)\<close>
+      by (rule trace_class_sandwich)
+  qed
+qed
+
+lemma cq_operator_at_non_partition:
+  assumes \<open>\<not> iso_qregister (qregister_pair C Q)\<close>
+  shows \<open>cq_operator_at C Q \<rho> c = 0\<close>
+  apply (transfer fixing: C Q)
+  using assms
+  by (simp add: qregister_inv_non_iso_qregister)
+
+
+definition cq_operator_reconstruct :: \<open>('c,'a) qregister \<Rightarrow> ('q,'a) qregister \<Rightarrow> ('c \<Rightarrow> ('q ell2, 'q ell2) trace_class) \<Rightarrow> ('a ell2, 'a ell2) trace_class\<close> where
+  \<open>cq_operator_reconstruct C Q \<rho> = (\<Sum>\<^sub>\<infinity>c. Abs_trace_class (apply_qregister (qregister_pair C Q) (selfbutter (ket c) \<otimes>\<^sub>o from_trace_class (\<rho> c))))\<close>
+
+lemma tensor_ell2_right_o_swap[simp]: \<open>(tensor_ell2_right \<psi>)* o\<^sub>C\<^sub>L swap_ell2 = (tensor_ell2_left \<psi>)*\<close>
+  apply (rule tensor_ell2_extensionality)
+  by simp
+
+lemma cq_operator_at_summable:
+  fixes C :: \<open>('c, 'a) qregister\<close> and Q :: \<open>('q, 'a) qregister\<close> and \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and c :: 'c
+  shows \<open>cq_operator_at C Q \<rho> abs_summable_on UNIV\<close>
+proof (transfer fixing: C Q, erule CollectE)
+  fix \<rho> :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+  define CQi \<rho>' where \<open>CQi = qregister_inv (qregister_pair C Q)\<close> and \<open>\<rho>' = Abs_trace_class (apply_qregister CQi \<rho>)\<close>
+  assume \<open>trace_class \<rho>\<close>
+  show \<open>(\<lambda>x. trace_norm (sandwich (tensor_ell2_left (ket x)*) *\<^sub>V apply_qregister CQi \<rho>)) summable_on UNIV\<close>
+  proof -
+    wlog \<open>iso_qregister (qregister_pair C Q)\<close>
+      by (simp add: negation qregister_inv_non_iso_qregister CQi_def)
+    then have dim: \<open>qregister_co_dim CQi = 1\<close>
+      by (simp add: CQi_def iso_qregister_co_dim iso_qregister_inv_iso)
+    with \<open>trace_class \<rho>\<close> 
+    have CQi\<rho>: \<open>apply_qregister CQi \<rho> = from_trace_class \<rho>'\<close>
+      by (simp add: \<rho>'_def Abs_trace_class_inverse apply_qregister_trace_class)
+    then have rewrite_norm: \<open>trace_norm (sandwich (tensor_ell2_left (ket x)*) (from_trace_class \<rho>'))
+      = norm (sandwich_tc (tensor_ell2_left (ket x)*) \<rho>')\<close> for x
+      by (simp add: from_trace_class_sandwich_tc norm_trace_class.rep_eq)
+    from partial_trace_abs_summable'[of \<open>sandwich_tc swap_ell2 \<rho>'\<close>]
+    have \<open>(\<lambda>x. sandwich_tc (tensor_ell2_left (ket x)*) \<rho>') abs_summable_on UNIV\<close>
+      by (auto intro!: simp: sandwich_tc_compose[symmetric, unfolded o_def, THEN fun_cong])
+    then show ?thesis
+      by (simp add: CQi\<rho> rewrite_norm)
+  qed
+qed
+
+
+(* TODO move *)
+(* TODO same for _right *)
+lemma norm_tensor_ell2_left[simp]: \<open>norm (tensor_ell2_left \<psi>) = norm \<psi>\<close>
+proof (rule norm_cblinfun_eqI)
+  fix \<phi>
+  show \<open>0 \<le> norm \<psi>\<close>
+    by simp
+  show \<open>norm \<psi> \<le> norm (tensor_ell2_left \<psi> *\<^sub>V ket undefined) / norm (ket undefined)\<close>
+    by (simp add: norm_tensor_ell2)
+  show \<open>norm (tensor_ell2_left \<psi> *\<^sub>V \<phi>) \<le> norm \<psi> * norm \<phi>\<close>
+    by (simp add: norm_tensor_ell2)
+qed
+
+lemma cq_operator_at_bounded_clinear[bounded_clinear]:
+  \<open>bounded_clinear (\<lambda>\<rho>. cq_operator_at C Q \<rho> c)\<close>
+proof -
+  wlog iso: \<open>iso_qregister (qregister_pair C Q)\<close>
+    using cq_operator_at_non_partition[OF negation]
+    by simp
+  then have dim: \<open>qregister_co_dim (qregister_inv (qregister_pair C Q)) = 1\<close>
+    using iso_qregister_co_dim iso_qregister_inv_iso by blast
+
+  have 1: \<open>cq_operator_at C Q (x + y) c = cq_operator_at C Q x c + cq_operator_at C Q y c\<close> for x y
+    apply (transfer' fixing: C Q c)
+    by (simp add: apply_qregister_plus cblinfun.add_right)
+  have 2: \<open>cq_operator_at C Q (r *\<^sub>C x) c = r *\<^sub>C cq_operator_at C Q x c\<close> for x r
+    apply (transfer' fixing: C Q c)
+    by (simp add: apply_qregister_scaleC cblinfun.scaleC_right)
+  have 3: \<open>norm (cq_operator_at C Q x c) \<le> norm x * 1\<close> for x
+  proof (transfer fixing: C Q c, erule CollectE)
+    fix x :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+    assume \<open>trace_class x\<close>
+    then have tc: \<open>trace_class (apply_qregister (qregister_inv (qregister_pair C Q)) x)\<close>
+      by (auto intro!: apply_qregister_trace_class iso_qregister_inv_iso simp: dim)
+    have \<open>trace_norm (sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister (qregister_inv (qregister_pair C Q)) x)
+      \<le> trace_norm (apply_qregister (qregister_inv (qregister_pair C Q)) x)\<close>
+      using trace_norm_sandwich[OF tc, of \<open>tensor_ell2_left (ket c)*\<close>]
+      by simp
+    also have \<open>\<dots> = trace_norm x\<close>
+      apply (rule apply_iso_qregister_trace_norm)
+      apply (auto intro!: iso_qregister_inv_iso simp: )
+      using iso by blast
+    also have \<open>\<dots> = trace_norm x * 1\<close>
+      by simp
+    finally show \<open>trace_norm (sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister (qregister_inv (qregister_pair C Q)) x) \<le> \<dots>\<close>
+      by -
+  qed
+  from 1 2 3
+  show ?thesis
+    by (rule bounded_clinearI)
+qed
+
+
+lemma apply_qregister_inv_inverse:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>apply_qregister (qregister_inv Q) (apply_qregister Q a) = a\<close>
+  using assms
+  apply transfer'
+  using iso_register_is_register register_inj by (auto intro!: inv_f_f simp: )
+
+lemma cq_operator_reconstruct_inv:
+  fixes C :: \<open>('c, 'a) qregister\<close> and Q :: \<open>('q, 'a) qregister\<close> and \<rho> :: \<open>'c \<Rightarrow> ('q ell2, 'q ell2) trace_class\<close>
+  assumes iso: \<open>iso_qregister (qregister_pair C Q)\<close>
+  assumes sum_\<rho>: \<open>\<rho> abs_summable_on UNIV\<close>
+  shows \<open>cq_operator_at C Q (cq_operator_reconstruct C Q \<rho>) = \<rho>\<close>
+proof (rule ext)
+  fix c
+  define CQ CQi where \<open>CQ = qregister_pair C Q\<close> and \<open>CQi = qregister_inv CQ\<close>
+  have dim: \<open>qregister_co_dim CQ = 1\<close>
+    using CQ_def iso iso_qregister_co_dim by blast
+  have *: \<open>cq_operator_at C Q (Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) c
+    = of_bool (c=d) *\<^sub>C \<rho> d\<close> for d
+  proof (rule from_trace_class_inject[THEN iffD1])
+    have \<open>from_trace_class (cq_operator_at C Q (Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) c)
+        = sandwich (tensor_ell2_left (ket c)*) (apply_qregister CQi (from_trace_class (Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d))))))\<close>
+      by (simp add: cq_operator_at.rep_eq CQi_def CQ_def)
+    also have \<open>\<dots> = sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister CQi (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))\<close>
+      apply (subst Abs_trace_class_inverse)
+      by (auto intro!: apply_qregister_trace_class trace_class_tensor iso simp: dim)
+    also have \<open>\<dots> = sandwich (tensor_ell2_left (ket c)*) *\<^sub>V (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d))\<close>
+      by (auto intro!: simp: CQi_def apply_qregister_inv_inverse iso CQ_def)
+    also have \<open>\<dots> = from_trace_class (of_bool (c = d) *\<^sub>C \<rho> d)\<close>
+      by (simp add: sandwich_tensor_ell2_left)
+    finally show \<open>from_trace_class (cq_operator_at C Q (Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) c) =
+                  from_trace_class (of_bool (c = d) *\<^sub>C \<rho> d)\<close>
+      by -
+  qed
+  have summable1: \<open>(\<lambda>d. Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) summable_on UNIV\<close>
+  proof -
+    have tc1: \<open>trace_class (apply_qregister CQ (selfbutter (ket x) \<otimes>\<^sub>o from_trace_class t))\<close> for x t
+      by (auto intro!: apply_qregister_trace_class trace_class_tensor simp: dim)
+    from sum_\<rho> have \<open>(\<lambda>x. trace_norm (selfbutter (ket x) \<otimes>\<^sub>o from_trace_class (\<rho> x))) summable_on UNIV\<close>
+      by (simp add: trace_norm_tensor trace_norm_butterfly flip: norm_trace_class.rep_eq)
+    then have \<open>(\<lambda>x. trace_norm (apply_qregister CQ (selfbutter (ket x) \<otimes>\<^sub>o from_trace_class (\<rho> x)))) summable_on UNIV\<close>
+      apply (subst apply_iso_qregister_trace_norm)
+      by (simp_all add: iso CQ_def)
+    then show ?thesis
+      apply (rule_tac abs_summable_summable)
+      by (simp add: eq_onp_def tc1 norm_trace_class.abs_eq)
+  qed
+  have \<open>cq_operator_at C Q (cq_operator_reconstruct C Q \<rho>) c
+     = cq_operator_at C Q (\<Sum>\<^sub>\<infinity>d. Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) c\<close>
+    by (simp add: cq_operator_reconstruct_def CQ_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>d. cq_operator_at C Q (Abs_trace_class (apply_qregister CQ (selfbutter (ket d) \<otimes>\<^sub>o from_trace_class (\<rho> d)))) c)\<close>
+    apply (subst infsum_bounded_linear[where h=\<open>\<lambda>\<rho>. cq_operator_at C Q \<rho> c\<close>])
+      apply (simp add: bounded_clinear.bounded_linear cq_operator_at_bounded_clinear) 
+     apply (rule summable1)
+    by simp
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>d::'c. of_bool (c = d) *\<^sub>C \<rho> d)\<close>
+    by (simp add: * )
+  also have \<open>\<dots> = \<rho> c\<close>
+    apply (subst infsum_single[where i=c])
+    by auto
+  finally show \<open>cq_operator_at C Q (cq_operator_reconstruct C Q \<rho>) c = \<rho> c\<close>
+    by -
+qed
+
+lemma sandwich_tc_Abs_trace_class: \<open>sandwich_tc a (Abs_trace_class t) = Abs_trace_class (sandwich a t)\<close> if \<open>trace_class t\<close>
+  by (metis Abs_trace_class_inverse from_trace_class_inject from_trace_class_sandwich_tc mem_Collect_eq that trace_class_sandwich)
+
+(* TODO move *)
+lemma sgn_ket[simp]: \<open>sgn (ket x) = ket x\<close>
+  by (simp add: sgn_div_norm)
+
+lemma apply_non_qregister_tc[simp]: \<open>apply_qregister_tc non_qregister x = 0\<close>
+  apply transfer'
+  by simp
+
+lemma apply_qregister_sandwich:
+  (* assumes \<open>qregister Q\<close> (* TODO remove *) *)
+  shows \<open>apply_qregister Q (sandwich a b) = sandwich (apply_qregister Q a) (apply_qregister Q b)\<close>
+  apply (cases \<open>qregister Q\<close>)
+  using qregister.rep_eq register_sandwich apply blast
+  by (simp add: non_qregister)
+
+
+lemma apply_qregister_tc_sandwich:
+  shows \<open>apply_qregister_tc Q (sandwich_tc a b) = sandwich_tc (apply_qregister Q a) (apply_qregister_tc Q b)\<close>
+proof -
+  wlog qreg: \<open>qregister Q\<close>
+    using negation by (simp add: non_qregister)
+  wlog dim: \<open>qregister_co_dim Q \<noteq> 0\<close> keeping qreg
+    using negation by (simp add: apply_qregister_tc_codim0)
+  show ?thesis
+    using qreg
+    apply (transfer' fixing: Q)
+    by (simp add: dim apply_qregister_sandwich)
+qed
+
+
+lemma cq_operator_reconstruct:
+(* TODO assms *)
+  assumes iso: \<open>iso_qregister (qregister_pair C Q)\<close>
+  assumes cq: \<open>classical_on C \<rho>\<close>
+  shows \<open>cq_operator_reconstruct C Q (cq_operator_at C Q \<rho>) = \<rho>\<close>
+proof -
+  define CQ CQi where \<open>CQ = qregister_pair C Q\<close> and \<open>CQi = qregister_inv CQ\<close>
+
+(*   obtain U where \<open>unitary U\<close> and CQ_U: \<open>apply_qregister (qregister_pair C Q) a = sandwich U a\<close> for a
+    using iso_qregister_decomposition by force
+  then have CQi_U: \<open>apply_qregister (qregister_inv (qregister_pair C Q)) a = sandwich (U* ) a\<close> for a
+    by (smt (verit, ccfv_SIG) apply_qregister_inv_inverse assms cblinfun_apply_cblinfun_compose cblinfun_compose_id_right iso_qregister_decomposition iso_qregister_inv_iso sandwich_compose unitaryD2)
+  have \<open>cq_operator_reconstruct C Q (cq_operator_at C Q \<rho>)
+     = (\<Sum>\<^sub>\<infinity>c. Abs_trace_class (sandwich U *\<^sub>V selfbutter (ket c) \<otimes>\<^sub>o sandwich (tensor_ell2_left (ket c)* ) *\<^sub>V sandwich (U* ) *\<^sub>V from_trace_class \<rho>))\<close>
+    by (simp add: cq_operator_reconstruct_def CQ_U cq_operator_at.rep_eq CQi_U)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>c. sandwich_tc U (tc_tensor (tc_butterfly (ket c) (ket c)) (sandwich_tc (tensor_ell2_left (ket c)* ) (sandwich_tc (U* ) \<rho>))))\<close>
+    by (simp add: trace_class_tensor trace_class_sandwich eq_onp_def from_trace_class_inverse 
+        flip: tc_tensor.abs_eq tc_butterfly.abs_eq sandwich_tc_Abs_trace_class) *)
+
+  from iso
+  have [simp]: \<open>qregister_co_dim CQ = 1\<close>
+    using CQ_def iso_qregister_co_dim by blast
+
+  have [simp]: \<open>qregister_co_dim CQi = 1\<close>
+    by (simp add: CQ_def CQi_def assms(1) iso_qregister_co_dim iso_qregister_inv_iso)
+
+  have \<open>cq_operator_reconstruct C Q (cq_operator_at C Q \<rho>)
+        = (\<Sum>\<^sub>\<infinity>c. Abs_trace_class (apply_qregister CQ (selfbutter (ket c) \<otimes>\<^sub>o sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister CQi (from_trace_class \<rho>))))\<close>
+    by (simp add: cq_operator_reconstruct_def cq_operator_at.rep_eq CQ_def CQi_def)
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>c. sandwich_tc (apply_qregister C (selfbutter (ket c))) \<rho>)\<close>
+    (is \<open>(\<Sum>\<^sub>\<infinity>c. ?lhs c) = (\<Sum>\<^sub>\<infinity>c. ?rhs c)\<close>)
+  proof (rule infsum_cong)
+    fix c
+    have \<open>?lhs c
+        = apply_qregister_tc CQ
+                  (Abs_trace_class  (selfbutter (ket c) \<otimes>\<^sub>o sandwich (tensor_ell2_left (ket c)*) *\<^sub>V apply_qregister CQi (from_trace_class \<rho>)))\<close>
+      apply (subst apply_qregister_tc.abs_eq)
+       apply (simp add: apply_qregister_trace_class eq_onp_def trace_class_sandwich trace_class_tensor)
+      by simp
+    also have \<open>\<dots> = apply_qregister_tc CQ (tc_tensor (tc_butterfly (ket c) (ket c))
+       (sandwich_tc (tensor_ell2_left (ket c)*) (Abs_trace_class (apply_qregister CQi (from_trace_class \<rho>)))))\<close>
+      by (simp add: eq_onp_def apply_qregister_trace_class trace_class_sandwich
+          flip: tc_butterfly.abs_eq tc_tensor.abs_eq sandwich_tc_Abs_trace_class)
+    also have \<open>\<dots> = apply_qregister_tc CQ (tc_tensor (tc_butterfly (ket c) (ket c))
+       (sandwich_tc (tensor_ell2_left (ket c)*) (apply_qregister_tc CQi (Abs_trace_class (from_trace_class \<rho>)))))\<close>
+      apply (subst apply_qregister_tc.abs_eq)
+      by (simp_all add: eq_onp_def)
+    also have \<open>\<dots> = apply_qregister_tc CQ
+     (tc_tensor (tc_butterfly (ket c) (ket c))
+       (sandwich_tc (tensor_ell2_left (ket c)*) (apply_qregister_tc CQi \<rho>)))\<close>
+      by (simp add: from_trace_class_inverse)
+    also have \<open>\<dots> = apply_qregister_tc CQ (sandwich_tc (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun) (apply_qregister_tc CQi \<rho>))\<close>
+    proof -
+      have *: \<open>sandwich_tc (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun) (tc_tensor x (tc_butterfly a b)) =
+       tc_tensor (tc_butterfly (ket c) (ket c)) (sandwich_tc (tensor_ell2_left (ket c)*) (tc_tensor x (tc_butterfly a b)))\<close>
+        for x :: \<open>('a ell2, 'a ell2) trace_class\<close> and a b :: \<open>'e ell2\<close>
+        apply (rule from_trace_class_inject[THEN iffD1])
+        apply (simp add: from_trace_class_sandwich_tc tc_tensor.rep_eq tc_butterfly.rep_eq sandwich_tensor_ell2_left)
+        by (simp add: sandwich_apply tensor_op_adjoint comp_tensor_op butterfly_comp_cblinfun cinner_adj_left tensor_op_cbilinear.scaleC_left tensor_op_cbilinear.scaleC_right)
+      have \<open>sandwich_tc (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun) = (\<lambda>\<rho>. tc_tensor (tc_butterfly (ket c) (ket c))
+       (sandwich_tc (tensor_ell2_left (ket c)*) \<rho>))\<close>
+        apply (rule eq_from_separatingI2)
+           apply (rule separating_set_bounded_clinear_tc_tensor_nested)
+            apply (rule separating_set_UNIV)
+           apply (rule separating_set_tc_butterfly)
+        using bounded_clinear_sandwich_tc apply blast
+        using bounded_clinear_compose bounded_clinear_sandwich_tc bounded_clinear_tc_tensor_right apply blast 
+        using * by auto
+      then show ?thesis
+        by metis
+    qed
+    also have \<open>\<dots> = sandwich_tc (apply_qregister CQ (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun)) (apply_qregister_tc CQ (apply_qregister_tc CQi \<rho>))\<close>
+      by (rule apply_qregister_tc_sandwich)
+    also have \<open>\<dots> = sandwich_tc (apply_qregister CQ (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun)) \<rho>\<close>
+      using \<open>qregister_co_dim CQ = 1\<close> \<open>qregister_co_dim CQi = 1\<close> 
+      by (smt (verit, ccfv_SIG) CQ_def CQi_def apply_qregister_inv_inverse apply_qregister_tc.rep_eq from_trace_class_inverse iso iso_qregister_inv_iso one_neq_zero)
+    also have \<open>\<dots> = sandwich_tc (apply_qregister C (selfbutter (ket c))) \<rho>\<close>
+      by (metis CQ_def apply_qregister_extend_pair_right assms(1) iso_qregister_def')
+    finally show \<open>?lhs c = ?rhs c\<close>
+      by -
+  qed
+  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>E\<in>range (\<lambda>x::'a. (apply_qregister C (selfbutter (ket x)), ket x)). sandwich_tc (fst E) \<rho>)\<close>
+    apply (subst infsum_reindex)
+    by (simp_all add: inj_def o_def) 
+  also have \<open>\<dots> = kraus_family_map (apply_qregister_kraus_map C (complete_measurement (range ket))) \<rho>\<close>
+    apply (transfer' fixing: \<rho> C)
+    apply (simp add: image_image)
+    apply transfer' (* Need to do this because the first transfer transferred a "ket x" that we didn't want transferred. *)
+    by simp
+  also have \<open>\<dots> = \<rho>\<close>
+    by (metis cq classical_on_def)
+  finally show ?thesis
+    by -
+qed
+
+
+
+
+
+
+
+
+
+
+(* ************ END ***************** *)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (* definition \<open>cq_map_rel \<EE> \<FF> \<longleftrightarrow> (\<forall>x. kraus_family_norm (\<EE> x) \<le> 1 \<and> kraus_equivalent' (\<EE> x) (\<FF> x))\<close>
   for \<EE> \<FF> :: \<open>'cl1 \<Rightarrow> ('qu1 ell2, 'qu2 ell2, 'cl2) kraus_family\<close> *)

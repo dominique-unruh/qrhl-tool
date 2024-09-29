@@ -4288,4 +4288,9 @@ lemma kraus_family_map'_map_outcome[simp]:
 lemma kraus_family_map'_empty[simp]: \<open>kraus_family_map' {} E \<rho> = 0\<close>
   by (simp add: kraus_family_map'_def)
 
+lemma kraus_familyI_0:
+  assumes \<open>\<And>E x. (E,x) \<in> \<EE> \<Longrightarrow> E = 0\<close>
+  shows \<open>kraus_family \<EE>\<close>
+by -
+
 end

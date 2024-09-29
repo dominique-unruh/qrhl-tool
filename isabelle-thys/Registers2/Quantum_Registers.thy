@@ -17,7 +17,7 @@ lemma qregister_raw_0: \<open>qregister_raw F \<Longrightarrow> F 0 = 0\<close>
 definition non_qregister_raw :: \<open>'a qupdate \<Rightarrow> 'b qupdate\<close> where \<open>non_qregister_raw a = 0\<close>
 lemma qregister_raw_inj: \<open>qregister_raw F \<Longrightarrow> inj_on F X\<close>
   by (rule register_inj)
-lemma non_qregister_raw: \<open>\<not> qregister_raw non_qregister_raw\<close>
+lemma non_qregister_raw[iff]: \<open>\<not> qregister_raw non_qregister_raw\<close>
   by (metis id_cblinfun_not_0 non_qregister_raw_def qregister_raw_1)
 
 typedef ('a,'b) qregister = \<open>{f :: 'a qupdate \<Rightarrow> 'b qupdate. qregister_raw f} \<union> {non_qregister_raw}\<close>
@@ -356,34 +356,41 @@ lemma apply_non_qregister[simp]: \<open>apply_qregister non_qregister x = 0\<clo
 lemma qregister_chain_qswap_qswap[simp]: \<open>qregister_chain qswap qswap = qregister_id\<close>
   by (metis Laws_Quantum.compatible_Fst_Snd Laws_Quantum.pair_Fst_Snd apply_qregister_inverse qFst.rep_eq qSnd.rep_eq qcompatible_Snd_Fst qregister_chain_pair qregister_chain_pair_Fst qregister_chain_pair_Snd qregister_id.abs_eq qregister_pair.rep_eq qswap_def)
 
-
-definition \<open>iso_qregister I \<longleftrightarrow> qregister I \<and> (\<exists>J. qregister J \<and> qregister_chain I J = qregister_id \<and> qregister_chain J I = qregister_id)\<close>
+lift_definition iso_qregister :: \<open>('a, 'b) qregister \<Rightarrow> bool\<close> is Laws_Quantum.iso_register.
+lemma iso_qregister_def': \<open>iso_qregister I \<longleftrightarrow> qregister I \<and> (\<exists>J. qregister J \<and> qregister_chain I J = qregister_id \<and> qregister_chain J I = qregister_id)\<close>
+  apply transfer'
+  by (auto simp: iso_register_def)
 
 lift_definition qregister_inv :: \<open>('a,'b) qregister \<Rightarrow> ('b,'a) qregister\<close> is
-  \<open>\<lambda>F. if qregister_raw (inv F) then inv F else non_qregister_raw\<close> by auto
+  \<open>\<lambda>F. if iso_register F then inv F else non_qregister_raw\<close>
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  using iso_register_is_register iso_register_inv iso_register_is_register 
+  by auto
 
 lemma iso_qregister_inv_iso: \<open>iso_qregister I \<Longrightarrow> iso_qregister (qregister_inv I)\<close>
-  unfolding iso_qregister_def apply transfer apply auto
-  using non_qregister_raw apply fastforce
-  using inv_unique_comp apply blast
-  apply (simp add: inv_unique_comp)
-  using inv_unique_comp by blast
+  apply transfer
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  by (simp add: iso_register_inv)
 
 lemma iso_qregister_inv_iso_apply: \<open>iso_qregister I \<Longrightarrow> apply_qregister (qregister_inv I) = inv (apply_qregister I)\<close>
-  unfolding iso_qregister_def apply transfer using non_qregister_raw inv_unique_comp apply auto by blast
+  apply transfer
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  by simp
 
 lemma iso_qregister_inv_chain: \<open>iso_qregister I \<Longrightarrow> qregister_chain (qregister_inv I) I = qregister_id\<close>
-  apply (rule apply_qregister_inject[THEN iffD1], rule ext)
-  apply simp
-  by (smt (verit, del_insts) apply_qregister_id inv_unique_comp iso_qregister_def iso_qregister_inv_iso_apply pointfree_idE qregister_chain_apply)
+  apply transfer
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  using inv_unique_comp iso_register_def
+  by (metis (mono_tags, lifting))
 
 lemma iso_qregister_chain_inv: \<open>iso_qregister I \<Longrightarrow> qregister_chain I (qregister_inv I) = qregister_id\<close>
-  apply (rule apply_qregister_inject[THEN iffD1], rule ext)
-  apply simp
-  by (smt (verit, best) apply_qregister_id iso_qregister_def iso_qregister_inv_chain left_right_inverse_eq pointfree_idE qregister_chain_apply)
+  apply (transfer' fixing: )
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  using iso_register_inv_comp2 iso_register_def inv_unique_comp 
+  by auto
 
 lemma qswap_iso[simp]: \<open>iso_qregister qswap\<close>
-  by (auto intro!: exI[of _ qswap] simp: iso_qregister_def)
+  by (auto intro!: exI[of _ qswap] simp: iso_qregister_def')
 
 lemma qcompatible_chain[simp]: \<open>qregister F \<Longrightarrow> qcompatible G H \<Longrightarrow> qcompatible (qregister_chain F G) (qregister_chain F H)\<close>
   unfolding qcompatible_def apply transfer by simp  
@@ -397,8 +404,8 @@ lemma qcompatible_chain_iso: \<open>iso_qregister I \<Longrightarrow> qcompatibl
    apply (subst asm_rl[of \<open>G = qregister_chain (qregister_inv I) (qregister_chain I G)\<close>])
     apply (simp add: qregister_chain_assoc[symmetric] iso_qregister_inv_chain)
    apply (rule qcompatible_chain)
-  using iso_qregister_def iso_qregister_inv_iso apply auto
-  by (simp add: iso_qregister_def qcompatible_chain)
+  using iso_qregister_def' iso_qregister_inv_iso apply auto[2]
+  by (simp add: iso_qregister_def' qcompatible_chain)
 
 definition \<open>apply_qregister_space F S = apply_qregister F (Proj S) *\<^sub>S top\<close>
 
