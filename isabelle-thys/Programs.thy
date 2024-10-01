@@ -5,7 +5,7 @@ begin
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
 no_notation Order.bottom ("\<bottom>\<index>")
 
-lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> is
+lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Rightarrow> ('cl1\<times>'qu,'cl2\<times>'qu,unit) kraus_family\<close> is
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
   by (auto intro!: bdd_aboveI simp: kraus_map_sample_norm prob_summable)
 

@@ -456,17 +456,6 @@ definition \<open>kraus_equivalent' \<EE> \<FF> \<longleftrightarrow> (\<forall>
 lemma kraus_equivalent_reflI: \<open>kraus_equivalent x x\<close>
   by (simp add: kraus_equivalent_def)
 
-lemma kraus_equivalentI: 
-  assumes \<open>\<And>\<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map \<EE> \<rho> = kraus_family_map \<FF> \<rho>\<close>
-  shows \<open>kraus_equivalent \<EE> \<FF>\<close>
-  using assms by (auto simp: kraus_equivalent_def)
-
-lemma kraus_equivalent'I: 
-  assumes \<open>\<And>x \<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map' {x} \<EE> \<rho> = kraus_family_map' {x} \<FF> \<rho>\<close>
-  shows \<open>kraus_equivalent' \<EE> \<FF>\<close>
-  using assms by (auto simp: kraus_equivalent'_def)
-
-
 (* lemma kraus_family_zero[simp]: \<open>kraus_family {}\<close>
   by (auto simp: kraus_family_def) *)
 
@@ -1780,6 +1769,23 @@ qed *)
 lemma kraus_family_map_clinear[iff]: \<open>clinear (kraus_family_map \<EE>)\<close>
   by (simp add: bounded_clinear.axioms(1) kraus_family_map_bounded_clinear)
 
+lemma kraus_equivalentI:
+  assumes \<open>\<And>\<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map \<EE> \<rho> = kraus_family_map \<FF> \<rho>\<close>
+  shows \<open>kraus_equivalent \<EE> \<FF>\<close>
+  unfolding kraus_equivalent_def
+  apply (rule eq_from_separatingI)
+     apply (rule separating_density_ops[where B=1])
+  using assms by auto
+
+lemma kraus_equivalent'I: 
+  assumes \<open>\<And>x \<rho>. \<rho> \<ge> 0 \<Longrightarrow> kraus_family_map' {x} \<EE> \<rho> = kraus_family_map' {x} \<FF> \<rho>\<close>
+  shows \<open>kraus_equivalent' \<EE> \<FF>\<close>
+  using kraus_equivalentI
+  using assms
+  by (auto simp: kraus_equivalent_def kraus_equivalent'_def kraus_family_map'_def)
+
+
+
 lemma kraus_map_apply_0_right[iff]: \<open>kraus_family_map \<EE> 0 = 0\<close>
   by (metis ab_left_minus kraus_family_map_plus_right kraus_family_map_uminus_right)
 
@@ -2538,6 +2544,9 @@ definition kraus_map_partial_trace :: \<open>'b ell2 set \<Rightarrow> (('a\<tim
 \<open>kraus_map_partial_trace B = kraus_family_map_outcome (\<lambda>((_,b),_). inv ket b)
 (kraus_family_comp (kraus_family_of_op (tensor_ell2_right (ket ())*))
  (kraus_family_tensor kraus_family_id (trace_kraus_family B)))\<close>
+
+definition kraus_map_partial_trace' :: \<open>'a ell2 set \<Rightarrow> (('a\<times>'b) ell2, 'b ell2, 'a) kraus_family\<close> where
+  \<open>kraus_map_partial_trace' B = kraus_family_map_outcome_inj snd (kraus_family_comp (kraus_map_partial_trace B) (kraus_family_of_op swap_ell2))\<close>
 
 lemma partial_trace_as_kraus_map: 
   fixes B :: \<open>'b ell2 set\<close>
@@ -4218,7 +4227,8 @@ proof -
       by (auto intro!: \<open>finite F\<close>)
     also have \<open>\<dots> \<le> infsum_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>
       apply (rule infsum_mono_neutral_wot)
-      using F_subset by (auto intro!:  \<open>finite F\<close> assms intro: summable_on_in_finite simp: has_kraus_map_infsum.rep_eq)
+      using F_subset assms
+      by (auto intro!: \<open>finite F\<close> intro: summable_on_in_finite simp: has_kraus_map_infsum.rep_eq)
     finally show \<open>(\<Sum>a\<in>F. kraus_family_bound (kraus_family_filter (\<lambda>x. P (a, x)) (\<EE> a))) \<le> \<dots>\<close>
       by -
   next
@@ -4226,7 +4236,7 @@ proof -
       by simp
   qed
   have \<open>Rep_kraus_family ?lhs = Rep_kraus_family ?rhs\<close>
-    by (force simp add: kraus_family_filter.rep_eq kraus_map_infsum.rep_eq assms summ has_kraus_map_infsum.rep_eq)
+    using assms by (force simp add: kraus_family_filter.rep_eq kraus_map_infsum.rep_eq assms summ has_kraus_map_infsum.rep_eq)
   then show \<open>?lhs = ?rhs\<close>
     by (simp add: Rep_kraus_family_inject)
 qed
@@ -4249,9 +4259,10 @@ lemma kraus_equivalent'_kraus_map_infsum:
   fixes \<EE> \<FF> :: \<open>'a \<Rightarrow> ('b::chilbert_space, 'c::chilbert_space, 'x) kraus_family\<close>
   assumes \<open>\<And>a. a \<in> A \<Longrightarrow> kraus_equivalent' (\<EE> a) (\<FF> a)\<close>
   shows \<open>kraus_equivalent' (kraus_map_infsum \<EE> A) (kraus_map_infsum \<FF> A)\<close>
-proof (cases \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<EE> a)) A\<close>)
+proof (cases \<open>has_kraus_map_infsum \<EE> A\<close>)
   case True
-  then have True': \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<FF> a)) A\<close>
+  then have True': \<open>has_kraus_map_infsum \<FF> A\<close>
+    unfolding has_kraus_map_infsum.rep_eq
     apply (rule summable_on_in_cong[THEN iffD1, rotated])
     by (simp add: kraus_family_bound_welldefined assms kraus_equivalent'_imp_equivalent)
   show ?thesis
@@ -4274,8 +4285,10 @@ proof (cases \<open>summable_on_in cweak_operator_topology (\<lambda>a. kraus_fa
   qed
 next
   case False
-  then have False': \<open>\<not> summable_on_in cweak_operator_topology (\<lambda>a. kraus_family_bound (\<FF> a)) A\<close>
-    apply (subst (asm) assms[THEN kraus_equivalent'_imp_equivalent, THEN kraus_family_bound_welldefined, THEN summable_on_in_cong])
+  then have False': \<open>\<not> has_kraus_map_infsum \<FF> A\<close>
+    unfolding has_kraus_map_infsum.rep_eq
+    apply (subst (asm) assms[THEN kraus_equivalent'_imp_equivalent, 
+          THEN kraus_family_bound_welldefined, THEN summable_on_in_cong])
     by auto
   show ?thesis
     by (simp add: kraus_map_infsum_invalid False False')
@@ -4291,6 +4304,21 @@ lemma kraus_family_map'_empty[simp]: \<open>kraus_family_map' {} E \<rho> = 0\<c
 lemma kraus_familyI_0:
   assumes \<open>\<And>E x. (E,x) \<in> \<EE> \<Longrightarrow> E = 0\<close>
   shows \<open>kraus_family \<EE>\<close>
-by -
+proof (unfold kraus_family_def, rule bdd_aboveI2)
+  fix F
+  assume F: \<open>F \<in> {F. finite F \<and> F \<subseteq> \<EE>}\<close>
+  have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) = 0\<close>
+  proof (intro sum.neutral ballI)
+    fix Ex assume asm: \<open>Ex \<in> F\<close>
+    obtain E x where Ex: \<open>Ex = (E,x)\<close>
+      by fastforce
+    with asm F assms have \<open>E = 0\<close>
+      by blast
+    then show \<open>(case Ex of (E, x) \<Rightarrow> E* o\<^sub>C\<^sub>L E) = 0\<close>
+      by (simp add: Ex)
+  qed
+  then show \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> 0\<close>
+    by simp
+qed
 
 end

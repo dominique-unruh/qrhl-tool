@@ -418,15 +418,15 @@ lemma QREGISTER_of_iso: \<open>QREGISTER_of I = QREGISTER_all\<close> if \<open>
 proof -
   have \<open>x \<in> range (apply_qregister I)\<close> for x
     apply (rule range_eqI[where x=\<open>apply_qregister (qregister_inv I) x\<close>])
-    by (metis inj_qregister inv_f_eq iso_qregister_def iso_qregister_inv_iso iso_qregister_inv_iso_apply that)
+    by (metis inj_qregister inv_f_eq iso_qregister_def' iso_qregister_inv_iso iso_qregister_inv_iso_apply that)
   then show ?thesis
     apply (transfer fixing: I)
-    using that by (auto simp: iso_qregister_def)
+    using that by (auto simp: iso_qregister_def')
 qed
 
 lemma qregister_le_iso: \<open>qregister F \<Longrightarrow> iso_qregister G \<Longrightarrow> qregister_le F G\<close>
   by (simp add: qregister_le_def QREGISTER_of_iso less_eq_QREGISTER.rep_eq top_QREGISTER.rep_eq
-      iso_qregister_def)
+      iso_qregister_def')
 
 lemma qregister_le_id[iff]: \<open>qregister F \<Longrightarrow> qregister_le F qregister_id\<close> (* TODO: could replace this by a simp-rule *)
   by (simp add: iso_qregister_def qregister_le_iso)
@@ -1224,7 +1224,7 @@ qed
 lemma QCOMPLEMENT_QREGISTER_of_eqI:
   assumes \<open>qcomplements F G\<close>
   shows \<open>QCOMPLEMENT (QREGISTER_of F) = QREGISTER_of G\<close>
-  by (metis uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inverse assms iso_qregister_def qcompatible_QQcompatible qcomplements.rep_eq qcomplements_def' register_range_complement_commutant)
+  by (metis uminus_QREGISTER.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inverse assms iso_qregister_def' qcompatible_QQcompatible qcomplements.rep_eq qcomplements_def' register_range_complement_commutant)
 
 lemma ACTUAL_QREGISTER_complement: \<open>ACTUAL_QREGISTER (QCOMPLEMENT \<FF>)\<close> if \<open>ACTUAL_QREGISTER \<FF>\<close>
 proof -
@@ -1356,7 +1356,7 @@ lemma equivalent_qregisters_chain:
   
 lemma iso_qregister_equivalent_id:
   \<open>iso_qregister F \<longleftrightarrow> equivalent_qregisters F qregister_id\<close>
-  unfolding iso_qregister_def
+  unfolding iso_qregister_def'
   apply transfer
   by (metis Laws_Quantum.equivalent_registers_sym Laws_Quantum.iso_register_def Laws_Quantum.iso_register_equivalent_id Un_iff mem_Collect_eq)
 
@@ -1499,16 +1499,16 @@ proof -
             by auto
           from \<open>qcomplements A AC\<close>
           have [simp]: \<open>qregister AC\<close>
-            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+            using iso_qregister_def' qcompatible_register2 qcomplements_def' by blast
           from \<open>qcomplements A AC\<close>
           have [simp]: \<open>qcompatible A AC\<close>
-            using iso_qregister_def qcomplements_def' by blast
+            using iso_qregister_def' qcomplements_def' by blast
           from \<open>qcomplements B BC\<close>
           have [simp]: \<open>qregister BC\<close>
-            using iso_qregister_def qcompatible_register2 qcomplements_def' by blast
+            using iso_qregister_def' qcompatible_register2 qcomplements_def' by blast
           from \<open>qcomplements B BC\<close>
           have [simp]: \<open>qcompatible B BC\<close>
-            using iso_qregister_def qcomplements_def' by blast
+            using iso_qregister_def' qcomplements_def' by blast
           have [simp]: \<open>iso_qregister (qregister_pair A AC)\<close>
             using \<open>qcomplements A AC\<close> qcomplements_def' by blast
           have [simp]: \<open>iso_qregister (qregister_pair B BC)\<close>
@@ -1616,7 +1616,7 @@ proof -
     have \<open>iso_qregister FG\<close>
       using FG_def \<open>qcomplements F G\<close> qcomplements_def' by blast
     then have [iff]: \<open>inj FG'\<close>
-      using FG'_def inj_qregister iso_qregister_def by blast
+      using FG'_def inj_qregister iso_qregister_def' by blast
     have vN: \<open>von_neumann_algebra (range F')\<close>
       by (metis assms valid_qregister_range valid_qregister_range_def F'_def)
     have \<open>range F' \<inter> commutant (range F') = range F' \<inter> range G'\<close>
@@ -1624,7 +1624,9 @@ proof -
       by (metis qcomplements.rep_eq register_range_complement_commutant)
     also have \<open>\<dots> = range (apply_qregister (qregister_chain FG qFst)) \<inter> range (apply_qregister (qregister_chain FG qSnd))\<close>
       apply (simp add: F'_def G'_def FG_def)
-      by (metis (no_types, lifting) FG_def \<open>iso_qregister FG\<close> apply_qregister_extend_pair_left apply_qregister_extend_pair_right apply_qregister_fst apply_qregister_snd image_cong iso_qregister_def qcompatible_sym)
+      by (metis (no_types, lifting) FG_def \<open>iso_qregister FG\<close> apply_qregister_extend_pair_left
+          apply_qregister_extend_pair_right apply_qregister_fst apply_qregister_snd image_cong
+          iso_qregister_def' qcompatible_sym)
     also have \<open>\<dots> = FG' ` (range (apply_qregister qFst) \<inter> range (apply_qregister qSnd))\<close>
       by (simp flip: FG'_def add: image_image image_Int)
     also have \<open>\<dots> = FG' ` (range (\<lambda>a. a \<otimes>\<^sub>o id_cblinfun) \<inter> range (\<lambda>b. id_cblinfun \<otimes>\<^sub>o b))\<close>
@@ -1658,7 +1660,7 @@ proof -
       qed
     qed
     also have \<open>\<dots> = one_algebra\<close>
-      using FG'_def \<open>iso_qregister FG\<close> apply_qregister_one_algebra iso_qregister_def by blast
+      using FG'_def \<open>iso_qregister FG\<close> apply_qregister_one_algebra iso_qregister_def' by blast
     finally have \<open>range F' \<inter> commutant (range F') = one_algebra\<close>
       by -
     with vN show \<open>von_neumann_factor (range F')\<close>

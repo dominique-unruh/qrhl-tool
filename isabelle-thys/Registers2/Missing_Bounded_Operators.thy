@@ -911,4 +911,44 @@ proof -
 qed
 
 
+lemma trace_norm_sandwich_isometry: \<open>trace_norm (sandwich e t) = trace_norm t\<close> if \<open>isometry e\<close>
+proof -
+  have \<open>trace_norm (sandwich e t) = cmod (trace (abs_op (sandwich e t)))\<close>
+    by simp
+  also have \<open>\<dots> = cmod (trace (sandwich e (abs_op t)))\<close>
+    by (metis (no_types, lifting) abs_op_def abs_op_id_on_pos abs_op_pos abs_op_square sandwich_apply_adj sandwich_arg_compose sandwich_pos that)
+  also have \<open>\<dots> = cmod (trace (abs_op t))\<close>
+    by (simp add: that)
+  also have \<open>\<dots> = trace_norm t\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+
+lemma tensor_ell2_right_o_swap[simp]: \<open>(tensor_ell2_right \<psi>)* o\<^sub>C\<^sub>L swap_ell2 = (tensor_ell2_left \<psi>)*\<close>
+  apply (rule tensor_ell2_extensionality)
+  by simp
+
+(* TODO move *)
+(* TODO same for _right *)
+lemma norm_tensor_ell2_left[simp]: \<open>norm (tensor_ell2_left \<psi>) = norm \<psi>\<close>
+proof (rule norm_cblinfun_eqI)
+  fix \<phi>
+  show \<open>0 \<le> norm \<psi>\<close>
+    by simp
+  show \<open>norm \<psi> \<le> norm (tensor_ell2_left \<psi> *\<^sub>V ket undefined) / norm (ket undefined)\<close>
+    by (simp add: norm_tensor_ell2)
+  show \<open>norm (tensor_ell2_left \<psi> *\<^sub>V \<phi>) \<le> norm \<psi> * norm \<phi>\<close>
+    by (simp add: norm_tensor_ell2)
+qed
+
+lemma sandwich_tc_Abs_trace_class: \<open>sandwich_tc a (Abs_trace_class t) = Abs_trace_class (sandwich a t)\<close> if \<open>trace_class t\<close>
+  by (metis Abs_trace_class_inverse from_trace_class_inject from_trace_class_sandwich_tc mem_Collect_eq that trace_class_sandwich)
+
+(* TODO move *)
+lemma sgn_ket[simp]: \<open>sgn (ket x) = ket x\<close>
+  by (simp add: sgn_div_norm)
+
+
 end

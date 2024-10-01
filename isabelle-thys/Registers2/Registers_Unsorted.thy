@@ -168,4 +168,176 @@ simproc_setup NOT_INDEX_REGISTER (\<open>NOT_INDEX_REGISTER R\<close>) = \<open>
 \<close>
 
 
+lemma apply_qregister_trace_class_transfer:
+  assumes \<open>\<rho> \<noteq> 0\<close>
+  assumes \<open>trace_class (apply_qregister Q \<rho>)\<close>
+  assumes \<open>trace_class \<sigma>\<close>
+  shows \<open>trace_class (apply_qregister Q \<sigma>)\<close>
+proof -
+  wlog \<open>qregister Q\<close>
+    using negation by (simp add: non_qregister)
+  from qregister_decomposition[OF this]
+  have \<open>let 'c::type = qregister_decomposition_basis Q in
+        trace_class (apply_qregister Q \<sigma>)\<close>
+  proof with_type_mp
+    with_type_case
+    from with_type_mp.premise
+    obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+      where \<open>unitary U\<close> and QU: \<open>Q = qregister_chain (transform_qregister U) qFst\<close>
+      by auto
+    let ?idc = \<open>id_cblinfun :: 'c ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close>
+    have \<open>trace_class ?idc\<close>
+    proof -
+      from assms 
+      have \<open>trace_class (sandwich U (\<rho> \<otimes>\<^sub>o ?idc))\<close>
+        by (simp add: QU \<open>unitary U\<close> apply_qregister_fst transform_qregister.rep_eq)
+      then have \<open>trace_class (sandwich (U*) (sandwich U (\<rho> \<otimes>\<^sub>o ?idc)))\<close>
+        using trace_class_sandwich by blast
+      then have \<open>trace_class (\<rho> \<otimes>\<^sub>o ?idc)\<close>
+        by (simp add: unitaryD1 \<open>unitary U\<close> flip: cblinfun_apply_cblinfun_compose sandwich_compose)
+      then show \<open>trace_class ?idc\<close>
+        by (simp add: assms(1) trace_class_tensor_iff)
+    qed
+    then show \<open>trace_class (apply_qregister Q \<sigma>)\<close>
+      by (auto intro!: trace_class_sandwich trace_class_tensor assms simp add: QU apply_qregister_fst transform_qregister.rep_eq \<open>unitary U\<close>)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+definition qregister_co_dim :: \<open>('a,'b) qregister \<Rightarrow> real\<close> where
+  \<open>qregister_co_dim Q = trace_norm (apply_qregister Q (selfbutter (ket undefined)))\<close>
+
+lift_definition apply_qregister_tc :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> ('b ell2, 'b ell2) trace_class\<close> is
+  \<open>\<lambda>Q. if qregister_co_dim Q \<noteq> 0 then apply_qregister Q else 0\<close>
+proof (erule CollectE, rule CollectI, rename_tac Q t)
+  fix Q :: \<open>('a, 'b) qregister\<close> and t :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+  assume \<open>trace_class t\<close>
+  have \<open>trace_class (apply_qregister Q t)\<close> if \<open>qregister_co_dim Q \<noteq> 0\<close>
+  proof -
+    from that have norm: \<open>trace_norm (apply_qregister Q (selfbutter (ket undefined))) \<noteq> 0\<close>
+      by (simp add: qregister_co_dim_def)
+    then have \<open>trace_class (apply_qregister Q (selfbutter (ket undefined)))\<close>
+      apply (rule_tac ccontr)
+      by (simp_all add: trace_norm_def)
+    then show \<open>trace_class (apply_qregister Q t)\<close>
+      apply (rule apply_qregister_trace_class_transfer[rotated])
+      using norm \<open>trace_class t\<close> by auto
+  qed
+  then show \<open>trace_class ((if qregister_co_dim Q \<noteq> 0 then apply_qregister Q else 0) t)\<close>
+    by simp
+qed
+
+(* TODO move *)
+lemma iso_qregister_decomposition:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>\<exists>U. unitary U \<and> apply_qregister X = sandwich U\<close>
+proof -
+  have \<open>iso_register (apply_qregister X)\<close>
+    using assms
+    unfolding iso_qregister_def iso_register_def
+    apply (transfer' fixing: )
+    by auto
+  from iso_register_decomposition[OF this]
+  show ?thesis
+    apply transfer' by auto
+qed
+
+lemma iso_qregister_co_dim: 
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>qregister_co_dim X = 1\<close>
+proof -
+  from iso_qregister_decomposition[OF assms(1)]
+  obtain U where \<open>unitary U\<close> and \<open>apply_qregister X = sandwich U\<close>
+    by auto
+  with assms show ?thesis
+    by (simp add: trace_class_sandwich qregister_co_dim_def trace_butterfly trace_norm_sandwich_isometry trace_norm_butterfly)
+qed
+
+lemma apply_qregister_tc_codim0: \<open>qregister_co_dim Q = 0 \<Longrightarrow> apply_qregister_tc Q t = 0\<close>
+  by (metis (mono_tags, lifting) apply_qregister_tc.rep_eq from_trace_class_inverse func_zero zero_trace_class_def)
+
+(* TODO move *)
+lemma apply_qregister_trace_class:
+  assumes \<open>qregister_co_dim X \<noteq> 0\<close>
+  assumes \<open>trace_class t\<close>
+  shows \<open>trace_class (apply_qregister X t)\<close>
+proof -
+  from assms have norm: \<open>trace_norm (apply_qregister X (selfbutter (ket undefined))) \<noteq> 0\<close>
+    by (simp add: qregister_co_dim_def)
+  then have \<open>trace_class (apply_qregister X (selfbutter (ket undefined)))\<close>
+    apply (rule_tac ccontr)
+    by (simp_all add: trace_norm_def)
+  then show \<open>trace_class (apply_qregister X t)\<close>
+    apply (rule apply_qregister_trace_class_transfer[rotated])
+    using norm \<open>trace_class t\<close> by auto
+qed
+
+
+(* TODO move *)
+lemma apply_iso_qregister_trace_norm:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>trace_norm (apply_qregister X t) = trace_norm t\<close>
+proof -
+  from iso_qregister_decomposition[OF assms(1)]
+  obtain U where \<open>unitary U\<close> and \<open>apply_qregister X = sandwich U\<close>
+    by auto
+  with assms show ?thesis
+    by (metis apply_qregister_abs_op of_real_hom.injectivity trace_abs_op trace_sandwich_isometry unitary_isometry)
+qed
+
+lemma apply_qregister_tc_0[simp]: \<open>apply_qregister_tc Q 0 = 0\<close>
+  apply (transfer' fixing: Q)
+  by auto
+
+
+(* TODO move *)
+lemma qregister_inv_non_qregister[simp]: \<open>qregister_inv non_qregister = non_qregister\<close>
+  apply transfer
+  using [[simproc del: Laws_Quantum.compatibility_warn]]
+  using iso_register_is_register by auto
+
+lemma qregister_inv_non_iso_qregister: 
+  assumes \<open>\<not> iso_qregister Q\<close>
+  shows \<open>qregister_inv Q = non_qregister\<close>
+  using assms
+  apply transfer'
+  by simp
+
+lemma apply_qregister_inv_inverse:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>apply_qregister (qregister_inv Q) (apply_qregister Q a) = a\<close>
+  using assms
+  apply transfer'
+  using iso_register_is_register register_inj by (auto intro!: inv_f_f simp: )
+
+lemma apply_non_qregister_tc[simp]: \<open>apply_qregister_tc non_qregister x = 0\<close>
+  apply transfer'
+  by simp
+
+lemma apply_qregister_sandwich:
+  (* assumes \<open>qregister Q\<close> (* TODO remove *) *)
+  shows \<open>apply_qregister Q (sandwich a b) = sandwich (apply_qregister Q a) (apply_qregister Q b)\<close>
+  apply (cases \<open>qregister Q\<close>)
+  using qregister.rep_eq register_sandwich apply blast
+  by (simp add: non_qregister)
+
+
+lemma apply_qregister_tc_sandwich:
+  shows \<open>apply_qregister_tc Q (sandwich_tc a b) = sandwich_tc (apply_qregister Q a) (apply_qregister_tc Q b)\<close>
+proof -
+  wlog qreg: \<open>qregister Q\<close>
+    using negation by (simp add: non_qregister)
+  wlog dim: \<open>qregister_co_dim Q \<noteq> 0\<close> keeping qreg
+    using negation by (simp add: apply_qregister_tc_codim0)
+  show ?thesis
+    using qreg
+    apply (transfer' fixing: Q)
+    by (simp add: dim apply_qregister_sandwich)
+qed
+
+
+
+
 end

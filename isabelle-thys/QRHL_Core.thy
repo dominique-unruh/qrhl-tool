@@ -863,7 +863,7 @@ lemma iso_qregister_operator_local:
   shows \<open>operator_local A Q\<close>
 proof -
   from assms obtain J where \<open>qregister_chain Q J = qregister_id\<close>
-    unfolding iso_qregister_def by auto
+    unfolding iso_qregister_def' by auto
   then have \<open>A = apply_qregister Q (apply_qregister J A)\<close>
     by (metis TTIR_APPLY_QREGISTER_def eq_id_iff qregister_id.rep_eq translate_to_index_registers_apply)
   then show ?thesis
@@ -895,7 +895,7 @@ proof -
     from \<open>qcomplements R Q\<close> have \<open>iso_qregister \<lbrakk>R,Q\<rbrakk>\<close>
       by (simp add: qcomplements_def')
     have [simp]: \<open>qregister \<lbrakk>R,Q\<rbrakk>\<close>
-      using \<open>iso_qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> iso_qregister_def by blast
+      using \<open>iso_qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close> iso_qregister_def' by blast
     have [simp]: \<open>qregister \<lbrakk>Q,R\<rbrakk>\<close>
       by (simp add: qcompatible_sym)
     from \<open>distinct_qvars_pred_vars A Q\<close> \<open>qcomplements Q R\<close>
@@ -968,7 +968,7 @@ proof -
     then obtain R :: \<open>('g, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
       by auto
     then have [simp]: \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
-      using iso_qregister_def qcomplements_def' by blast
+      using iso_qregister_def' qcomplements_def' by blast
     have \<open>top\<guillemotright>\<lbrakk>R,Q\<rbrakk> \<div> \<psi>\<guillemotright>Q = top\<close>
       apply (simp add: space_div_space_div_unlifted space_div_unlifted_def flip: top_ccsubspace_def)
       using \<open>qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close> qcompatible_register2 top_lift by blast
