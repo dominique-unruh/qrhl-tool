@@ -2113,6 +2113,17 @@ proof (rename_tac \<EE> \<FF>, intro CollectI)
   qed
 qed
 
+lemma kraus_family_map_tensor_raw_sum:
+  \<open>kraus_family_map (kraus_family_tensor_raw \<EE> \<FF>) \<rho> = (\<Sum>\<^sub>\<infinity>((E,x),(F,y))\<in>Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>. sandwich_tc (E \<otimes>\<^sub>o F) \<rho>)\<close>
+proof -
+  have inj: \<open>inj_on (\<lambda>((E, x), F, y). (E \<otimes>\<^sub>o F, E, F, x, y)) (Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>)\<close>
+    by (auto intro!: inj_onI)
+  show \<open>kraus_family_map (kraus_family_tensor_raw \<EE> \<FF>) \<rho>
+      = (\<Sum>\<^sub>\<infinity>((E,x),(F,y))\<in>Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>. sandwich_tc (E \<otimes>\<^sub>o F) \<rho>)\<close>
+    apply (simp add: kraus_family_map.rep_eq kraus_family_tensor_raw.rep_eq infsum_reindex inj o_def)
+    by (simp add: case_prod_unfold)
+qed
+
 lemma kraus_family_map_tensor_raw:
   shows \<open>kraus_family_map (kraus_family_tensor_raw \<EE> \<FF>) (tc_tensor \<rho> \<sigma>) = tc_tensor (kraus_family_map \<EE> \<rho>) (kraus_family_map \<FF> \<sigma>)\<close>
 proof -
@@ -2134,8 +2145,7 @@ proof -
 
   have \<open>kraus_family_map (kraus_family_tensor_raw \<EE> \<FF>) (tc_tensor \<rho> \<sigma>)
       = (\<Sum>\<^sub>\<infinity>((E,x),(F,y))\<in>Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>. sandwich_tc (E \<otimes>\<^sub>o F) (tc_tensor \<rho> \<sigma>))\<close>
-    apply (simp add: kraus_family_map.rep_eq kraus_family_tensor_raw.rep_eq infsum_reindex inj o_def)
-    by (simp add: case_prod_unfold)
+    by (rule kraus_family_map_tensor_raw_sum)
   also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. \<Sum>\<^sub>\<infinity>(F,y)\<in>Rep_kraus_family \<FF>. sandwich_tc (E \<otimes>\<^sub>o F) (tc_tensor \<rho> \<sigma>))\<close>
     apply (subst infsum_Sigma_banach[symmetric])
     using sum1 by (auto intro!: simp: case_prod_unfold)
@@ -2172,6 +2182,10 @@ definition \<open>kraus_family_tensor \<EE> \<FF> = kraus_family_map_outcome (\<
 lemma kraus_family_map_tensor:
   \<open>kraus_family_map (kraus_family_tensor \<EE> \<FF>) (tc_tensor \<rho> \<sigma>)= tc_tensor (kraus_family_map \<EE> \<rho>) (kraus_family_map \<FF> \<sigma>)\<close>
   by (auto intro!: simp: kraus_family_tensor_def kraus_family_map_outcome_same_map kraus_family_map_tensor_raw)
+
+lemma kraus_family_map_tensor_sum:
+  \<open>kraus_family_map (kraus_family_tensor \<EE> \<FF>) \<rho> = (\<Sum>\<^sub>\<infinity>((E,x),(F,y))\<in>Rep_kraus_family \<EE> \<times> Rep_kraus_family \<FF>. sandwich_tc (E \<otimes>\<^sub>o F) \<rho>)\<close>
+  by (simp add: kraus_family_tensor_def kraus_family_map_tensor_raw_sum)
 
 
 lemma kraus_family_bound_tensor_raw:
