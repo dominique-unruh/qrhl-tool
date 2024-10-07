@@ -3,7 +3,11 @@ theory CQ_Operators
     Registers2.Registers_Unsorted
 begin
 
+type_synonym ('c,'q) cq_operator = \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
+type_synonym ('c1,'q1,'c2,'q2) cq_map = \<open>(('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close>
+type_synonym ('c,'q) cq_map2 = \<open>('c,'q,'c,'q) cq_map\<close>
 
+(* TODO move *)
 lift_definition apply_qregister_kraus_map :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2, 'x) kraus_family \<Rightarrow> ('b ell2, 'b ell2, 'x) kraus_family\<close> is
   \<open>\<lambda>(Q :: ('a,'b) qregister). image (\<lambda>(E,x). (apply_qregister Q E, x))\<close>
 proof (rule CollectI, erule CollectE, rename_tac Q E)
@@ -157,7 +161,7 @@ proof -
     apply (simp only: kraus_family_map_tensor_sum kraus_family_id_def kraus_family_of_op.rep_eq complete_measurement.rep_eq)
     by (simp add: image_image)
   also have \<open>\<dots> = \<rho>\<close>
-    by (metis cq classical_on_def)
+    using cq classical_fst_def by blast
   finally show ?thesis
     by -
 qed
@@ -170,6 +174,117 @@ definition cq_map_from_measurement :: \<open>(('c1\<times>'q1) ell2, 'q2 ell2, '
 definition cq_map_from_pointwise :: \<open>('c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family) \<Rightarrow> (('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close> where
   \<open>cq_map_from_pointwise E = cq_map_from_measurement (kraus_family_map_outcome (\<lambda>(c,d). d) (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket))))\<close>
 
+definition cq_map_to_pointwise :: \<open>(('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family \<Rightarrow> ('c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family)\<close> where
+\<open>cq_map_to_pointwise E = undefined\<close>
+
+definition cq_map_cases :: \<open>('c1 \<Rightarrow> ('c1,'q1,'c2,'q2) cq_map) \<Rightarrow> ('c1,'q1,'c2,'q2) cq_map\<close> where
+\<open>cq_map_cases E = kraus_family_flatten (kraus_family_comp_dependent (\<lambda>(c,()). E (inv ket c))
+                       (kraus_family_tensor (complete_measurement (range ket)) kraus_family_id))\<close>
+
+definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 \<Rightarrow> real) \<Rightarrow> ('cl1, 'qu,'cl2, 'qu) cq_map\<close> where
+  \<open>cq_map_sample d = cq_map_from_pointwise (\<lambda>c. kraus_map_sample (d c))\<close>
+
+definition cq_prob :: \<open>('c,'q) cq_operator \<Rightarrow> 'c \<Rightarrow> real\<close> where
+  \<open>cq_prob \<rho> c = norm (cq_operator_at \<rho> c)\<close>
+
+definition cq_map_comp :: \<open>('c2,'q2,'c3,'q3) cq_map \<Rightarrow> ('c1,'q1,'c2,'q2) cq_map \<Rightarrow> ('c1,'q1,'c3,'q3) cq_map\<close> where
+  \<open>cq_map_comp E F = kraus_family_flatten (kraus_family_comp E F)\<close>
+
+lemma cq_map_comp_cong[cong]:
+  assumes \<open>kraus_family_map E = kraus_family_map E'\<close>
+  assumes \<open>kraus_family_map F = kraus_family_map F'\<close>
+  shows \<open>kraus_family_map (cq_map_comp E F) = kraus_family_map (cq_map_comp E' F')\<close>
+try0
+sledgehammer [dont_slice]
+by -
+
+fun cq_map_seq where
+  \<open>cq_map_seq [] = kraus_family_id\<close>
+| \<open>cq_map_seq [E] = E\<close>
+| \<open>cq_map_seq (E#Es) = cq_map_comp (cq_map_seq Es) E\<close>
+
+definition cq_map_on_q :: \<open>('c \<Rightarrow> ('q1 ell2,'q2 ell2,'x) kraus_family) \<Rightarrow> ('c,'q1,'c,'q2) cq_map\<close> where
+  \<open>cq_map_on_q E = cq_map_from_pointwise (\<lambda>c. kraus_family_map_outcome (\<lambda>_. c) (E c))\<close>
+
+definition cq_map_on_c :: \<open>('c1 \<Rightarrow> 'c2) \<Rightarrow> ('c1,'q,'c2,'q) cq_map\<close> where
+  \<open>cq_map_on_c f = cq_map_from_pointwise (\<lambda>c. kraus_family_map_outcome (\<lambda>_. f c) kraus_family_id)\<close>
+
+definition cq_map_with_auxiliary_state ::
+  \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> ('cl1, 'qu1\<times>'aux, 'cl2, 'qu2\<times>'aux) cq_map \<Rightarrow> ('cl1,'qu1,'cl2,'qu2) cq_map\<close> where
+  \<open>cq_map_with_auxiliary_state \<rho> \<EE> = cq_map_comp (cq_map_on_q (\<lambda>_. kraus_map_partial_trace (range ket))) (cq_map_comp \<EE> (cq_map_on_q (\<lambda>_. kraus_family_tensor_op_right \<rho>)))\<close>
+
+definition \<open>cq_map_of_op U = cq_map_on_q (\<lambda>c. kraus_family_of_op (U c))\<close>
+
+definition cq_map_tensor_id_right :: \<open>('cl1, 'qu1, 'cl2, 'qu2) cq_map \<Rightarrow> ('cl1, 'qu1\<times>'extra, 'cl2, 'qu2\<times>'extra) cq_map\<close> where
+  \<open>cq_map_tensor_id_right \<EE> = cq_map_from_pointwise (\<lambda>c. 
+      kraus_family_map_outcome fst (kraus_family_tensor (cq_map_to_pointwise \<EE> c) kraus_family_id))\<close>
+
+definition cq_map_id :: \<open>('c,'q) cq_map2\<close> where
+  \<open>cq_map_id = cq_map_on_q (\<lambda>_. kraus_family_id)\<close>
+
+definition is_cq_map :: \<open>('c1,'q1,'c2,'q2) cq_map \<Rightarrow> bool\<close> where
+  \<open>is_cq_map E \<longleftrightarrow> kraus_equivalent (cq_map_comp (cq_map_comp cq_map_id E) cq_map_id) E\<close>
+
+lemma cq_map_comp_0L[simp]: \<open>cq_map_comp 0 E = 0\<close>
+  by (simp add: cq_map_comp_def)
+
+lemma cq_map_comp_0R[simp]: \<open>cq_map_comp E 0 = 0\<close>
+  by (simp add: cq_map_comp_def)
+
+lemma is_cq_map_0[iff]: \<open>is_cq_map 0\<close>
+  by (simp add: is_cq_map_def)
+
+definition cq_map_while :: \<open>('c \<Rightarrow> bool) \<Rightarrow> ('c,'q) cq_map2 \<Rightarrow> ('c,'q) cq_map2\<close> where
+  \<open>cq_map_while = undefined\<close>
+
+lemma cq_map_comp_cq_map_from_pointwise:
+  fixes E :: \<open>'c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family\<close>
+    and F :: \<open>'c2 \<Rightarrow> ('q2 ell2, 'q3 ell2, 'c3) kraus_family\<close>
+  shows \<open>kraus_family_map (cq_map_comp (cq_map_from_pointwise F) (cq_map_from_pointwise E))
+    = kraus_family_map (cq_map_from_pointwise (\<lambda>c. kraus_family_map_outcome (\<lambda>(c,d). d) (kraus_family_comp_dependent (\<lambda>d. F d) (E c))))\<close>
+  by x
+
+lemma cq_map_from_pointwise_cong[cong]:
+  assumes \<open>\<And>x. kraus_family_map (E x) = kraus_family_map (F x)\<close>
+  shows \<open>kraus_family_map (cq_map_from_pointwise E) = kraus_family_map (cq_map_from_pointwise F)\<close>
+try0
+sledgehammer [dont_slice]
+by -
+
+
+lemma is_cq_map_cq_map_from_pointwise[iff]: \<open>is_cq_map (cq_map_from_pointwise E)\<close>
+  apply (auto intro!: kraus_equivalentI simp: is_cq_map_def cq_map_id_def cq_map_on_q_def
+cong : cq_map_comp_cong)
+  apply (subst cq_map_comp_cong)
+    apply (subst cq_map_comp_cq_map_from_pointwise)
+    apply (rule refl)
+    apply (rule refl)
+  apply (subst cq_map_comp_cq_map_from_pointwise)
+  apply (subst cq_map_from_pointwise_cong)
+   apply (subst kraus_family_map_outcome_same_map)
+   apply (subst kraus_family_comp_dependent_cong)
+apply (simp add: )
+
+  by -
+
+lemma kraus_family_norm_cq_map_from_pointwise:
+  assumes \<open>\<And>x. kraus_family_norm (E x) \<le> B\<close>
+  shows \<open>kraus_family_norm (cq_map_from_pointwise E) \<le> B\<close>
+  by -
+
+lemma kraus_family_norm_cq_map_to_pointwise:
+  \<open>kraus_family_norm (cq_map_to_pointwise E x) \<le> kraus_family_norm E\<close>
+by -
+
+lemma cq_map_from_pointwise_cong:
+  assumes \<open>\<And>c. kraus_equivalent' (\<EE> c) (\<FF> c)\<close>
+  shows \<open>kraus_equivalent (cq_map_from_pointwise \<EE>) (cq_map_from_pointwise \<FF>)\<close>
+by -
+
+lemma cq_map_to_pointwise_cong:
+  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
+  shows \<open>kraus_equivalent' (cq_map_to_pointwise \<EE> c) (cq_map_to_pointwise \<FF> c)\<close>
+  by (simp add: cq_map_to_pointwise_def)
 
 end
 

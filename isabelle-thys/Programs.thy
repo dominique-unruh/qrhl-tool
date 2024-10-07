@@ -5,12 +5,60 @@ begin
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
 no_notation Order.bottom ("\<bottom>\<index>")
 
-lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Rightarrow> ('cl1\<times>'qu,'cl2\<times>'qu,unit) kraus_family\<close> is
+(* lift_definition cq_map_sample :: \<open>('cl1 \<Rightarrow> 'cl2 distr) \<Rightarrow> ('cl1\<times>'qu,'cl2\<times>'qu,unit) kraus_family\<close> is
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
-  by (auto intro!: bdd_aboveI simp: kraus_map_sample_norm prob_summable)
+  by (auto intro!: bdd_aboveI simp: kraus_map_sample_norm prob_summable) *)
 
 definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr" where
   \<open>cq_operator_distrib \<rho> = (if is_distribution (cq_prob \<rho>) then Abs_distr (cq_prob \<rho>) else 0)\<close>
+
+definition denotation_rel :: \<open>(cl,qu) cq_map2 \<Rightarrow> (cl,qu) cq_map2 \<Rightarrow> bool\<close> where 
+  \<open>denotation_rel D E \<longleftrightarrow> kraus_equivalent D E \<and> is_cq_map D \<and> kraus_family_norm D \<le> 1\<close>
+
+lemma denotation_relI:
+  assumes \<open>kraus_equivalent D E\<close>
+  assumes \<open>is_cq_map D\<close>
+  assumes \<open>kraus_family_norm D \<le> 1\<close>
+  shows \<open>denotation_rel D E\<close>
+  using assms by (simp add: denotation_rel_def)
+
+lemma symp_denotation_rel[iff]: \<open>symp denotation_rel\<close>
+proof (rule sympI)
+  write kraus_equivalent (infix "===" 10)
+  write kraus_equivalent' (infix "===''" 10)
+  fix D E
+  assume rel: \<open>denotation_rel D E\<close>
+  have \<open>E === D\<close>
+    by (metis rel denotation_rel_def kraus_equivalent_def)
+  moreover 
+  have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id === E\<close>
+  proof -
+    have \<open>E ===' D\<close>
+      by (simp add: \<open>E === D\<close> kraus_equivalent_imp_equivalent'_CARD_1)
+    have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id ===' cq_map_comp (cq_map_comp cq_map_id D) cq_map_id\<close>
+      by (auto intro!: kraus_equivalent'_map_cong kraus_family_comp_cong' \<open>E ===' D\<close> simp add: cq_map_comp_def)
+    also have \<open>\<dots> ===' D\<close>
+      apply (rule kraus_equivalent_imp_equivalent'_CARD_1)
+      using denotation_rel_def is_cq_map_def rel by blast
+    also have \<open>\<dots> ===' E\<close>
+      using \<open>E ===' D\<close> kraus_equivalent'_sym by blast
+    finally show ?thesis
+      using kraus_equivalent'_imp_equivalent by blast
+  qed
+  then have \<open>is_cq_map E\<close>
+    by (simp add: is_cq_map_def)
+  moreover have \<open>kraus_family_norm E \<le> 1\<close>
+    by (metis rel denotation_rel_def kraus_family_norm_welldefined)
+  ultimately show \<open>denotation_rel E D\<close>
+    by (simp add: denotation_rel_def)
+qed
+
+lemma transp_denotation_rel[iff]: \<open>transp denotation_rel\<close>
+  by (metis denotation_rel_def kraus_equivalent_def transpI)
+
+
+quotient_type denotation = \<open>(cl,qu) cq_map2\<close> / partial: denotation_rel
+  by (auto intro!: part_equivpI exI[of _ 0] simp: denotation_rel_def)
 
 
 datatype raw_program =
@@ -538,9 +586,48 @@ consts
   sandwich (U \<otimes>\<^sub>o U) (classical_operator (Some o map_prod (inv f) (inv f) o (\<lambda>((x,y),(z,w)). ((z,y),(x,w))) o map_prod f f))
 )\<close> *)
 
-lift_definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> is
+definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> where
+  \<open>cq_map_local_c F init \<EE> = cq_map_from_pointwise (\<lambda>c.
+      kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (cq_map_to_pointwise \<EE> (copy_CREGISTER_from F init c)))\<close>
+
+lemma is_cq_map_cq_map_local_c[intro]:
+  assumes \<open>is_cq_map \<EE>\<close>
+  shows \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
+  by (simp add: cq_map_local_c_def)
+
+lemma kraus_family_norm_cq_map_local_c: \<open>kraus_family_norm (cq_map_local_c F init \<EE>) \<le> kraus_family_norm \<EE>\<close>
+  by (auto intro!: kraus_family_norm_cq_map_from_pointwise kraus_family_norm_cq_map_to_pointwise
+      simp: cq_map_local_c_def)
+
+lemma cq_map_local_c_cong:
+  assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
+  shows \<open>kraus_equivalent (cq_map_local_c F init \<EE>) (cq_map_local_c F init \<FF>)\<close>
+  using assms
+  by (auto intro!: cq_map_from_pointwise_cong kraus_equivalent'_map_cong cq_map_to_pointwise_cong
+      simp: cq_map_local_c_def)
+
+lift_definition denotation_local_c :: \<open>cl CREGISTER \<Rightarrow> cl \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
+  cq_map_local_c
+proof (rename_tac F init \<EE> \<FF>, rule denotation_relI)
+  fix \<EE> \<FF> init F
+  assume \<open>denotation_rel \<EE> \<FF>\<close>
+  then have \<open>is_cq_map \<EE>\<close>
+    using denotation_rel_def by blast
+  then show \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
+    by blast
+  have \<open>kraus_family_norm \<EE> \<le> 1\<close>
+    using \<open>denotation_rel \<EE> \<FF>\<close> denotation_rel_def by force
+  then show \<open>kraus_family_norm (cq_map_local_c F init \<EE>) \<le> 1\<close>
+    by (smt (verit) kraus_family_norm_cq_map_local_c)
+  have \<open>kraus_equivalent \<EE> \<FF>\<close>
+    using \<open>denotation_rel \<EE> \<FF>\<close> denotation_rel_def by blast
+  then show \<open>kraus_equivalent (cq_map_local_c F init \<EE>) (cq_map_local_c F init \<FF>)\<close>
+    by (simp add: cq_map_local_c_cong)
+qed
+
+(* lift_definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> is
   \<open>\<lambda>F init \<EE> c. kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (\<EE> (copy_CREGISTER_from F init c))\<close>
-  by (auto simp: bdd_above_def)
+  by (auto simp: bdd_above_def) *)
 
 (* 
 lemma von_neumann_factor_tensor:
@@ -560,13 +647,25 @@ https://math.stackexchange.com/questions/4794773/tensor-product-of-factors-is-a-
     Rep_QREGISTER Q = {sandwich U a | a. actual_qregister_range_aux f a}})\<close> *)
 
 
-
 definition cq_map_local_q :: 
+  \<open>'qu QREGISTER \<Rightarrow> ('qu ell2, 'qu ell2) trace_class \<Rightarrow> ('cl,'qu) cq_map2 \<Rightarrow> ('cl,'qu) cq_map2\<close> where
+  \<open>cq_map_local_q Q \<rho> \<EE> = cq_map_with_auxiliary_state \<rho> (cq_map_seq [
+      cq_map_of_op (\<lambda>_. swap_QREGISTER Q),
+      cq_map_tensor_id_right \<EE>,
+      cq_map_of_op (\<lambda>_. swap_QREGISTER Q)])\<close>
+
+lift_definition denotation_local_q :: 
+  \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> denotation \<Rightarrow> denotation\<close>
+  is cq_map_local_q
+  by x
+
+
+(* definition cq_map_local_q :: 
   \<open>'qu QREGISTER \<Rightarrow> ('qu ell2, 'qu ell2) trace_class \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> where
-  \<open>cq_map_local_q Q \<rho> \<EE> = cq_map_auxiliary_state \<rho> (
+  \<open>cq_map_local_q Q \<rho> \<EE> = cq_map_with_auxiliary_state \<rho> (
     cq_map_seq  (cq_map_of_op (swap_QREGISTER Q))
     (cq_map_seq (cq_map_tensor_id_right \<EE>)
-                (cq_map_of_op (swap_QREGISTER Q))))\<close>
+                (cq_map_of_op (swap_QREGISTER Q))))\<close> *)
 
 
 (* lemma infsum_le_finite_sums_wot':
@@ -590,26 +689,49 @@ proof -
 
 (* lemma kraus_map_from_measurement_0: \<open>kraus_equivalent' (kraus_map_from_measurement 0) 0\<close> *)
 
-lift_definition cq_map_measurement :: \<open>('cl1 \<Rightarrow> ('cl2, 'qu) measurement) \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> is
-  \<open>\<lambda>m c. kraus_map_from_measurement (m c)\<close>
-  by (auto intro!: kraus_map_from_measurement_norm_leq1 simp: bdd_above_def)
+lift_definition denotation_measurement :: \<open>(cl \<Rightarrow> (cl, qu) measurement) \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>M. cq_map_from_pointwise (\<lambda>c. kraus_map_from_measurement (M c))\<close>
+  by x
 
-fun denotation_raw :: \<open>raw_program \<Rightarrow> (cl,qu,cl,qu) cq_map\<close> where
-  denotation_raw_Skip: \<open>denotation_raw Skip = cq_map_id\<close>
-| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = cq_map_seq (denotation_raw c) (denotation_raw d)\<close>
-| denotation_raw_Sample: \<open>denotation_raw (Sample e) = cq_map_sample e\<close>
-| denotation_raw_IfThenElse: \<open>denotation_raw (IfThenElse e c d) = cq_map_if e (denotation_raw c) (denotation_raw d)\<close>
-| denotation_raw_While: \<open>denotation_raw (While e c) = cq_map_while e (denotation_raw c)\<close>
-| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = cq_map_quantum_op \<EE>\<close>
-| denotation_raw_Measurement: \<open>denotation_raw (Measurement m) = cq_map_measurement m\<close>
+(* lift_definition cq_map_measurement :: \<open>('cl1 \<Rightarrow> ('cl2, 'qu) measurement) \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> is
+  \<open>\<lambda>m c. kraus_map_from_measurement (m c)\<close>
+  by (auto intro!: kraus_map_from_measurement_norm_leq1 simp: bdd_above_def) *)
+
+lift_definition denotation_id :: denotation is cq_map_id
+  by x
+
+lift_definition denotation_seq :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>D E. cq_map_comp E D\<close>
+  by x
+
+lift_definition denotation_sample :: \<open>(cl \<Rightarrow> cl distr) \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>e. cq_map_sample (\<lambda>c. prob (e c))\<close>
+  by x
+
+lift_definition denotation_cases :: \<open>(cl \<Rightarrow> denotation) \<Rightarrow> denotation\<close> is cq_map_cases
+  by x
+
+lift_definition denotation_while :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> denotation\<close> is cq_map_while
+  by x
+
+lift_definition denotation_on_quantum :: \<open>(cl \<Rightarrow> (qu ell2, qu ell2, 'x) kraus_family) \<Rightarrow> denotation\<close>
+  is cq_map_on_q
+  by x
+
+fun denotation_raw :: \<open>raw_program \<Rightarrow> denotation\<close> where
+  denotation_raw_Skip: \<open>denotation_raw Skip = denotation_id\<close>
+| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = denotation_seq (denotation_raw c) (denotation_raw d)\<close>
+| denotation_raw_Sample: \<open>denotation_raw (Sample e) = denotation_sample e\<close>
+| denotation_raw_IfThenElse: \<open>denotation_raw (IfThenElse e c d) = denotation_cases (\<lambda>m. if e m then denotation_raw c else denotation_raw d)\<close>
+| denotation_raw_While: \<open>denotation_raw (While e c) = denotation_while e (denotation_raw c)\<close>
+| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = denotation_on_quantum \<EE>\<close>
+| denotation_raw_Measurement: \<open>denotation_raw (Measurement m) = denotation_measurement m\<close>
 | denotation_raw_OracleCall: \<open>denotation_raw (OracleCall _) = undefined\<close>
   \<comment> \<open>\<^const>\<open>OracleCall\<close> should not occur in valid programs\<close>
 | denotation_raw_InstantiateOracles: \<open>denotation_raw (InstantiateOracles _ _) = undefined\<close>
   \<comment> \<open>\<^const>\<open>InstantiateOracles\<close> should not occur in valid programs\<close>
-| denotation_raw_LocalC: \<open>denotation_raw (LocalC F init c) = cq_map_local_c F init (denotation_raw c)\<close>
-| denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = cq_map_local_q F init (denotation_raw c)\<close>
-
-
+| denotation_raw_LocalC: \<open>denotation_raw (LocalC F init c) = denotation_local_c F init (denotation_raw c)\<close>
+| denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = denotation_local_q F init (denotation_raw c)\<close>
 
 (* fun denotation_raw :: "raw_program \<Rightarrow> cq_map" where
   denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_family_id\<close>
@@ -624,9 +746,9 @@ fun denotation_raw :: "raw_program \<Rightarrow> cq_operator \<Rightarrow> cq_op
 (* TODO missing cases *)
  *)
 
-lift_definition denotation :: "program \<Rightarrow> (cl,qu,cl,qu) cq_map" is denotation_raw.
+lift_definition denotation :: "program \<Rightarrow> denotation" is denotation_raw.
 
-lemma denotation_sample: \<open>denotation (sample x e) = cq_map_sample (\<lambda>m. map_distr (\<lambda>xa. Classical_Registers.setter x xa m) (e m))\<close>
+lemma denotation_sample: \<open>denotation (sample x e) = denotation_sample (\<lambda>m. map_distr (\<lambda>xa. Classical_Registers.setter x xa m) (e m))\<close>
   apply (transfer' fixing: x e)
   by simp
 
@@ -651,9 +773,9 @@ lemma cq_map_sample_point_distr: \<open>cq_map_equiv (cq_map_sample (\<lambda>x.
   apply (transfer' fixing: )
   by (auto intro!: kraus_map_sample_point_distr simp: kraus_family_norm_sample_prob)
 
-lemma denotation_assign_sample: \<open>denotation (assign x e) = cq_map_sample (\<lambda>m. point_distr (Classical_Registers.setter x (e m) m))\<close>
+lemma denotation_assign_sample: \<open>denotation (assign x e) = denotation_sample (\<lambda>m. point_distr (Classical_Registers.setter x (e m) m))\<close>
   by (simp add: assign_def denotation_sample)
-lemma denotation_assign: \<open>cq_map_equiv (denotation (assign x e)) (cq_map_classical (\<lambda>m. Classical_Registers.setter x (e m) m))\<close>
+lemma denotation_assign: \<open>denotation (assign x e) = (cq_map_classical (\<lambda>m. Classical_Registers.setter x (e m) m))\<close>
   by (simp add: denotation_assign_sample cq_map_sample_point_distr)
 
 lemma denotation_skip: \<open>denotation skip = cq_map_id\<close>
