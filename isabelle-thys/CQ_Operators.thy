@@ -172,7 +172,7 @@ definition cq_map_from_measurement :: \<open>(('c1\<times>'q1) ell2, 'q2 ell2, '
       (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)\<close>
 
 definition cq_map_from_pointwise :: \<open>('c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family) \<Rightarrow> (('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close> where
-  \<open>cq_map_from_pointwise E = cq_map_from_measurement (kraus_family_map_outcome (\<lambda>(c,d). d) (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket))))\<close>
+  \<open>cq_map_from_pointwise E = cq_map_from_measurement (kraus_family_map_outcome snd (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket))))\<close>
 
 definition cq_map_to_pointwise :: \<open>(('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family \<Rightarrow> ('c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family)\<close> where
 \<open>cq_map_to_pointwise E = undefined\<close>
@@ -190,13 +190,12 @@ definition cq_prob :: \<open>('c,'q) cq_operator \<Rightarrow> 'c \<Rightarrow> 
 definition cq_map_comp :: \<open>('c2,'q2,'c3,'q3) cq_map \<Rightarrow> ('c1,'q1,'c2,'q2) cq_map \<Rightarrow> ('c1,'q1,'c3,'q3) cq_map\<close> where
   \<open>cq_map_comp E F = kraus_family_flatten (kraus_family_comp E F)\<close>
 
-lemma cq_map_comp_cong[cong]:
-  assumes \<open>kraus_family_map E = kraus_family_map E'\<close>
-  assumes \<open>kraus_family_map F = kraus_family_map F'\<close>
-  shows \<open>kraus_family_map (cq_map_comp E F) = kraus_family_map (cq_map_comp E' F')\<close>
-try0
-sledgehammer [dont_slice]
-by -
+lemma cq_map_comp_cong:
+  assumes \<open>kraus_equivalent E E'\<close>
+  assumes \<open>kraus_equivalent F F'\<close>
+  shows \<open>kraus_equivalent (cq_map_comp E F) (cq_map_comp E' F')\<close>
+  by (auto intro!: kraus_equivalent_kraus_family_map_outcome_left kraus_equivalent_kraus_family_map_outcome_right kraus_family_comp_cong assms
+      simp: cq_map_comp_def)
 
 fun cq_map_seq where
   \<open>cq_map_seq [] = kraus_family_id\<close>
@@ -225,6 +224,17 @@ definition cq_map_id :: \<open>('c,'q) cq_map2\<close> where
 definition is_cq_map :: \<open>('c1,'q1,'c2,'q2) cq_map \<Rightarrow> bool\<close> where
   \<open>is_cq_map E \<longleftrightarrow> kraus_equivalent (cq_map_comp (cq_map_comp cq_map_id E) cq_map_id) E\<close>
 
+lemma is_cq_mapI: 
+  assumes \<open>kraus_equivalent (cq_map_comp (cq_map_comp cq_map_id E) cq_map_id) E\<close>
+  shows \<open>is_cq_map E\<close>
+  by (simp add: assms is_cq_map_def)
+
+lemma is_cq_mapI2:
+  assumes \<open>kraus_equivalent (cq_map_comp cq_map_id E) E\<close>
+  assumes \<open>kraus_equivalent (cq_map_comp E cq_map_id) E\<close>
+  shows \<open>is_cq_map E\<close>
+  by (metis assms(1) assms(2) cq_map_comp_def is_cq_mapI kraus_equivalent_def kraus_family_comp_apply kraus_family_map_outcome_same_map)
+
 lemma cq_map_comp_0L[simp]: \<open>cq_map_comp 0 E = 0\<close>
   by (simp add: cq_map_comp_def)
 
@@ -237,35 +247,200 @@ lemma is_cq_map_0[iff]: \<open>is_cq_map 0\<close>
 definition cq_map_while :: \<open>('c \<Rightarrow> bool) \<Rightarrow> ('c,'q) cq_map2 \<Rightarrow> ('c,'q) cq_map2\<close> where
   \<open>cq_map_while = undefined\<close>
 
+lemma cq_map_comp_cq_map_from_measurement:
+  shows \<open>cq_map_comp (cq_map_from_measurement F) (cq_map_from_measurement E) 
+      =\<^sub>k\<^sub>r cq_map_from_measurement (kraus_family_map_outcome snd (kraus_family_comp F (kraus_family_comp_dependent 
+                                            (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))\<close>
+proof -
+  have \<open>cq_map_comp (cq_map_from_measurement F) (cq_map_from_measurement E)
+    = kraus_family_flatten (kraus_family_comp (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) F))
+       (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))\<close>
+    by (simp add: cq_map_comp_def cq_map_from_measurement_def)
+  also have \<open>kraus_family_flatten
+     (kraus_family_comp (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) F))
+       (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))
+=\<^sub>k\<^sub>r kraus_family_comp (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) F))
+       (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))\<close>
+  by (simp add: kraus_equivalent_def)
+  also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_comp ( (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) F))
+       (kraus_family_flatten (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))\<close>
+    by (simp add: kraus_equivalent_def kraus_family_comp_apply)
+  also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_comp ( (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) F))
+       ( (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))\<close>
+    by (simp add: kraus_equivalent_def kraus_family_comp_apply)
+  also have \<open>\<dots> \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>((g, f), e). (g, f, ()))
+     (kraus_family_comp_dependent (\<lambda>(_, f). kraus_family_of_op (tensor_ell2_left (ket f)))
+       (kraus_family_comp F (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))\<close>
+    apply (rule kraus_equivalent'_trans)
+    unfolding kraus_family_comp_def
+     apply (rule kraus_family_comp_dependent_assoc')
+    by auto
+  also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_comp_dependent (\<lambda>(_, f). kraus_family_of_op (tensor_ell2_left (ket f)))
+       (kraus_family_comp F (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))\<close>
+    by (simp add: kraus_equivalent_def)
+  also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_flatten (kraus_family_comp_dependent (\<lambda>f. kraus_family_of_op (tensor_ell2_left (ket f)))
+       (kraus_family_map_outcome snd (kraus_family_comp F (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))))\<close>
+    apply (subst kraus_family_comp_dependent_map_outcome_right)
+    by (simp add: kraus_equivalent_def case_prod_unfold)
+  also have \<open>\<dots> = cq_map_from_measurement (kraus_family_map_outcome snd (kraus_family_comp F (kraus_family_comp_dependent 
+                                            (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))\<close>
+    by (simp add: cq_map_from_measurement_def)
+  finally show ?thesis
+    by -
+qed
+
+lemma cq_map_from_measurement_cong:
+  assumes \<open>E \<equiv>\<^sub>k\<^sub>r F\<close>
+  shows \<open>cq_map_from_measurement E =\<^sub>k\<^sub>r cq_map_from_measurement F\<close>
+by -
+
+lemma kraus_family_map_outcome_equiv_left_iff[simp]: 
+(* TODO right *)
+  shows \<open>kraus_family_map_outcome f E =\<^sub>k\<^sub>r F \<longleftrightarrow> E =\<^sub>k\<^sub>r F\<close>
+  by (simp add: kraus_equivalent_def)
+
 lemma cq_map_comp_cq_map_from_pointwise:
   fixes E :: \<open>'c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family\<close>
     and F :: \<open>'c2 \<Rightarrow> ('q2 ell2, 'q3 ell2, 'c3) kraus_family\<close>
-  shows \<open>kraus_family_map (cq_map_comp (cq_map_from_pointwise F) (cq_map_from_pointwise E))
-    = kraus_family_map (cq_map_from_pointwise (\<lambda>c. kraus_family_map_outcome (\<lambda>(c,d). d) (kraus_family_comp_dependent (\<lambda>d. F d) (E c))))\<close>
-  by x
+  shows \<open>cq_map_comp (cq_map_from_pointwise F) (cq_map_from_pointwise E) 
+      =\<^sub>k\<^sub>r cq_map_from_pointwise (\<lambda>c. kraus_family_map_outcome snd (kraus_family_comp_dependent (\<lambda>d. F d) (E c)))\<close>
+proof -
+  have \<open>cq_map_comp (cq_map_from_pointwise F) (cq_map_from_pointwise E) =\<^sub>k\<^sub>r 
+      cq_map_from_measurement
+           (kraus_family_map_outcome snd
+             (kraus_family_comp (kraus_family_map_outcome snd (kraus_family_comp_dependent F (kraus_map_partial_trace' (range ket))))
+               (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c)))
+                 (kraus_family_map_outcome snd (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket)))))))\<close>
+    unfolding cq_map_from_pointwise_def
+    by (rule cq_map_comp_cq_map_from_measurement)
+  also have \<open>\<dots> = xxx\<close>
 
-lemma cq_map_from_pointwise_cong[cong]:
-  assumes \<open>\<And>x. kraus_family_map (E x) = kraus_family_map (F x)\<close>
-  shows \<open>kraus_family_map (cq_map_from_pointwise E) = kraus_family_map (cq_map_from_pointwise F)\<close>
-try0
-sledgehammer [dont_slice]
+
+
+
+
+]
+
+
+  have \<open>kraus_family_map_outcome snd (kraus_family_comp (kraus_family_map_outcome snd (kraus_family_comp_dependent F (kraus_map_partial_trace' (range ket))))
+         (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c)))
+           (kraus_family_map_outcome snd (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket))))))
+    \<equiv>\<^sub>k\<^sub>r
+    kraus_family_map_outcome snd (kraus_family_comp_dependent (\<lambda>c. kraus_family_map_outcome snd (kraus_family_comp_dependent F (E c))) (kraus_map_partial_trace' (range ket)))\<close>
+  proof -
+
+
+    show a for a
+      by x
+  qed
+
+  then
+  show ?thesis
+    unfolding cq_map_from_pointwise_def
+    apply (rule_tac kraus_equivalent_trans)
+     apply (rule cq_map_comp_cq_map_from_measurement)
+    apply (rule cq_map_from_measurement_cong)
+    by simp
+qed
+
+lemma cq_map_from_pointwise_cong:
+  assumes \<open>\<And>x. kraus_equivalent (E x) (F x)\<close>
+  shows \<open>kraus_equivalent (cq_map_from_pointwise E) (cq_map_from_pointwise F)\<close>
 by -
 
 
-lemma is_cq_map_cq_map_from_pointwise[iff]: \<open>is_cq_map (cq_map_from_pointwise E)\<close>
-  apply (auto intro!: kraus_equivalentI simp: is_cq_map_def cq_map_id_def cq_map_on_q_def
-cong : cq_map_comp_cong)
-  apply (subst cq_map_comp_cong)
-    apply (subst cq_map_comp_cq_map_from_pointwise)
-    apply (rule refl)
-    apply (rule refl)
-  apply (subst cq_map_comp_cq_map_from_pointwise)
-  apply (subst cq_map_from_pointwise_cong)
-   apply (subst kraus_family_map_outcome_same_map)
-   apply (subst kraus_family_comp_dependent_cong)
-apply (simp add: )
+lemma is_cq_map_cq_map_from_measurement[iff]: 
+  assumes \<open>kraus_family_map_outcome snd (kraus_family_comp E cq_map_id) \<equiv>\<^sub>k\<^sub>r E\<close>
+  shows \<open>is_cq_map (cq_map_from_measurement E)\<close>
+by -
 
-  by -
+lemma cq_map_comp_id_left[simp]: \<open>cq_map_comp cq_map_id E = E\<close> if \<open>is_cq_map E\<close>
+by -
+
+lemma cq_map_comp_id_right[simp]: \<open>cq_map_comp E cq_map_id = E\<close> if \<open>is_cq_map E\<close>
+by -
+
+lemma kraus_family_comp_partial_trace'_cq_map_id: \<open>kraus_family_comp (kraus_map_partial_trace' (range ket)) cq_map_id
+    \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>x. ((),x)) (kraus_map_partial_trace' (range ket))\<close>
+by -
+
+
+
+lemma is_cq_map_cq_map_from_pointwise[iff]: 
+  fixes E :: \<open>('c1 \<Rightarrow> ('q1 ell2, 'q2 ell2, 'c2) kraus_family)\<close>
+  shows \<open>is_cq_map (cq_map_from_pointwise E)\<close>
+proof (unfold cq_map_from_pointwise_def, rule is_cq_map_cq_map_from_measurement)
+  let ?id = \<open>cq_map_id :: (('c1 \<times> 'q1) ell2, ('c1 \<times> 'q1) ell2, unit) kraus_family\<close>
+  let ?lhs = \<open>kraus_family_map_outcome snd
+     (kraus_family_comp (kraus_family_map_outcome (\<lambda>(c, d). d) (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket)))) ?id)\<close>
+    and ?rhs = \<open>kraus_family_map_outcome (\<lambda>(c, d). d) (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket)))\<close>
+  wlog bdd: \<open>bdd_above (range (kraus_family_norm \<circ> E))\<close> goal \<open>?lhs \<equiv>\<^sub>k\<^sub>r ?rhs\<close>
+    using negation
+    by (simp add: kraus_family_comp_dependent_invalid case_prod_unfold)
+  have bdd1: \<open>bdd_above (range (kraus_family_norm \<circ> (\<lambda>g. kraus_map_partial_trace' (range ket))))\<close>
+    by simp
+  have bdd2: \<open>bdd_above ((kraus_family_norm \<circ> (\<lambda>(_, f). E f)) ` kraus_map_domain (kraus_family_comp (kraus_map_partial_trace' (range ket)) ?id))\<close>
+  proof -
+    have \<open>?thesis = bdd_above ((kraus_family_norm \<circ> E) ` ((\<lambda>(_, f). f) ` kraus_map_domain (kraus_family_comp (kraus_map_partial_trace' (range ket)) ?id)))\<close>
+      apply (rule arg_cong[where f=bdd_above])
+      by force
+    also have \<open>\<dots>\<close>
+      using bdd apply (rule bdd_above_mono2)
+      by auto
+    finally show ?thesis
+      by -
+  qed
+  have bdd3: \<open>bdd_above ((kraus_family_norm \<circ> E) ` kraus_map_domain (kraus_map_partial_trace' (range ket)))\<close>
+    using bdd bdd_above_mono2 by force
+
+  show  \<open>?lhs \<equiv>\<^sub>k\<^sub>r ?rhs\<close>
+  proof (rule kraus_equivalent'I_from_equivalent)
+    fix x :: 'c2
+    define E_x where \<open>E_x e = kraus_family_filter ((=) x) (E e)\<close> for e
+    have aux1: \<open>(\<lambda>xa. x = snd xa) = (\<lambda>(e,f). x=f \<and> True)\<close>
+      by auto
+    have aux2: \<open>(\<lambda>xa. x = (case xa of (c, d) \<Rightarrow> d)) = (\<lambda>(e,f). x=f \<and> True)\<close>
+      by auto
+    from bdd
+    have bdd4: \<open>bdd_above (range (kraus_family_norm \<circ> E_x))\<close>
+      apply (rule bdd_above_mono2)
+      by (auto intro!: kraus_family_norm_filter simp: E_x_def)
+    have bdd5: \<open>bdd_above ((kraus_family_norm \<circ> (\<lambda>(_, f). E_x f)) ` kraus_map_domain (kraus_family_comp (kraus_map_partial_trace' (range ket)) ?id))\<close>
+    proof -
+      have \<open>?thesis = bdd_above ((kraus_family_norm \<circ> E_x) ` ((\<lambda>(_, f). f) ` kraus_map_domain (kraus_family_comp (kraus_map_partial_trace' (range ket)) ?id)))\<close>
+        apply (rule arg_cong[where f=bdd_above])
+        by force
+      also have \<open>\<dots>\<close>
+        using bdd4 apply (rule bdd_above_mono2)
+        by auto
+      finally show ?thesis
+        by -
+    qed
+
+    have \<open>kraus_family_filter ((=) x) ?lhs = kraus_family_map_outcome snd
+     (kraus_family_comp (kraus_family_map_outcome (\<lambda>(c, d). d)
+         (kraus_family_comp_dependent E_x (kraus_map_partial_trace' (range ket)))) cq_map_id)\<close>
+      by (simp only: kraus_family_filter_true kraus_family_filter_comp_dependent[OF bdd3] aux2 aux1
+          kraus_family_filter_map_outcome kraus_family_filter_comp kraus_family_filter_map_outcome E_x_def[abs_def])
+    also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_comp (kraus_family_comp_dependent E_x (kraus_map_partial_trace' (range ket))) cq_map_id\<close>
+      by (simp add: kraus_equivalent_def kraus_family_comp_apply)
+    also have \<open>\<dots> \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>((g, f), e). (g, f, e))
+       (kraus_family_comp_dependent (\<lambda>(_, f). E_x f) (kraus_family_comp (kraus_map_partial_trace' (range ket)) cq_map_id))\<close>
+      using bdd1 bdd4 by (auto intro!: kraus_family_comp_dependent_assoc' simp only: kraus_family_comp_def)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r (kraus_family_comp_dependent (\<lambda>(_, f). E_x f) (kraus_family_comp (kraus_map_partial_trace' (range ket)) cq_map_id))\<close>
+      by (simp add: kraus_equivalent_def)
+    also have \<open>\<dots> \<equiv>\<^sub>k\<^sub>r kraus_family_comp_dependent (\<lambda>(_, f). E_x f) (kraus_family_map_outcome (\<lambda>x. ((),x)) (kraus_map_partial_trace' (range ket)))\<close>
+      by (auto intro!: kraus_family_comp_dependent_cong' bdd5 kraus_family_comp_partial_trace'_cq_map_id)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(c, d). d) (kraus_family_comp_dependent E_x (kraus_map_partial_trace' (range ket)))\<close>
+      (* TODO: missing lemma for: comp_def (map_outcome f E) (G) = \<dots> *)
+      by -
+    also have \<open>\<dots> = kraus_family_filter ((=) x) (kraus_family_map_outcome (\<lambda>(c, d). d) (kraus_family_comp_dependent E (kraus_map_partial_trace' (range ket))))\<close>
+      by (simp only: kraus_family_filter_true kraus_family_filter_comp_dependent[OF bdd3] aux2 
+          kraus_family_filter_map_outcome E_x_def[abs_def])
+    finally show \<open>kraus_family_filter ((=) x) ?lhs =\<^sub>k\<^sub>r kraus_family_filter ((=) x) ?rhs\<close>
+      by -
+  qed
+qed
 
 lemma kraus_family_norm_cq_map_from_pointwise:
   assumes \<open>\<And>x. kraus_family_norm (E x) \<le> B\<close>

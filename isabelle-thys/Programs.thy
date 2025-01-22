@@ -1168,18 +1168,6 @@ lemma Rep_apply_fixed_cl_cq_operator:
   using assms
   by auto
 
-lemma kraus_equivalent_from_separatingI:
-  fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
-  assumes \<open>separating_set (bounded_clinear :: (('q,'q) trace_class \<Rightarrow> ('r,'r) trace_class) \<Rightarrow> bool) S\<close>
-  assumes \<open>\<And>\<rho>. \<rho> \<in> S \<Longrightarrow> kraus_family_map E \<rho> = kraus_family_map F \<rho>\<close>
-  shows \<open>kraus_equivalent E F\<close>
-proof -
-  have \<open>kraus_family_map E = kraus_family_map F\<close>
-    by (metis assms(1) assms(2) kraus_family_map_bounded_clinear separating_set_def)
-  then show ?thesis
-    by (simp add: kraus_equivalentI)
-qed
-
 lemma is_kraus_map_kraus_family_map'[iff]: \<open>kraus_map (kraus_family_map' X E)\<close>
   by (simp add: kraus_family_map'_def)
 

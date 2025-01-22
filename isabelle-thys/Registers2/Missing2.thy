@@ -5,9 +5,9 @@ theory Missing2
     Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
 begin
 
-unbundle cblinfun_notation
+unbundle cblinfun_syntax
 no_notation m_inv ("inv\<index> _" [81] 80)
-unbundle jnf_notation
+unbundle jnf_syntax
 hide_const (open) Finite_Cartesian_Product.vec
 hide_const (open) Finite_Cartesian_Product.mat
 hide_const (open) Order.top
@@ -146,6 +146,7 @@ proof -
     using b_def[abs_def] infsumI by blast
 qed
 
+unbundle no cblinfun_syntax and no jnf_syntax
 
 
 end

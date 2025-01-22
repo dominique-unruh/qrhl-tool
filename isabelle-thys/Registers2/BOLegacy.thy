@@ -36,6 +36,7 @@ hide_const (open) Quantum.pauliZ *)
 syntax (output) "_forced_parentheses" :: \<open>'a \<Rightarrow> 'a\<close> ("'(_')")
 
 unbundle lattice_syntax
+unbundle cblinfun_syntax
 
 (* Needed to make the terms below print with parentheses. If not, the result of printing cannot be parsed back. *)
 translations "A *\<^sub>S _forced_parentheses (B \<sqinter> C)" \<leftharpoondown> "A *\<^sub>S (B \<sqinter> C)"

@@ -2,12 +2,14 @@ theory Kraus_Maps
   imports Hilbert_Space_Tensor_Product.Trace_Class Wlog.Wlog "HOL-Library.Rewrite"
     Registers2.Missing2 Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
     Hilbert_Space_Tensor_Product.Partial_Trace
+  abbrevs "=kr" = "=\<^sub>k\<^sub>r" and "==kr" = "\<equiv>\<^sub>k\<^sub>r"
 begin
 
 no_notation  Order.top ("\<top>\<index>")
 no_notation   eq_closure_of ("closure'_of\<index>")
 
-unbundle cblinfun_notation
+unbundle cblinfun_syntax
+unbundle no m_inv_syntax
 
 definition \<open>kraus_family \<EE> \<longleftrightarrow> bdd_above ((\<lambda>F. \<Sum>(E,x)\<in>F. E* o\<^sub>C\<^sub>L E) ` {F. finite F \<and> F \<subseteq> \<EE>})\<close>
   for \<EE> :: \<open>((_::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L _::chilbert_space) \<times> _) set\<close>
@@ -454,7 +456,19 @@ definition \<open>kraus_family_map' S \<EE> = kraus_family_map (kraus_family_fil
 definition \<open>kraus_equivalent \<EE> \<FF> \<longleftrightarrow> kraus_family_map \<EE> = kraus_family_map \<FF>\<close>
 definition \<open>kraus_equivalent' \<EE> \<FF> \<longleftrightarrow> (\<forall>x. kraus_family_map' {x} \<EE> = kraus_family_map' {x} \<FF>)\<close>
 
-lemma kraus_equivalent_reflI[iff]: \<open>kraus_equivalent x x\<close>
+bundle kraus_map_notation begin
+notation kraus_equivalent (infix "=\<^sub>k\<^sub>r" 50)
+notation kraus_equivalent' (infix "\<equiv>\<^sub>k\<^sub>r" 50)
+end
+
+unbundle kraus_map_notation
+
+bundle no_kraus_map_notation begin
+no_notation kraus_equivalent (infix "=\<^sub>k\<^sub>r" 50)
+no_notation kraus_equivalent' (infix "\<equiv>\<^sub>k\<^sub>r" 50)
+end
+
+lemma kraus_equivalent_reflI[iff]: \<open>x =\<^sub>k\<^sub>r x\<close>
   by (simp add: kraus_equivalent_def)
 
 (* lemma kraus_family_zero[simp]: \<open>kraus_family {}\<close>
@@ -1171,7 +1185,7 @@ proof (rule CollectI, rule kraus_familyI, rename_tac f \<EE>)
 qed                              
 
 lemma selfadjoint_kraus_family_bound[iff]: \<open>selfadjoint (kraus_family_bound \<EE>)\<close>
-  by (simp add: positive_hermitianI selfadjoint_def)
+  by (simp add: positive_selfadjointI)
 
 lemma kraus_family_bound_leq_norm:
   shows \<open>kraus_family_bound \<EE> \<le> kraus_family_norm \<EE> *\<^sub>R id_cblinfun\<close>
@@ -2006,9 +2020,9 @@ lemma trace_preserving_id[iff]: \<open>trace_preserving_map id\<close>
 lemma trace_preserving_trace_kraus_map[iff]: \<open>trace_preserving_map (one_dim_iso o trace_tc)\<close>
   by (auto intro!: clinear_compose simp add: trace_preserving_map_def bounded_clinear.clinear)
 
-lemma kraus_equivalent_kraus_family_map_outcome_left: \<open>kraus_equivalent (kraus_family_flatten F) G\<close> if \<open>kraus_equivalent F G\<close>
+lemma kraus_equivalent_kraus_family_map_outcome_left: \<open>kraus_equivalent (kraus_family_map_outcome f F) G\<close> if \<open>kraus_equivalent F G\<close>
   using that by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map)
-lemma kraus_equivalent_kraus_family_map_outcome_right: \<open>kraus_equivalent F (kraus_family_flatten G)\<close> if \<open>kraus_equivalent F G\<close>
+lemma kraus_equivalent_kraus_family_map_outcome_right: \<open>kraus_equivalent F (kraus_family_map_outcome f G)\<close> if \<open>kraus_equivalent F G\<close>
   using that by (simp add: kraus_equivalent_def kraus_family_map_outcome_same_map)
 
 lemma kraus_family_comp_cong: \<open>kraus_equivalent (kraus_family_comp F G) (kraus_family_comp F' G')\<close>
@@ -2338,8 +2352,99 @@ proof -
     by (auto intro: has_sum_cong[THEN iffD2, rotated] simp: map'_infsum)
 qed
 
+lemma kraus_family_map'_empty[simp]: \<open>kraus_family_map' {} E \<rho> = 0\<close>
+  by (simp add: kraus_family_map'_def)
 
 lemma kraus_family_map'_union_eqI:
+  assumes \<open>\<And>X Y. (X,Y)\<in>F \<Longrightarrow> kraus_family_map' X \<EE> \<rho> = kraus_family_map' Y \<FF> \<rho>\<close>
+  assumes \<open>\<And>X Y X' Y'. (X,Y)\<in>F \<Longrightarrow> (X',Y')\<in>F \<Longrightarrow> (X,Y)\<noteq>(X',Y') \<Longrightarrow> disjnt X X'\<close>
+  assumes \<open>\<And>X Y X' Y'. (X,Y)\<in>F \<Longrightarrow> (X',Y')\<in>F \<Longrightarrow> (X,Y)\<noteq>(X',Y') \<Longrightarrow> disjnt Y Y'\<close>
+  assumes XX: \<open>XX = \<Union>(fst ` F)\<close> and YY: \<open>YY = \<Union>(snd ` F)\<close>
+  shows \<open>kraus_family_map' XX \<EE> \<rho> = kraus_family_map' YY \<FF> \<rho>\<close>
+proof -
+  define F' where \<open>F' = Set.filter (\<lambda>(X,Y). X\<noteq>{} \<and> Y\<noteq>{}) F\<close>
+  have inj1: \<open>inj_on fst F'\<close>
+    apply (rule inj_onI)
+    using assms(2)
+    unfolding F'_def
+    by fastforce
+  have inj2: \<open>inj_on snd F'\<close>
+    apply (rule inj_onI)
+    using assms(3)
+    unfolding F'_def
+    by fastforce
+  have \<open>((\<lambda>X. kraus_family_map' X \<EE> \<rho>) has_sum kraus_family_map' XX \<EE> \<rho>) (fst ` F)\<close>
+    unfolding XX
+    apply (rule kraus_family_map'_union_has_sum)
+    using assms(2) by force
+  then have \<open>((\<lambda>X. kraus_family_map' X \<EE> \<rho>) has_sum kraus_family_map' XX \<EE> \<rho>) (fst ` F')\<close>
+  proof (rule has_sum_cong_neutral[OF _ _ refl, THEN iffD2, rotated -1])
+    show \<open>kraus_family_map' X \<EE> \<rho> = 0\<close> if \<open>X \<in> fst ` F' - fst ` F\<close> for X
+      using that by (auto simp: F'_def)
+    show \<open>kraus_family_map' X \<EE> \<rho> = 0\<close> if \<open>X \<in> fst ` F - fst ` F'\<close> for X
+    proof -
+      from that obtain Y where \<open>(X,Y) \<in> F\<close> and \<open>X = {} \<or> Y = {}\<close>
+        apply atomize_elim
+        by (auto intro!: simp: F'_def)
+      then consider (X) \<open>X = {}\<close> | (Y) \<open>Y = {}\<close>
+        by auto
+      then show ?thesis
+      proof cases
+        case X
+        then show ?thesis
+          by simp
+      next
+        case Y
+        then have \<open>kraus_family_map' Y \<FF> \<rho> = 0\<close>
+          by simp
+        then show ?thesis
+          using \<open>(X, Y) \<in> F\<close> assms(1) by presburger
+      qed
+    qed
+  qed
+  then have sum1: \<open>((\<lambda>(X,Y). kraus_family_map' X \<EE> \<rho>) has_sum kraus_family_map' XX \<EE> \<rho>) F'\<close>
+    apply (subst (asm) has_sum_reindex)
+    using inj1 by (auto intro!: simp: o_def case_prod_unfold)
+  have \<open>((\<lambda>Y. kraus_family_map' Y \<FF> \<rho>) has_sum kraus_family_map' YY \<FF> \<rho>) (snd ` F)\<close>
+    unfolding YY
+    apply (rule kraus_family_map'_union_has_sum)
+    using assms(3) by force
+  then have \<open>((\<lambda>Y. kraus_family_map' Y \<FF> \<rho>) has_sum kraus_family_map' YY \<FF> \<rho>) (snd ` F')\<close>
+  proof (rule has_sum_cong_neutral[OF _ _ refl, THEN iffD2, rotated -1])
+    show \<open>kraus_family_map' Y \<FF> \<rho> = 0\<close> if \<open>Y \<in> snd ` F' - snd ` F\<close> for Y
+      using that by (auto simp: F'_def)
+    show \<open>kraus_family_map' Y \<FF> \<rho> = 0\<close> if \<open>Y \<in> snd ` F - snd ` F'\<close> for Y
+    proof -
+      from that obtain X where \<open>(X,Y) \<in> F\<close> and \<open>X = {} \<or> Y = {}\<close>
+        apply atomize_elim
+        by (auto intro!: simp: F'_def)
+      then consider (X) \<open>X = {}\<close> | (Y) \<open>Y = {}\<close>
+        by auto
+      then show ?thesis
+      proof cases
+        case Y
+        then show ?thesis
+          by simp
+      next
+        case X
+        then have \<open>kraus_family_map' X \<EE> \<rho> = 0\<close>
+          by simp
+        then show ?thesis
+          using \<open>(X, Y) \<in> F\<close> assms(1) by simp
+      qed
+    qed
+  qed
+  then have \<open>((\<lambda>(X,Y). kraus_family_map' Y \<FF> \<rho>) has_sum kraus_family_map' YY \<FF> \<rho>) F'\<close>
+    apply (subst (asm) has_sum_reindex)
+    using inj2 by (auto intro!: simp: o_def case_prod_unfold)
+  then have sum2: \<open>((\<lambda>(X,Y). kraus_family_map' X \<EE> \<rho>) has_sum kraus_family_map' YY \<FF> \<rho>) F'\<close>
+    apply (rule has_sum_cong[THEN iffD1, rotated -1])
+    using assms(1) by (auto simp: F'_def)
+  from sum1 sum2 show ?thesis
+    using has_sum_unique by blast
+qed
+
+(* lemma kraus_family_map'_union_eqI:
   assumes \<open>\<And>X. X\<in>F \<Longrightarrow> kraus_family_map' X \<EE> \<rho> = kraus_family_map' X \<FF> \<rho>\<close>
   assumes \<open>\<And>X Y. X\<in>F \<Longrightarrow> Y\<in>F \<Longrightarrow> X\<noteq>Y \<Longrightarrow> disjnt X Y\<close>
   shows \<open>kraus_family_map' (\<Union>F) \<EE> \<rho> = kraus_family_map' (\<Union>F) \<FF> \<rho>\<close>
@@ -2353,7 +2458,7 @@ proof -
   ultimately show ?thesis
     using has_sum_unique by blast
 qed
-
+ *)
 
 lemma kraus_family_map'_UNIV[simp]: \<open>kraus_family_map' UNIV = kraus_family_map\<close>
   by (auto intro!: ext simp: kraus_family_map'_def)
@@ -2365,14 +2470,14 @@ lemma kraus_family_map'_CARD_1[simp]: \<open>kraus_family_map' {x::_::CARD_1} = 
 lemma kraus_family_map_eqI_from_map':
   assumes \<open>\<And>x. kraus_family_map' {x} \<EE> = kraus_family_map' {x} \<FF>\<close>
   shows \<open>kraus_family_map \<EE> = kraus_family_map \<FF>\<close>
-  using kraus_family_map'_union_eqI[where F=\<open>range (\<lambda>x. {x})\<close> and \<EE>=\<EE> and \<FF>=\<FF>] assms
+  using kraus_family_map'_union_eqI[where F=\<open>range (\<lambda>x. ({x},{x}))\<close> and \<EE>=\<EE> and \<FF>=\<FF>] assms
   by (force intro!: ext)
 
 (* TODO equivalent using map=map *)
 lemma kraus_equivalent'_imp_equivalent:
   assumes \<open>kraus_equivalent' \<EE> \<FF>\<close>
   shows \<open>kraus_equivalent \<EE> \<FF>\<close>
-  using kraus_family_map'_union_eqI[where F=\<open>range (\<lambda>x. {x})\<close> and \<EE>=\<EE> and \<FF>=\<FF>] assms
+  using kraus_family_map'_union_eqI[where F=\<open>range (\<lambda>x. ({x},{x}))\<close> and \<EE>=\<EE> and \<FF>=\<FF>] assms
   by (force intro!: ext simp: kraus_equivalent'_def kraus_equivalent_def)
 
 lemma kraus_family_filter_cong'':
@@ -2624,6 +2729,7 @@ lemma
   using assms kraus_equivalent'_imp_equivalent kraus_equivalent'_map_outcome_inj kraus_family_norm_welldefined by fastforce
 
 
+(* TODO: remove first argument. Doesn't make much sense to have anything but "range ket" if we apply "inv ket" in the definition *)
 definition kraus_map_partial_trace :: \<open>'b ell2 set \<Rightarrow> (('a\<times>'b) ell2, 'a ell2, 'b) kraus_family\<close> where
 \<open>kraus_map_partial_trace B = kraus_family_map_outcome (\<lambda>((_,b),_). inv ket b)
 (kraus_family_comp (kraus_family_of_op (tensor_ell2_right (ket ())*))
@@ -3171,16 +3277,15 @@ lemma kraus_family_map'_union_infsum:
 lemma kraus_family_map'_eqI:
   assumes \<open>kraus_equivalent' \<EE> \<FF>\<close>
   shows \<open>kraus_family_map' X \<EE> \<rho> = kraus_family_map' X \<FF> \<rho>\<close>
-  apply (subst asm_rl[of \<open>X=\<Union>((\<lambda>x.{x})`X)\<close>], simp)
-  apply (subst (2) asm_rl[of \<open>X=\<Union>((\<lambda>x.{x})`X)\<close>], simp)
-  apply (rule kraus_family_map'_union_eqI)
+  apply (rule kraus_family_map'_union_eqI[where F=\<open>(\<lambda>x.({x},{x})) ` X\<close>])
   using assms by (auto simp: kraus_equivalent'_def)
 
-lemma kraus_equivalent'_map_cong:
+
+lemma kraus_family_map_outcome_cong':
   assumes \<open>kraus_equivalent' \<EE> \<FF>\<close>
-  shows \<open>kraus_equivalent' (kraus_family_map_outcome f \<EE>) (kraus_family_map_outcome f \<FF>)\<close>
+  shows \<open>kraus_family_map_outcome f \<EE> \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome f \<FF>\<close>
 proof -
-  from assms 
+  from assms
   have \<open>kraus_family_map' (f-`{x}) \<EE> \<rho> = kraus_family_map' (f-`{x}) \<FF> \<rho>\<close> for x \<rho>
     by (rule kraus_family_map'_eqI)
   then show ?thesis
@@ -3212,7 +3317,7 @@ lemma kraus_family_norm_filter:
   apply (rule norm_cblinfun_mono)
   by (simp_all add: kraus_family_bound_filter)
 
-lemma kraus_map_domain_kraus_family_filter[simp]:
+lemma kraus_map_domain_filter[simp]:
   \<open>kraus_map_domain (kraus_family_filter P E) = Set.filter P (kraus_map_domain E)\<close>
   apply (transfer' fixing: P)
   by force
@@ -3418,11 +3523,6 @@ lemma kraus_map_domain_comp_dependent:
   by force
 
 
-lemma kraus_map_domain_filter[simp]:
-  \<open>kraus_map_domain (kraus_family_filter P \<EE>) = Set.filter P (kraus_map_domain \<EE>)\<close>
-  apply (transfer' fixing: P)
-  by (auto simp: image_iff Bex_def)
-
 lemma kraus_family_comp_dependent_assoc': 
   fixes \<EE> :: \<open>'f \<Rightarrow> ('c::chilbert_space,'d::chilbert_space,'e) kraus_family\<close>
     and \<FF> :: \<open>'g \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'f) kraus_family\<close>
@@ -3595,7 +3695,7 @@ qed
      (kraus_family_map_outcome (\<lambda>(G, EF, g, (_,_,fe)). (G, EF, g, fe))
        (kraus_family_comp_dependent_raw (\<lambda>g. kraus_family_comp_dependent_raw \<EE> (\<FF> g)) \<GG>))\<close>
     apply (rule kraus_equivalent'_trans)
-    apply (rule kraus_equivalent'_map_cong)
+    apply (rule kraus_family_map_outcome_cong')
     apply (rule kraus_family_comp_dependent_raw_map1)
     by (simp add: case_prod_unfold)
   also have \<open>\<dots> ~~ kraus_family_map_outcome ((\<lambda>(_, _, gfe). gfe) \<circ> (\<lambda>(G, EF, g, (_,_,fe)). (G, EF, g, fe)))
@@ -3612,7 +3712,7 @@ qed
   also have \<open>\<dots> ~~ kraus_family_map_outcome (\<lambda>(G, EF, g, _, _, fe). (g, fe))
      (kraus_family_map_outcome (\<lambda>(FG, E, (G, F, g, f), e). (G, E o\<^sub>C\<^sub>L F, g, F, E, f, e))
        (kraus_family_comp_dependent_raw (\<lambda>(_, _, _, y). \<EE> y) (kraus_family_comp_dependent_raw \<FF> \<GG>)))\<close>
-    apply (rule kraus_equivalent'_map_cong)
+    apply (rule kraus_family_map_outcome_cong')
     using inj by (rule kraus_equivalent'_map_outcome_inj)
   also have \<open>\<dots> ~~ kraus_family_map_outcome ((\<lambda>(G, EF, g, _, _, fe). (g, fe)) \<circ>
      (\<lambda>(FG, E, (G, F, g, f), e). (G, E o\<^sub>C\<^sub>L F, g, F, E, f, e)))
@@ -3644,7 +3744,7 @@ qed
        (kraus_family_comp_dependent_raw (\<lambda>(_, _, _, f). \<EE> f)
          (kraus_family_comp_dependent_raw \<FF> \<GG>)))\<close>
     apply (rule kraus_equivalent'_trans)
-    apply (rule kraus_equivalent'_map_cong)
+    apply (rule kraus_family_map_outcome_cong')
      apply (rule kraus_family_comp_dependent_raw_map2)
     by (simp add: o_def case_prod_unfold)
   also have \<open>\<dots> ~~ ?mid\<close>
@@ -3837,15 +3937,15 @@ lemma kraus_map_domain_cong:
   using assms
   by (simp add: kraus_equivalent'_def kraus_map_domain_member_iff)
 
-
 lemma kraus_family_comp_dependent_cong'':
-  fixes \<EE> \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e) kraus_family\<close>
+  fixes \<EE> :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e1) kraus_family\<close>
+    and \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e2) kraus_family\<close>
     and \<FF> \<FF>' :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
   assumes bdd: \<open>bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close>
   assumes bdd': \<open>bdd_above ((kraus_family_norm o \<EE>') ` kraus_map_domain \<FF>')\<close>
-  assumes \<open>\<And>x y. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_family_map' E (\<EE> x) = kraus_family_map' E (\<EE>' x)\<close>
+  assumes \<open>\<And>x y. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_family_map' E (\<EE> x) = kraus_family_map' E' (\<EE>' x)\<close>
   assumes \<open>kraus_family_map' {f} \<FF> = kraus_family_map' {f} \<FF>'\<close>
-  shows \<open>kraus_family_map' ({f}\<times>E) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' ({f}\<times>E) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
+  shows \<open>kraus_family_map' ({f}\<times>E) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' ({f}\<times>E') (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
 proof (rule ext)
   fix \<rho> :: \<open>('a, 'a) trace_class\<close>
 
@@ -3853,7 +3953,7 @@ proof (rule ext)
         kraus_family_map (kraus_family_comp (kraus_family_filter (\<lambda>x. x\<in>E) (\<EE> f))
                                            (kraus_family_filter (\<lambda>x. x=f) \<FF>))\<close>
     if \<open>bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close> 
-    for \<EE> :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e) kraus_family\<close> 
+    for E and \<EE> :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e) kraus_family\<close> 
       and \<FF> :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
   proof -
     have bdd_filter: \<open>bdd_above ((kraus_family_norm \<circ> (\<lambda>f. kraus_family_filter (\<lambda>x. x\<in>E) (\<EE> f))) ` kraus_map_domain \<FF>)\<close>
@@ -3887,7 +3987,7 @@ proof (rule ext)
   qed
 
   have rew_\<EE>: \<open>kraus_family_map (kraus_family_filter (\<lambda>x. x\<in>E) (\<EE> f))
-      = kraus_family_map (kraus_family_filter (\<lambda>x. x\<in>E) (\<EE>' f))\<close>
+      = kraus_family_map (kraus_family_filter (\<lambda>x. x\<in>E') (\<EE>' f))\<close>
     if \<open>f \<in> kraus_map_domain \<FF>\<close>
     using assms(3)[OF that]
     by (simp add: kraus_family_map'_def)
@@ -3915,7 +4015,7 @@ proof (rule ext)
   qed
 
   show \<open>kraus_family_map' ({f} \<times> E) (kraus_family_comp_dependent \<EE> \<FF>) \<rho> =
-    kraus_family_map' ({f} \<times> E) (kraus_family_comp_dependent \<EE>' \<FF>') \<rho>\<close>
+    kraus_family_map' ({f} \<times> E') (kraus_family_comp_dependent \<EE>' \<FF>') \<rho>\<close>
     apply (cases \<open>f \<in> kraus_map_domain \<FF>\<close>)
     by (auto intro!: ext simp add: rewrite_comp[OF bdd] rewrite_comp[OF bdd']
         kraus_family_comp_apply rew_\<EE> rew_\<FF> \<FF>_0)
@@ -4028,7 +4128,7 @@ lemma kraus_family_comp_dependent_cong':
   fixes \<EE> \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e) kraus_family\<close>
     and \<FF> \<FF>' :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
   assumes bdd: \<open>bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close>
-  assumes \<open>\<And>x. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_equivalent' (\<EE> x) (\<EE>' x)\<close>(* TODO restrict *)
+  assumes \<open>\<And>x. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_equivalent' (\<EE> x) (\<EE>' x)\<close>
   assumes \<open>kraus_equivalent' \<FF> \<FF>'\<close>
   shows \<open>kraus_equivalent' (kraus_family_comp_dependent \<EE> \<FF>) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
 proof (rule kraus_equivalent'I)
@@ -4095,6 +4195,71 @@ lemma kraus_equivalent_sym:
   shows \<open>kraus_equivalent \<FF> \<EE>\<close>
   by (metis assms kraus_equivalent_def)
 
+
+lemma kraus_family_comp_dependent_cong:
+  fixes \<EE> :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e1) kraus_family\<close>
+    and \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e2) kraus_family\<close>
+    and \<FF> \<FF>' :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
+  assumes bdd: \<open>bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close>
+  assumes eq: \<open>\<And>x. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_equivalent (\<EE> x) (\<EE>' x)\<close>
+  assumes \<open>kraus_equivalent' \<FF> \<FF>'\<close>
+  shows \<open>kraus_equivalent (kraus_family_comp_dependent \<EE> \<FF>) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
+proof -
+  have \<open>kraus_family_map' ({f}\<times>UNIV) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' ({f}\<times>UNIV) (kraus_family_comp_dependent \<EE>' \<FF>')\<close> for f
+  proof -
+    note bdd
+    moreover have \<open>bdd_above ((kraus_family_norm \<circ> \<EE>') ` kraus_map_domain \<FF>')\<close>
+      by (metis (no_types, lifting) assms(1) assms(2) assms(3) comp_apply image_cong kraus_family_norm_welldefined kraus_map_domain_cong)
+    moreover have \<open>kraus_family_map' UNIV (\<EE> x) = kraus_family_map' UNIV (\<EE>' x)\<close> if \<open>x \<in> kraus_map_domain \<FF>\<close> for x
+      using assms(2) kraus_equivalent_def that by auto
+    moreover have \<open>kraus_family_map' {f} \<FF> = kraus_family_map' {f} \<FF>'\<close>
+      by (meson assms(3) kraus_equivalent'_def)
+    ultimately show ?thesis
+      by (rule kraus_family_comp_dependent_cong'')
+  qed
+  then have \<open>kraus_family_map' (\<Union>f. {f}\<times>UNIV) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' (\<Union>f. {f}\<times>UNIV) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
+    apply (rule_tac ext)
+    apply (rule kraus_family_map'_union_eqI[where F=\<open>range (\<lambda>f. ({f}\<times>UNIV,{f}\<times>UNIV))\<close>])
+    by auto
+  moreover have \<open>(\<Union>f. {f} \<times> UNIV) = UNIV\<close>
+    by fast
+  ultimately show ?thesis
+    by (metis kraus_equivalent_def kraus_family_map'_UNIV)
+qed
+
+
+(* lemma kraus_family_comp_dependent_cong:
+  fixes \<EE> :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e1) kraus_family\<close>
+    and \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e2) kraus_family\<close>
+    and \<FF> \<FF>' :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
+  assumes bdd: \<open>bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close>
+  assumes eq: \<open>\<And>x. x \<in> kraus_map_domain \<FF> \<Longrightarrow> kraus_equivalent (\<EE> x) (\<EE>' x)\<close>
+  assumes \<open>kraus_equivalent' \<FF> \<FF>'\<close>
+  shows \<open>kraus_equivalent (kraus_family_comp_dependent \<EE> \<FF>) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
+  by x
+proof -
+  have \<open>kraus_family_map' ({f}\<times>UNIV) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' ({f}\<times>UNIV) (kraus_family_comp_dependent \<EE>' \<FF>')\<close> for f
+  proof -
+    note bdd
+    moreover have \<open>bdd_above ((kraus_family_norm \<circ> \<EE>') ` kraus_map_domain \<FF>')\<close>
+      by (metis (no_types, lifting) assms(1) assms(2) assms(3) comp_apply image_cong kraus_family_norm_welldefined kraus_map_domain_cong)
+    moreover have \<open>kraus_family_map' UNIV (\<EE> x) = kraus_family_map' UNIV (\<EE>' x)\<close> if \<open>x \<in> kraus_map_domain \<FF>\<close> for x
+      using assms(2) kraus_equivalent_def that by auto
+    moreover have \<open>kraus_family_map' {f} \<FF> = kraus_family_map' {f} \<FF>'\<close>
+      by (meson assms(3) kraus_equivalent'_def)
+    ultimately show ?thesis
+      by (rule kraus_family_comp_dependent_cong'')
+  qed
+  then have \<open>kraus_family_map' (\<Union>f. {f}\<times>UNIV) (kraus_family_comp_dependent \<EE> \<FF>) = kraus_family_map' (\<Union>f. {f}\<times>UNIV) (kraus_family_comp_dependent \<EE>' \<FF>')\<close>
+    by (auto intro!: ext kraus_family_map'_union_eqI)
+  moreover have \<open>(\<Union>f. {f} \<times> UNIV) = UNIV\<close>
+    by fast
+  ultimately show ?thesis
+    by (metis kraus_equivalent_def kraus_family_map'_UNIV)
+qed *)
+
+
+(*
 lemma kraus_family_comp_dependent_cong:
   fixes \<EE> \<EE>' :: \<open>'f \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'e) kraus_family\<close>
     and \<FF> \<FF>' :: \<open>('a::chilbert_space,'b::chilbert_space,'f) kraus_family\<close>
@@ -4122,7 +4287,7 @@ proof -
   ultimately show ?thesis
     by (metis kraus_equivalent_def kraus_family_map'_UNIV)
 qed
-
+*)
 
 lemma kraus_equivalent_imp_equivalent'_CARD_1:
   fixes \<EE> \<FF> :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x::CARD_1) kraus_family\<close>
@@ -4753,9 +4918,6 @@ lemma kraus_family_map'_map_outcome[simp]:
   \<open>kraus_family_map' X (kraus_family_map_outcome f E) \<rho> = kraus_family_map' (f -` X) E \<rho>\<close>
   by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome)
 
-lemma kraus_family_map'_empty[simp]: \<open>kraus_family_map' {} E \<rho> = 0\<close>
-  by (simp add: kraus_family_map'_def)
-
 lemma kraus_familyI_0:
   assumes \<open>\<And>E x. (E,x) \<in> \<EE> \<Longrightarrow> E = 0\<close>
   shows \<open>kraus_family \<EE>\<close>
@@ -4815,8 +4977,258 @@ lemma kraus_family_comp_0R[simp]: \<open>kraus_family_comp E 0 = 0\<close>
   using kraus_family_comp_dependent_0R[of \<open>\<lambda>_. E\<close>]
   by (simp add: kraus_family_comp_def)
 
-lemma kraus_family_flatten_0[simp]: \<open>kraus_family_flatten 0 = 0\<close>
+lemma kraus_family_filter_0[simp]: \<open>kraus_family_filter P 0 = 0\<close>
+  apply (transfer' fixing: P)
+  by auto
+
+lemma kraus_family_map_outcome_0[simp]: \<open>kraus_family_map_outcome f 0 = 0\<close>
   apply transfer'
-  by simp
+  by auto
+
+(* TODO move *)
+lemma flip_eq_const: \<open>(\<lambda>y. y = x) = ((=) x)\<close>
+  by auto
+
+lemma kraus_equivalent'I_from_equivalent:
+  assumes \<open>\<And>x. kraus_family_filter ((=)x) E =\<^sub>k\<^sub>r kraus_family_filter ((=)x) F\<close>
+  shows \<open>E \<equiv>\<^sub>k\<^sub>r F\<close>
+  using assms by (simp add: kraus_equivalent_def kraus_equivalent'_def kraus_family_map'_def flip_eq_const)
+
+lemma kraus_family_filter_comp:
+  fixes \<FF> :: \<open>('b::chilbert_space,'c::chilbert_space,'f) kraus_family\<close>
+    and \<EE> :: \<open>('a::chilbert_space,'b::chilbert_space,'e) kraus_family\<close>
+  shows \<open>kraus_family_filter (\<lambda>(e,f). F f \<and> E e) (kraus_family_comp \<FF> \<EE>)
+      = kraus_family_comp (kraus_family_filter F \<FF>) (kraus_family_filter E \<EE>)\<close>
+  unfolding kraus_family_comp_def
+  apply (rule kraus_family_filter_comp_dependent)
+  by auto
+
+(* TODO move *)
+lemma sandwich_tc_butterfly: \<open>sandwich_tc c (tc_butterfly a b) = tc_butterfly (c a) (c b)\<close>
+  by (metis from_trace_class_inverse from_trace_class_sandwich_tc sandwich_butterfly tc_butterfly.rep_eq)
+
+(* TODO move *)
+lemma tc_butterfly_0_left[simp]: \<open>tc_butterfly 0 t = 0\<close>
+  by (metis mult_eq_0_iff norm_eq_zero norm_tc_butterfly)
+
+lemma tc_butterfly_0_right[simp]: \<open>tc_butterfly t 0 = 0\<close>
+  by (metis mult_eq_0_iff norm_eq_zero norm_tc_butterfly)
+
+
+lemma kraus_family_comp_dependent_invalid:
+  assumes \<open>\<not> bdd_above ((kraus_family_norm o \<EE>) ` kraus_map_domain \<FF>)\<close>
+  shows \<open>kraus_family_comp_dependent \<EE> \<FF> = 0\<close>
+  by (metis (no_types, lifting) Rep_kraus_family_inject assms kraus_family_comp_dependent_def kraus_family_comp_dependent_raw.rep_eq kraus_family_map_outcome_0 zero_kraus_family.rep_eq)
+
+lemma kraus_map_partial_trace_apply:
+    \<open>kraus_family_map' {x} (kraus_map_partial_trace (range ket)) \<rho> = sandwich_tc (tensor_ell2_right (ket x)*) \<rho>\<close>
+proof -
+  have \<open>kraus_family_map' {x} (kraus_map_partial_trace (range ket)) (tc_tensor (tc_butterfly (ket a) (ket b)) (tc_butterfly (ket c) (ket d))) =
+       sandwich_tc (tensor_ell2_right (ket x)*) (tc_tensor (tc_butterfly (ket a) (ket b)) (tc_butterfly (ket c) (ket d)))\<close> for a b :: 'a and c d :: 'b
+  proof -
+    have aux1: \<open>(\<lambda>xa. (case xa of (x, xa) \<Rightarrow> (case x of (uu_, b) \<Rightarrow> \<lambda>_. inv ket b) xa) \<in> {x}) = (\<lambda>(e,f). True \<and> inv ket (snd e) = x)\<close>
+      by auto
+    have aux2: \<open>(\<lambda>e. inv ket (snd e) = x) = (\<lambda>(a,b). True \<and> inv ket b = x)\<close>
+      by auto
+    have \<open>kraus_family_map' {x} (kraus_map_partial_trace (range ket)) (tc_tensor (tc_butterfly (ket a) (ket b)) (tc_butterfly (ket c) (ket d))) =
+       sandwich_tc (tensor_ell2_right (ket ())*)
+        (tc_tensor (tc_butterfly (ket a) (ket b)) (kraus_family_map (kraus_family_filter (\<lambda>b. inv ket b = x) (trace_kraus_family (range ket))) (tc_butterfly (ket c) (ket d))))\<close>
+      by (auto simp only: kraus_family_map'_def kraus_map_partial_trace_def
+          kraus_family_filter_map_outcome aux1 kraus_family_filter_comp kraus_family_of_op_apply
+          kraus_family_filter_true kraus_family_filter_tensor aux2 kraus_family_map_outcome_same_map
+          kraus_family_comp_apply o_def kraus_family_map_tensor kraus_family_id_apply)
+    also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket ())*) (tc_tensor (tc_butterfly (ket a) (ket b)) (of_bool (x=c \<and> x=d) *\<^sub>R tc_butterfly (ket ()) (ket ())))\<close>
+    proof (rule arg_cong[where f=\<open>\<lambda>x. sandwich_tc _ (tc_tensor _ x)\<close>])
+      have \<open>kraus_family_map (kraus_family_filter (\<lambda>b. inv ket b = x) (trace_kraus_family (range ket))) (tc_butterfly (ket c) (ket d))
+         = sandwich_tc (vector_to_cblinfun (ket x)*) (tc_butterfly (ket c) (ket d))\<close>
+        apply (transfer' fixing: x)
+        apply (subst infsum_single[where i=\<open>((vector_to_cblinfun (ket x))*, ket x)\<close>])
+        by auto
+      also have \<open>\<dots> = of_bool (x=c \<and> x=d) *\<^sub>R tc_butterfly (ket ()) (ket ())\<close>
+        apply (auto simp add: sandwich_tc_butterfly ket_CARD_1_is_1 cinner_ket)
+        by -
+      finally show \<open>kraus_family_map (kraus_family_filter (\<lambda>b. inv ket b = x) (trace_kraus_family (range ket))) (tc_butterfly (ket c) (ket d))
+           = of_bool (x=c \<and> x=d) *\<^sub>R tc_butterfly (ket ()) (ket ())\<close>
+        by -
+    qed
+    also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x)*) (tc_tensor (tc_butterfly (ket a) (ket b)) (tc_butterfly (ket c) (ket d)))\<close>
+      by (auto simp: tensor_tc_butterfly sandwich_tc_butterfly)
+    finally show ?thesis
+      by -
+  qed
+  then show ?thesis
+    apply (rule_tac fun_cong[where x=\<rho>])
+    apply (rule eq_from_separatingI2)
+       apply (rule separating_set_bounded_clinear_tc_tensor_nested)
+        apply (rule separating_set_tc_butterfly_nested)
+         apply (rule separating_set_ket)
+        apply (rule separating_set_ket)
+       apply (rule separating_set_tc_butterfly_nested)
+        apply (rule separating_set_ket)
+       apply (rule separating_set_ket)
+    by (auto intro!: kraus_family_map'_bounded_clinear bounded_clinear_sandwich_tc separating_set_tc_butterfly_nested simp: )
+qed
+
+lemma kraus_map_partial_trace'_apply:
+  \<open>kraus_family_map' {x} (kraus_map_partial_trace' (range ket)) \<rho> = sandwich_tc (tensor_ell2_left (ket x)*) \<rho>\<close>
+proof -
+  have aux1: \<open>(\<lambda>xa. snd xa = x) = (\<lambda>(e,f). f=x \<and> True)\<close>
+    by auto
+  have aux2: \<open>(\<lambda>xa. xa \<in> {x}) = (\<lambda>xa. xa = x)\<close>
+    by auto
+  have inj_snd: \<open>inj_on (snd :: unit\<times>'b \<Rightarrow> 'b) X\<close> for X
+    by (auto intro!: inj_onI)
+  have aux3: \<open>tensor_ell2_right (ket x)* *\<^sub>V ket (b, a) = of_bool (x=a) *\<^sub>R ket b\<close> for x a :: 'x and b :: 'y
+    by (smt (verit) cinner_ket_same of_bool_eq(1) of_bool_eq(2) of_real_1 of_real_hom.hom_0_iff orthogonal_ket scaleR_scaleC tensor_ell2_ket tensor_ell2_right_adj_apply)
+  have aux4: \<open>tensor_ell2_left (ket x)* *\<^sub>V ket (a, b) = of_bool (x=a) *\<^sub>R ket b\<close> for x a :: 'x and b :: 'y
+    by (smt (verit, del_insts) cinner_ket_same of_bool_eq(1) of_bool_eq(2) of_real_1 of_real_hom.hom_0_iff orthogonal_ket scaleR_scaleC tensor_ell2_ket tensor_ell2_left_adj_apply)
+  have aux5: \<open>tensor_ell2_right (ket x)* o\<^sub>C\<^sub>L swap_ell2 = tensor_ell2_left (ket x)*\<close>
+    apply (rule equal_ket)
+    by (auto intro!: simp: aux3 aux4)
+  have \<open>kraus_family_map' {x} (kraus_map_partial_trace' (range ket)) \<rho>
+     = kraus_family_map' {x} (kraus_map_partial_trace (range ket)) (sandwich_tc swap_ell2 \<rho>)\<close>
+    by (simp only: kraus_map_partial_trace'_def kraus_family_map'_def kraus_family_filter_map_outcome_inj
+aux1 kraus_family_filter_comp kraus_family_map_outcome_inj_same_map inj_snd kraus_family_filter_true
+kraus_family_comp_apply o_def kraus_family_of_op_apply aux2)
+  also have \<open>\<dots> = sandwich_tc (tensor_ell2_left (ket x)*) \<rho>\<close>
+    by (auto intro!: arg_cong[where f=\<open>\<lambda>x. sandwich_tc x _\<close>]
+        simp: kraus_map_partial_trace_apply aux5
+        simp flip: sandwich_tc_compose[unfolded o_def, THEN fun_cong])
+  finally show ?thesis
+    by -
+qed
+
+lemma kraus_map_domain_partial_trace[simp]: \<open>kraus_map_domain (kraus_map_partial_trace (range ket)) = UNIV\<close>
+proof (intro Set.set_eqI iffI UNIV_I)
+  fix x :: 'a and y :: 'b
+
+  have \<open>kraus_family_map' {x} (kraus_map_partial_trace (range ket)) (tc_tensor (tc_butterfly (ket y) (ket y)) (tc_butterfly (ket x) (ket x)))
+      = tc_butterfly (ket y) (ket y)\<close>
+    by (simp add: kraus_map_partial_trace_apply tensor_tc_butterfly sandwich_tc_butterfly)
+  also have \<open>\<dots> \<noteq> 0\<close>
+  proof -
+    have \<open>norm (tc_butterfly (ket y) (ket y)) = 1\<close>
+      by (simp add: norm_tc_butterfly)
+    then show ?thesis
+      by auto
+  qed
+ finally have \<open>kraus_family_map' {x} (kraus_map_partial_trace (range ket) :: (('b\<times>'a) ell2, 'b ell2, 'a) kraus_family) \<noteq> 0\<close>
+    by auto
+  then show \<open>x \<in> kraus_map_domain (kraus_map_partial_trace (range ket) :: (('b\<times>'a) ell2, 'b ell2, 'a) kraus_family)\<close>
+    by (rule kraus_map_domain_member_iff[THEN iffD2])
+qed
+
+
+
+lemma kraus_map_domain_partial_trace'[simp]: \<open>kraus_map_domain (kraus_map_partial_trace' (range ket)) = UNIV\<close>
+proof (intro Set.set_eqI iffI UNIV_I)
+  fix x :: 'a and y :: 'b
+
+  have \<open>kraus_family_map' {x} (kraus_map_partial_trace' (range ket)) (tc_tensor (tc_butterfly (ket x) (ket x)) (tc_butterfly (ket y) (ket y)))
+      = tc_butterfly (ket y) (ket y)\<close>
+    by (simp add: kraus_map_partial_trace'_apply tensor_tc_butterfly sandwich_tc_butterfly)
+  also have \<open>\<dots> \<noteq> 0\<close>
+  proof -
+    have \<open>norm (tc_butterfly (ket y) (ket y)) = 1\<close>
+      by (simp add: norm_tc_butterfly)
+    then show ?thesis
+      by auto
+  qed
+ finally have \<open>kraus_family_map' {x} (kraus_map_partial_trace' (range ket) :: (('a\<times>'b) ell2, 'b ell2, 'a) kraus_family) \<noteq> 0\<close>
+    by auto
+  then show \<open>x \<in> kraus_map_domain (kraus_map_partial_trace' (range ket) :: (('a\<times>'b) ell2, 'b ell2, 'a) kraus_family)\<close>
+    by (rule kraus_map_domain_member_iff[THEN iffD2])
+qed
+
+
+
+lemma kraus_equivalent_from_separatingI:
+  fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
+  assumes \<open>separating_set (bounded_clinear :: (('q,'q) trace_class \<Rightarrow> ('r,'r) trace_class) \<Rightarrow> bool) S\<close>
+  assumes \<open>\<And>\<rho>. \<rho> \<in> S \<Longrightarrow> kraus_family_map E \<rho> = kraus_family_map F \<rho>\<close>
+  shows \<open>kraus_equivalent E F\<close>
+proof -
+  have \<open>kraus_family_map E = kraus_family_map F\<close>
+    by (metis assms(1) assms(2) kraus_family_map_bounded_clinear separating_set_def)
+  then show ?thesis
+    by (simp add: kraus_equivalentI)
+qed
+
+
+lemma kraus_family_comp_dependent_map_outcome_left:
+  \<open>kraus_family_comp_dependent (\<lambda>x. kraus_family_map_outcome (f x) (E x)) F
+     \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(x,y). (x, f x y)) (kraus_family_comp_dependent E F)\<close>
+proof (cases \<open>bdd_above ((kraus_family_norm \<circ> E) ` kraus_map_domain F)\<close>)
+  case True
+  show ?thesis
+  proof (rule kraus_equivalent'I)
+    fix xy :: \<open>'c \<times> 'd\<close> and \<rho>
+    obtain x y where xy: \<open>xy = (x, y)\<close>
+      by force
+    define F' where \<open>F' x = kraus_family_filter (\<lambda>x'. x' = x) F\<close> for x
+    define E'f where \<open>E'f y e = kraus_family_filter (\<lambda>x. f e x = y) (E e)\<close> for e y
+    have bdd2: \<open>bdd_above ((\<lambda>x. kraus_family_norm (E'f y x)) ` kraus_map_domain (F' x))\<close>
+      apply (simp add: E'f_def F'_def)
+      by fastforce
+    have \<open>kraus_family_map' {xy} (kraus_family_comp_dependent (\<lambda>x. kraus_family_map_outcome (f x) (E x)) F) \<rho>
+        = kraus_family_map (kraus_family_filter (\<lambda>(x',y'). y'=y \<and> x'=x) (kraus_family_comp_dependent (\<lambda>x. kraus_family_map_outcome (f x) (E x)) F)) \<rho>\<close>
+      (is \<open>?lhs = _\<close>)
+      apply (simp add: kraus_family_map'_def xy case_prod_unfold)
+      by (metis fst_conv prod.collapse snd_conv)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent (\<lambda>e. kraus_family_filter (\<lambda>y'. y' = y)
+         (kraus_family_map_outcome (f e) (E e))) (F' x)) \<rho>\<close>
+      using True by (simp add: kraus_family_filter_comp_dependent F'_def)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent
+                 (\<lambda>e. kraus_family_map_outcome (f e) (E'f y e)) (F' x)) \<rho>\<close>
+      by (simp add: kraus_family_filter_map_outcome E'f_def)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent (E'f y) (F' x)) \<rho>\<close>
+      apply (rule kraus_map_eqI)
+      apply (rule kraus_family_comp_dependent_cong)
+      by (simp_all add: bdd2 kraus_equivalent_def)
+    also have \<open>\<dots> = kraus_family_map 
+       (kraus_family_filter (\<lambda>(x',y'). f x' y' = y \<and> x' = x) (kraus_family_comp_dependent E F)) \<rho>\<close>
+      apply (subst kraus_family_filter_comp_dependent)
+      using True by (simp_all add: o_def F'_def E'f_def[abs_def])
+    also have \<open>\<dots> = kraus_family_map (kraus_family_map_outcome (\<lambda>(x,y). (x, f x y))
+       (kraus_family_filter (\<lambda>(x',y'). f x' y' = y \<and> x' = x) (kraus_family_comp_dependent E F))) \<rho>\<close>
+      by simp
+    also have \<open>\<dots>
+      = kraus_family_map (kraus_family_filter (\<lambda>(x',y'). y'=y \<and> x'=x)
+       (kraus_family_map_outcome (\<lambda>(x,y). (x, f x y)) (kraus_family_comp_dependent E F))) \<rho>\<close>
+      by (simp add: kraus_family_filter_map_outcome case_prod_unfold)
+    also have \<open>\<dots> = kraus_family_map' {xy} (kraus_family_map_outcome (\<lambda>(x,y). (x, f x y)) (kraus_family_comp_dependent E F)) \<rho>\<close>
+      apply (simp add: kraus_family_map'_def xy case_prod_unfold)
+      by (metis fst_conv prod.collapse snd_conv)
+    finally show \<open>?lhs = \<dots>\<close>
+      by -
+  qed
+next
+  case False
+  then show ?thesis
+    by (simp add: kraus_family_comp_dependent_invalid)
+qed
+
+lemma kraus_family_comp_dependent_map_outcome_right:
+  \<open>kraus_family_comp_dependent E (kraus_family_map_outcome f F)
+     \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(x,y). (f x, y)) (kraus_family_comp_dependent (\<lambda>x. E (f x)) F)\<close>
+  by -
+
+lemma kraus_family_comp_map_outcome_left:
+  \<open>kraus_family_comp (kraus_family_map_outcome f E) F
+     \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(x,y). (x, f y)) (kraus_family_comp E F)\<close>
+  by (simp add: kraus_family_comp_def kraus_family_comp_dependent_map_outcome_left)
+
+lemma kraus_family_comp_map_outcome_right:
+  \<open>kraus_family_comp E (kraus_family_map_outcome f F)
+     \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(x,y). (f x, y)) (kraus_family_comp E F)\<close>
+  using kraus_family_comp_dependent_map_outcome_right[where E=\<open>\<lambda>_. E\<close> and f=f and F=F]
+  by (simp add: kraus_family_comp_def)
+
+lemma kraus_equivalent_equivalent'_trans[trans]: \<open>a =\<^sub>k\<^sub>r b \<Longrightarrow> b \<equiv>\<^sub>k\<^sub>r c \<Longrightarrow> a =\<^sub>k\<^sub>r c\<close>
+  by (metis kraus_equivalent'_imp_equivalent kraus_equivalent_def)
+
+lemma kraus_equivalent'_equivalent_trans[trans]: \<open>a \<equiv>\<^sub>k\<^sub>r b \<Longrightarrow> b =\<^sub>k\<^sub>r c \<Longrightarrow> a =\<^sub>k\<^sub>r c\<close>
+  by (metis kraus_equivalent'_imp_equivalent kraus_equivalent_def)
+
 
 end
