@@ -4,7 +4,7 @@ theory Missing_Bounded_Operators
     Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
     With_Type.With_Type Misc_Missing
     Hilbert_Space_Tensor_Product.Partial_Trace
-    Missing2
+    Kraus_Maps.Misc_Kraus_Maps
 begin
 
 unbundle cblinfun_notation

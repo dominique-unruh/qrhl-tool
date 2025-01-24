@@ -1,7 +1,7 @@
 theory Misc_Missing
   imports Main "HOL-Library.Z2" "HOL-Library.FuncSet" "HOL-Library.Cardinality" 
     (* Missing_Bounded_Operators *) Registers.Misc
-    Registers.Axioms_Classical Missing2
+    Registers.Axioms_Classical Kraus_Maps.Misc_Kraus_Maps
 begin                                                                         
 
 section \<open>Misc\<close>
