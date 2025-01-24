@@ -1,5 +1,5 @@
 theory Programs
-  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps CQ_Operators
+  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps.Kraus_Maps CQ_Operators
 begin
 
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
@@ -36,7 +36,7 @@ proof (rule sympI)
     have \<open>E ===' D\<close>
       by (simp add: \<open>E === D\<close> kraus_equivalent_imp_equivalent'_CARD_1)
     have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id ===' cq_map_comp (cq_map_comp cq_map_id D) cq_map_id\<close>
-      by (auto intro!: kraus_equivalent'_map_cong kraus_family_comp_cong' \<open>E ===' D\<close> simp add: cq_map_comp_def)
+      by (auto intro!: kraus_family_flatten_cong' kraus_family_comp_cong kraus_equivalent_kraus_family_map_outcome_right \<open>E === D\<close> simp add: cq_map_comp_def)
     also have \<open>\<dots> ===' D\<close>
       apply (rule kraus_equivalent_imp_equivalent'_CARD_1)
       using denotation_rel_def is_cq_map_def rel by blast
@@ -46,7 +46,7 @@ proof (rule sympI)
       using kraus_equivalent'_imp_equivalent by blast
   qed
   then have \<open>is_cq_map E\<close>
-    by (simp add: is_cq_map_def)
+    using is_cq_map_def by blast
   moreover have \<open>kraus_family_norm E \<le> 1\<close>
     by (metis rel denotation_rel_def kraus_family_norm_welldefined)
   ultimately show \<open>denotation_rel E D\<close>
@@ -593,6 +593,10 @@ definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow
 lemma is_cq_map_cq_map_local_c[intro]:
   assumes \<open>is_cq_map \<EE>\<close>
   shows \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
+try0
+sledgehammer [dont_slice]
+by -
+
   by (simp add: cq_map_local_c_def)
 
 lemma kraus_family_norm_cq_map_local_c: \<open>kraus_family_norm (cq_map_local_c F init \<EE>) \<le> kraus_family_norm \<EE>\<close>
@@ -1006,16 +1010,16 @@ lemma Rep_cq_map_apply_partial_trace: \<open>Rep_cq_operator (cq_map_apply cq_ma
 lemma cq_norm_raw_pos[iff]: \<open>cq_norm_raw \<rho> \<ge> 0\<close>
   by (auto intro!: infsum_nonneg simp: cq_norm_raw_def)
 
-instantiation cq_operator :: (type,type) norm begin
+(* instantiation cq_operator :: (type,type) norm begin
 lift_definition norm_cq_operator :: \<open>('a, 'b) cq_operator \<Rightarrow> real\<close> is cq_norm_raw.
 instance..
-end
+end *)
 
 setup \<open>Sign.add_const_constraint
   (\<^const_name>\<open>norm\<close>, SOME \<^typ>\<open>'a::norm \<Rightarrow> real\<close>)\<close>
 
 
-lift_definition cq_tensor :: \<open>('c1,'q1) cq_operator \<Rightarrow> ('c2,'q2) cq_operator \<Rightarrow> ('c1\<times>'c2, 'q1\<times>'q2) cq_operator\<close> is
+(* lift_definition cq_tensor :: \<open>('c1,'q1) cq_operator \<Rightarrow> ('c2,'q2) cq_operator \<Rightarrow> ('c1\<times>'c2, 'q1\<times>'q2) cq_operator\<close> is
   \<open>\<lambda>\<rho>1 \<rho>2 (c1,c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)\<close>
 proof (intro conjI allI)
   fix \<rho>1 :: \<open>'c1 \<Rightarrow> ('q1 ell2, 'q1 ell2) trace_class\<close> and \<rho>2 :: \<open>'c2 \<Rightarrow> ('q2 ell2, 'q2 ell2) trace_class\<close> and c :: \<open>'c1\<times>'c2\<close>
@@ -1034,10 +1038,10 @@ proof (intro conjI allI)
     show ?thesis
       by (simp add: norm_tc_tensor case_prod_beta)
   qed
-qed
+qed *)
 
 
-lemma norm_cq_tensor: \<open>norm (cq_tensor \<rho> \<sigma>) = norm \<rho> * norm \<sigma>\<close>
+(* lemma norm_cq_tensor: \<open>norm (cq_tensor \<rho> \<sigma>) = norm \<rho> * norm \<sigma>\<close>
 proof transfer
   fix \<rho> :: \<open>'e \<Rightarrow> ('g ell2, 'g ell2) trace_class\<close> and \<sigma> :: \<open>'b \<Rightarrow> ('d ell2, 'd ell2) trace_class\<close>
   assume asm1: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV\<close>
@@ -1057,7 +1061,7 @@ proof transfer
     by (metis cq_norm_raw_def)
   finally show \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho> c1) (\<sigma> c2)) = cq_norm_raw \<rho> * cq_norm_raw \<sigma>\<close>
     by -
-qed
+qed *)
 
 
 definition \<open>cq_tensor_left \<rho> \<sigma> = cq_map_apply (cq_map_classical fst) (cq_tensor \<rho> (fixed_cl_cq_operator () \<sigma>))\<close>

@@ -7,9 +7,9 @@ theory Missing_Bounded_Operators
     Kraus_Maps.Misc_Kraus_Maps
 begin
 
-unbundle cblinfun_notation
-no_notation m_inv ("inv\<index> _" [81] 80)
-unbundle jnf_notation
+unbundle cblinfun_syntax
+unbundle no m_inv_syntax
+unbundle jnf_syntax
 hide_const (open) Finite_Cartesian_Product.vec
 hide_const (open) Finite_Cartesian_Product.mat                      
 hide_const (open) Order.top

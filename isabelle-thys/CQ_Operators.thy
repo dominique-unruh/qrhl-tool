@@ -1,7 +1,9 @@
 theory CQ_Operators
-  imports Kraus_Maps Registers2.Missing_Bounded_Operators Registers2.Quantum_Registers
+  imports Kraus_Maps.Kraus_Maps Registers2.Missing_Bounded_Operators Registers2.Quantum_Registers
     Registers2.Registers_Unsorted
 begin
+
+unbundle kraus_map_syntax
 
 type_synonym ('c,'q) cq_operator = \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
 type_synonym ('c1,'q1,'c2,'q2) cq_map = \<open>(('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close>
@@ -280,7 +282,11 @@ proof -
     by (simp add: kraus_equivalent_def)
   also have \<open>\<dots> =\<^sub>k\<^sub>r kraus_family_flatten (kraus_family_comp_dependent (\<lambda>f. kraus_family_of_op (tensor_ell2_left (ket f)))
        (kraus_family_map_outcome snd (kraus_family_comp F (kraus_family_comp_dependent (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E))))\<close>
-    apply (subst kraus_family_comp_dependent_map_outcome_right)
+    apply (rule kraus_equivalent_sym)
+    apply (rule kraus_equivalent_trans)
+     apply (rule kraus_family_flatten_cong)
+     apply (rule kraus_equivalent'_imp_equivalent)
+     apply (rule kraus_family_comp_dependent_map_outcome_right)
     by (simp add: kraus_equivalent_def case_prod_unfold)
   also have \<open>\<dots> = cq_map_from_measurement (kraus_family_map_outcome snd (kraus_family_comp F (kraus_family_comp_dependent 
                                             (\<lambda>c. kraus_family_of_op (tensor_ell2_left (ket c))) E)))\<close>

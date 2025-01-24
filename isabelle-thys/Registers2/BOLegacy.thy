@@ -74,9 +74,9 @@ abbreviation (input) \<open>assoc_op == assoc_ell2*\<close>
 
 lemmas ket_product = tensor_ell2_ket[symmetric]
 
-unbundle no notation_blinfun_apply
+unbundle no blinfun_apply_syntax
 (* unbundle no_blinfun_notation *)
-unbundle cblinfun_notation
+unbundle cblinfun_syntax
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 

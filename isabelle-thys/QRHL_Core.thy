@@ -1,7 +1,7 @@
 theory QRHL_Core
   imports Complex_Main "HOL-Library.Adhoc_Overloading" Registers2.BOLegacy Discrete_Distributions 
     Registers2.Misc_Missing Prog_Variables (* Registers.Pure_States *)
-    Kraus_Maps
+    Kraus_Maps.Kraus_Maps
     "HOL-Eisbach.Eisbach"
   keywords "declare_variable_type" :: thy_decl
 begin

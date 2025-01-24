@@ -15,8 +15,8 @@ theory Prog_Variables
     Registers2.Registers_Unsorted
 begin
 
-unbundle cblinfun_notation
-no_notation m_inv ("inv\<index> _" [81] 80)
+unbundle cblinfun_syntax
+unbundle no m_inv_syntax
 hide_const (open) Order.top
 no_notation Order.top ("\<top>\<index>")
 hide_const (open) Axioms_Classical.getter

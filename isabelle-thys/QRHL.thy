@@ -14,8 +14,8 @@ no_notation Order.top ("\<top>\<index>")
 no_notation Order.bottom ("\<bottom>\<index>")
 
 unbundle notation_norm
-unbundle cblinfun_notation
-unbundle no_jnf_notation
+unbundle cblinfun_syntax
+unbundle no jnf_syntax
 
 declare [[quick_and_dirty]]
 

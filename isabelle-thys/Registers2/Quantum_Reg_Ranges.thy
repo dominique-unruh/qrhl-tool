@@ -3,6 +3,7 @@ theory Quantum_Reg_Ranges
 begin
 
 no_notation Lattice.inf ("\<Sqinter>\<index>_" [90] 90)
+unbundle register_syntax
 
 text \<open>The following definition of a valid qregister range is supposed to roughly define
 what sets are possible as the range of a qregister, as a preliminary to define the type \<open>QREGISTER\<close> below.

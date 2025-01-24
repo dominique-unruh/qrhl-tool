@@ -3,7 +3,7 @@ struct
 
 val current_simpset = simpset_of \<^context>
 
-val dddot_var = Syntax.var Auto_Bind.dddot
+val dddot_var = Syntax.var Auto_Bind.dddot_indexname
 
 fun string_of_term_truncated ctxt depth t = let
   fun trunc d t = if d <= 0 then dddot_var
@@ -83,7 +83,7 @@ fun is_dummy2 thm =
 datatype lazy_error = Lazy_Error of unit -> string
 exception LAZY_ERROR of lazy_error
 fun lazy_error msg = LAZY_ERROR (Lazy_Error msg)
-val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
+val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => ML_Pretty.str (msg ()))
 (* fun method_error_push msg = MethodErrorStack.map (fn st => msg::st) *)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
 (* fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt)) *)
@@ -242,7 +242,7 @@ fun mk_ct_equals ct1 ct2 = let
 
 (* For debugging. Never call outside of experiments (has a hardcoded Linux terminal in it) *)
 val tty_handle = Lazy.lazy (fn () => TextIO.openOut "/dev/pts/2")
-fun tty s = (TextIO.output (Lazy.force tty_handle, (s |> Output.output |> YXML.content_of) ^ "\n"); TextIO.flushOut (Lazy.force tty_handle))
+fun tty s = (TextIO.output (Lazy.force tty_handle, (s |> YXML.parse_body |> XML.content_of) ^ "\n"); TextIO.flushOut (Lazy.force tty_handle))
 
 (* Transforms str into a valid identifier (if it isn't one yet).
    (Simply by truncating or replacing by "x".) *)
@@ -328,7 +328,7 @@ fun resolve_and_remember_rule _    []            _ _ : (thm * thm) option = NONE
    Prefixed with pfx_name or pfx_term, respectively. *)
 fun theorem_or_name ctxt pfx_name pfx_term thm = 
   if Thm.has_name_hint thm
-  then pfx_name ^ (Pretty.marks_str (Proof_Context.markup_extern_fact ctxt (Thm.get_name_hint thm)) |> Pretty.string_of)
+  then pfx_name ^ (Proof_Context.print_thm_name ctxt (Thm.get_name_hint thm))
   else pfx_term ^ Syntax.string_of_term ctxt (Thm.prop_of thm)
 
 (* (* Removes outermost unused \<And>'s from goal. *)

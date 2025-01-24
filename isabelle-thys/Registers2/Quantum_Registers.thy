@@ -690,7 +690,7 @@ lemma apply_qregister_mono:
 proof (rule iffI)
   assume \<open>A \<le> B\<close>
   then obtain C :: \<open>'a qupdate\<close> where \<open>B - A = C* o\<^sub>C\<^sub>L C\<close>
-    by (metis diff_ge_0_iff_ge positive_hermitianI sqrt_op_pos sqrt_op_square)
+    by (metis diff_ge_0_iff_ge positive_selfadjointI selfadjoint_def sqrt_op_pos sqrt_op_square)
   then have \<open>apply_qregister Q B - apply_qregister Q A = (apply_qregister Q C)* o\<^sub>C\<^sub>L apply_qregister Q C\<close>
     by (metis apply_qregister_adj apply_qregister_minus qregister_compose)
   then show \<open>apply_qregister Q A \<le> apply_qregister Q B\<close>
@@ -835,7 +835,7 @@ proof (cases \<open>qregister F\<close>)
     then have posFA: \<open>0 \<le> apply_qregister F (sqrt_op A)\<close>
       by (simp add: apply_qregister_pos)
     have sq: \<open>apply_qregister F (sqrt_op A)* o\<^sub>C\<^sub>L apply_qregister F (sqrt_op A) = apply_qregister F A\<close>
-      using True by (simp_all add: abs_op_square positive_hermitianI flip: apply_qregister_adj qregister_compose)
+      using True by (simp_all add: abs_op_square positive_selfadjointI[unfolded selfadjoint_def] flip: apply_qregister_adj qregister_compose)
     from posFA sq
     show ?thesis
       by (rule sqrt_op_unique)
