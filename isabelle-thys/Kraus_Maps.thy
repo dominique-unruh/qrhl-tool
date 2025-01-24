@@ -5211,7 +5211,67 @@ qed
 lemma kraus_family_comp_dependent_map_outcome_right:
   \<open>kraus_family_comp_dependent E (kraus_family_map_outcome f F)
      \<equiv>\<^sub>k\<^sub>r kraus_family_map_outcome (\<lambda>(x,y). (f x, y)) (kraus_family_comp_dependent (\<lambda>x. E (f x)) F)\<close>
-  by -
+proof (cases \<open>bdd_above ((kraus_family_norm \<circ> E) ` kraus_map_domain (kraus_family_map_outcome f F))\<close>)
+  case True
+  show ?thesis
+  proof (rule kraus_equivalent'I)
+    fix xy :: \<open>'c \<times> 'd\<close> and \<rho>
+    obtain x y where xy: \<open>xy = (x, y)\<close>
+      by force
+    define F'f where \<open>F'f x = kraus_family_filter (\<lambda>xa. f xa = x) F\<close> for x
+    define E' where \<open>E' y e = kraus_family_filter (\<lambda>y'. y' = y) (E e)\<close> for e y
+    have bdd2: \<open>bdd_above ((kraus_family_norm \<circ> E' y) ` kraus_map_domain (kraus_family_map_outcome f (F'f x)))\<close>
+      apply (simp add: E'_def F'f_def)
+      by fastforce
+    have bdd3: \<open>bdd_above ((kraus_family_norm \<circ> (\<lambda>x. E (f x))) ` kraus_map_domain F)\<close>
+      by (metis (no_types, lifting) ext True comp_apply image_comp kraus_map_domain_map_outcome)
+    have bdd4: \<open>bdd_above ((kraus_family_norm \<circ> (\<lambda>_. E' y x)) ` kraus_map_domain (F'f x))\<close>
+      by fastforce
+    have \<open>kraus_family_map' {xy} (kraus_family_comp_dependent E (kraus_family_map_outcome f F)) \<rho>
+        = kraus_family_map (kraus_family_filter (\<lambda>(x',y'). y'=y \<and> x'=x) (kraus_family_comp_dependent E (kraus_family_map_outcome f F))) \<rho>\<close>
+      (is \<open>?lhs = _\<close>)
+      apply (simp add: kraus_family_map'_def xy case_prod_unfold)
+      by (metis fst_conv prod.collapse snd_conv)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent (E' y) (kraus_family_filter (\<lambda>x'. x' = x) (kraus_family_map_outcome f F))) \<rho>\<close>
+      using True by (simp add: kraus_family_filter_comp_dependent F'f_def E'_def[abs_def])
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent
+                 (E' y) (kraus_family_map_outcome f (F'f x))) \<rho>\<close>
+      by (simp add: kraus_family_filter_map_outcome F'f_def)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp (E' y x) (kraus_family_map_outcome f (F'f x))) \<rho>\<close>
+      unfolding kraus_family_comp_def
+      apply (rule kraus_map_eqI)
+      using bdd2 apply (rule kraus_family_comp_dependent_cong)
+      by (auto simp: F'f_def)
+    also have \<open>\<dots> = kraus_family_map (E' y x) (kraus_family_map (F'f x) \<rho>)\<close>
+      by (simp add: kraus_family_comp_apply)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp (E' y x) (F'f x)) \<rho>\<close>
+      by (simp add: kraus_family_comp_apply)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_comp_dependent (\<lambda>e. kraus_family_filter (\<lambda>y'. y' = y) (E (f e))) (F'f x)) \<rho>\<close>
+      unfolding kraus_family_comp_def
+      apply (rule kraus_map_eqI)
+      using bdd4 apply (rule kraus_family_comp_dependent_cong)
+      by (auto intro!: simp: F'f_def E'_def)
+    also have \<open>\<dots> = kraus_family_map (kraus_family_filter (\<lambda>(x',y'). y' = y \<and> f x' = x) (kraus_family_comp_dependent (\<lambda>x. E (f x)) F)) \<rho>\<close>
+      using bdd3 by (simp add: kraus_family_filter_comp_dependent F'f_def[abs_def] E'_def[abs_def])
+    also have \<open>\<dots> = kraus_family_map (kraus_family_filter (\<lambda>(x',y'). y'=y \<and> x'=x)
+              (kraus_family_map_outcome (\<lambda>(x, y). (f x, y)) (kraus_family_comp_dependent (\<lambda>x. E (f x)) F))) \<rho>\<close>
+      by (simp add: kraus_family_filter_map_outcome case_prod_unfold)
+    also have \<open>\<dots> = kraus_family_map' {xy} (kraus_family_map_outcome (\<lambda>(x, y). (f x, y)) (kraus_family_comp_dependent (\<lambda>x. E (f x)) F)) \<rho>\<close>
+      apply (simp add: kraus_family_map'_def xy case_prod_unfold)
+      by (metis fst_conv prod.collapse snd_conv)
+
+    finally show \<open>?lhs = \<dots>\<close>
+      by -
+  qed
+next
+  case False
+  have not_bdd2: \<open>\<not> bdd_above ((kraus_family_norm \<circ> (\<lambda>x. E (f x))) ` kraus_map_domain F)\<close>
+    by (metis (no_types, lifting) False comp_apply image_comp image_cong kraus_map_domain_map_outcome)
+  show ?thesis
+    using False not_bdd2
+    by (simp add: kraus_family_comp_dependent_invalid)
+qed
+
 
 lemma kraus_family_comp_map_outcome_left:
   \<open>kraus_family_comp (kraus_family_map_outcome f E) F
