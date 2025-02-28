@@ -1,5 +1,5 @@
 theory QRHL_Core
-  imports Complex_Main "HOL-Library.Adhoc_Overloading" Registers2.BOLegacy Discrete_Distributions 
+  imports Complex_Main Registers2.BOLegacy Discrete_Distributions 
     Registers2.Misc_Missing Prog_Variables (* Registers.Pure_States *)
     Kraus_Maps.Kraus_Maps
     "HOL-Eisbach.Eisbach"
@@ -701,16 +701,16 @@ lemma is_measurement_mproj[iff]: \<open>is_measurement (mproj M)\<close>
   using mproj by auto
 
 lemma kraus_map_from_measurement_bound_leq1: 
-  shows \<open>kraus_family_bound (kraus_map_from_measurement M) \<le> id_cblinfun\<close>
-  apply (rule kraus_family_bound_leqI)
+  shows \<open>kf_bound (kraus_map_from_measurement M) \<le> id_cblinfun\<close>
+  apply (rule kf_bound_leqI)
   apply (rule kraus_map_from_measurement_norm_leq1_aux[of \<open>mproj M\<close>])
-  by (auto intro!: kraus_family_bound_leqI simp: kraus_map_from_measurement.rep_eq)
+  by (auto intro!: kf_bound_leqI simp: kraus_map_from_measurement.rep_eq)
 
 lemma kraus_map_from_measurement_norm_leq1:
-  shows \<open>kraus_family_norm (kraus_map_from_measurement M) \<le> 1\<close>
+  shows \<open>kf_norm (kraus_map_from_measurement M) \<le> 1\<close>
   using kraus_map_from_measurement_bound_leq1[of M]
-  apply (simp add: kraus_family_norm_def)
-  by (metis kraus_family_bound_pos norm_cblinfun_id norm_cblinfun_mono)
+  apply (simp add: kf_norm_def)
+  by (metis kf_bound_pos norm_cblinfun_id norm_cblinfun_mono)
 
 section \<open>Quantum predicates (ctd.)\<close>
 

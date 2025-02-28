@@ -8,7 +8,7 @@ be removed eventually.
 
 theory BOLegacy
   imports 
-    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" 
+    Complex_Bounded_Operators.Complex_L2
 
     (* TODO: Still needed here? *)
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.

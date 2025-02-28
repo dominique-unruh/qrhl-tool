@@ -4,10 +4,9 @@ theory QRHL_Code
     "Jordan_Normal_Form.Matrix_Impl"
     "HOL-Library.Code_Target_Numeral"
     "HOL-Eisbach.Eisbach"
-    Tensor_Product.Unsorted_HSTP
 begin
 
-unbundle jnf_notation
+unbundle jnf_syntax
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
 hide_const (open) Lattice.sup
@@ -210,6 +209,6 @@ method prepare_for_code = (
     )
 
 
-unbundle no_jnf_notation
+unbundle no jnf_syntax
 
 end

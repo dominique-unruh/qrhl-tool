@@ -13,12 +13,12 @@ definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr
   \<open>cq_operator_distrib \<rho> = (if is_distribution (cq_prob \<rho>) then Abs_distr (cq_prob \<rho>) else 0)\<close>
 
 definition denotation_rel :: \<open>(cl,qu) cq_map2 \<Rightarrow> (cl,qu) cq_map2 \<Rightarrow> bool\<close> where 
-  \<open>denotation_rel D E \<longleftrightarrow> kraus_equivalent D E \<and> is_cq_map D \<and> kraus_family_norm D \<le> 1\<close>
+  \<open>denotation_rel D E \<longleftrightarrow> kraus_equivalent D E \<and> is_cq_map D \<and> kf_norm D \<le> 1\<close>
 
 lemma denotation_relI:
   assumes \<open>kraus_equivalent D E\<close>
   assumes \<open>is_cq_map D\<close>
-  assumes \<open>kraus_family_norm D \<le> 1\<close>
+  assumes \<open>kf_norm D \<le> 1\<close>
   shows \<open>denotation_rel D E\<close>
   using assms by (simp add: denotation_rel_def)
 
@@ -36,7 +36,7 @@ proof (rule sympI)
     have \<open>E ===' D\<close>
       by (simp add: \<open>E === D\<close> kraus_equivalent_imp_equivalent'_CARD_1)
     have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id ===' cq_map_comp (cq_map_comp cq_map_id D) cq_map_id\<close>
-      by (auto intro!: kraus_family_flatten_cong' kraus_family_comp_cong kraus_equivalent_kraus_family_map_outcome_right \<open>E === D\<close> simp add: cq_map_comp_def)
+      by (auto intro!: kf_flatten_cong' kf_comp_cong kraus_equivalent_kf_map_outcome_right \<open>E === D\<close> simp add: cq_map_comp_def)
     also have \<open>\<dots> ===' D\<close>
       apply (rule kraus_equivalent_imp_equivalent'_CARD_1)
       using denotation_rel_def is_cq_map_def rel by blast
@@ -47,8 +47,8 @@ proof (rule sympI)
   qed
   then have \<open>is_cq_map E\<close>
     using is_cq_map_def by blast
-  moreover have \<open>kraus_family_norm E \<le> 1\<close>
-    by (metis rel denotation_rel_def kraus_family_norm_welldefined)
+  moreover have \<open>kf_norm E \<le> 1\<close>
+    by (metis rel denotation_rel_def kf_norm_welldefined)
   ultimately show \<open>denotation_rel E D\<close>
     by (simp add: denotation_rel_def)
 qed
@@ -308,7 +308,7 @@ valid_oracle_program_Seq:  \<open>valid_oracle_program c \<Longrightarrow> valid
 | valid_oracle_program_Sample: \<open>(\<And>m. weight (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (Sample e)\<close>
 | valid_oracle_program_IfThenElse: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (IfThenElse e c d)\<close>
 | valid_oracle_program_While: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program (While e c)\<close>
-| valid_oracle_program_QuantumOp: \<open>(\<And>m. kraus_family_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
+| valid_oracle_program_QuantumOp: \<open>(\<And>m. kf_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
 | valid_oracle_program_Measurement: \<open>valid_oracle_program (Measurement e)\<close>
 | valid_oracle_program_InstantiateOracles: \<open>(\<And>d. d \<in> set ds \<Longrightarrow> valid_oracle_program d \<and> no_oracles d) \<Longrightarrow> valid_oracle_program c \<Longrightarrow> 
   oracle_number c \<le> length ds \<Longrightarrow> valid_oracle_program (InstantiateOracles c ds)\<close>
@@ -536,7 +536,7 @@ definition assign :: \<open>'a cvariable \<Rightarrow> 'a expression \<Rightarro
 
 lift_definition qapply :: \<open>'a qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program\<close> is
   \<open>\<lambda>Q e. if qregister Q then
-      QuantumOp (\<lambda>m. kraus_family_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
+      QuantumOp (\<lambda>m. kf_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
   apply (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
   by (simp add: power_le_one)
 
@@ -588,19 +588,15 @@ consts
 
 definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> where
   \<open>cq_map_local_c F init \<EE> = cq_map_from_pointwise (\<lambda>c.
-      kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (cq_map_to_pointwise \<EE> (copy_CREGISTER_from F init c)))\<close>
+      kf_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (cq_map_to_pointwise \<EE> (copy_CREGISTER_from F init c)))\<close>
 
 lemma is_cq_map_cq_map_local_c[intro]:
   assumes \<open>is_cq_map \<EE>\<close>
   shows \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
-try0
-sledgehammer [dont_slice]
-by -
-
   by (simp add: cq_map_local_c_def)
 
-lemma kraus_family_norm_cq_map_local_c: \<open>kraus_family_norm (cq_map_local_c F init \<EE>) \<le> kraus_family_norm \<EE>\<close>
-  by (auto intro!: kraus_family_norm_cq_map_from_pointwise kraus_family_norm_cq_map_to_pointwise
+lemma kf_norm_cq_map_local_c: \<open>kf_norm (cq_map_local_c F init \<EE>) \<le> kf_norm \<EE>\<close>
+  by (auto intro!: kf_norm_cq_map_from_pointwise kf_norm_cq_map_to_pointwise
       simp: cq_map_local_c_def)
 
 lemma cq_map_local_c_cong:
@@ -619,10 +615,10 @@ proof (rename_tac F init \<EE> \<FF>, rule denotation_relI)
     using denotation_rel_def by blast
   then show \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
     by blast
-  have \<open>kraus_family_norm \<EE> \<le> 1\<close>
+  have \<open>kf_norm \<EE> \<le> 1\<close>
     using \<open>denotation_rel \<EE> \<FF>\<close> denotation_rel_def by force
-  then show \<open>kraus_family_norm (cq_map_local_c F init \<EE>) \<le> 1\<close>
-    by (smt (verit) kraus_family_norm_cq_map_local_c)
+  then show \<open>kf_norm (cq_map_local_c F init \<EE>) \<le> 1\<close>
+    by (smt (verit) kf_norm_cq_map_local_c)
   have \<open>kraus_equivalent \<EE> \<FF>\<close>
     using \<open>denotation_rel \<EE> \<FF>\<close> denotation_rel_def by blast
   then show \<open>kraus_equivalent (cq_map_local_c F init \<EE>) (cq_map_local_c F init \<FF>)\<close>
@@ -630,7 +626,7 @@ proof (rename_tac F init \<EE> \<FF>, rule denotation_relI)
 qed
 
 (* lift_definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> is
-  \<open>\<lambda>F init \<EE> c. kraus_family_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (\<EE> (copy_CREGISTER_from F init c))\<close>
+  \<open>\<lambda>F init \<EE> c. kf_map_outcome (\<lambda>d. copy_CREGISTER_from F c d) (\<EE> (copy_CREGISTER_from F init c))\<close>
   by (auto simp: bdd_above_def) *)
 
 (* 
@@ -689,7 +685,7 @@ proof -
 
 (* lemma kraus_map_from_measurement_norm: 
   assumes \<open>M \<noteq> 0\<close>
-  shows \<open>kraus_family_norm (kraus_map_from_measurement M) = 1\<close> *)
+  shows \<open>kf_norm (kraus_map_from_measurement M) = 1\<close> *)
 
 (* lemma kraus_map_from_measurement_0: \<open>kraus_equivalent' (kraus_map_from_measurement 0) 0\<close> *)
 
@@ -738,8 +734,8 @@ fun denotation_raw :: \<open>raw_program \<Rightarrow> denotation\<close> where
 | denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = denotation_local_q F init (denotation_raw c)\<close>
 
 (* fun denotation_raw :: "raw_program \<Rightarrow> cq_map" where
-  denotation_raw_Skip: \<open>denotation_raw Skip = cq_kraus_family_id\<close>
-| denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kraus_family_comp (denotation_raw d) (denotation_raw c)\<close>
+  denotation_raw_Skip: \<open>denotation_raw Skip = cq_kf_id\<close>
+| denotation_raw_Seq: \<open>denotation_raw (Seq c d) = cq_kf_comp (denotation_raw d) (denotation_raw c)\<close>
 | denotation_raw_Sample: \<open>denotation_raw (Sample e) = 
       cq_operator_cases (\<lambda>c \<rho>. cq_diagonal_operator (prob (e c)) \<rho>) \<rho>\<close>
 
@@ -756,26 +752,26 @@ lemma denotation_sample: \<open>denotation (sample x e) = denotation_sample (\<l
   apply (transfer' fixing: x e)
   by simp
 
-lemma kraus_family_norm_sample_prob: \<open>kraus_family_norm (kraus_map_sample (prob \<mu>) :: ('a::{chilbert_space,not_singleton},'a,'x) kraus_family) = weight \<mu>\<close>
+lemma kf_norm_sample_prob: \<open>kf_norm (kraus_map_sample (prob \<mu>) :: ('a::{chilbert_space,not_singleton},'a,'x) kraus_family) = weight \<mu>\<close>
   apply (subst kraus_map_sample_norm[of \<open>prob \<mu>\<close>])
   by (auto intro!: prob_summable simp: Prob.rep_eq)
 
-lemma kraus_map_sample_point_distr': \<open>kraus_family_remove_0 (kraus_map_sample (prob (point_distr x))) 
-                                        = kraus_family_remove_0 (kraus_family_map_outcome_inj (\<lambda>_. x) kraus_family_id)\<close>
+lemma kraus_map_sample_point_distr': \<open>kf_remove_0 (kraus_map_sample (prob (point_distr x))) 
+                                        = kf_remove_0 (kf_map_outcome_inj (\<lambda>_. x) kf_id)\<close>
   apply (rule Rep_kraus_family_inject[THEN iffD1])
   by (auto intro!: prob_summable
-      simp: kraus_map_sample.rep_eq kraus_family_map_outcome_inj.rep_eq kraus_family_id_def
-      kraus_family_of_op.rep_eq kraus_family_remove_0.rep_eq image_iff
-      simp del: kraus_family_of_op_id)
+      simp: kraus_map_sample.rep_eq kf_map_outcome_inj.rep_eq kf_id_def
+      kf_of_op.rep_eq kf_remove_0.rep_eq image_iff
+      simp del: kf_of_op_id)
 
-lemma kraus_map_sample_point_distr: \<open>kraus_equivalent' (kraus_map_sample (prob (point_distr x))) (kraus_family_map_outcome_inj (\<lambda>_. x) kraus_family_id)\<close>
-  using kraus_map_sample_point_distr'[of x] kraus_family_remove_0_equivalent'
+lemma kraus_map_sample_point_distr: \<open>kraus_equivalent' (kraus_map_sample (prob (point_distr x))) (kf_map_outcome_inj (\<lambda>_. x) kf_id)\<close>
+  using kraus_map_sample_point_distr'[of x] kf_remove_0_equivalent'
     kraus_equivalent'_sym kraus_equivalent'_trans
   by metis
 
 lemma cq_map_sample_point_distr: \<open>cq_map_equiv (cq_map_sample (\<lambda>x. point_distr (f x))) (cq_map_classical f)\<close>
   apply (transfer' fixing: )
-  by (auto intro!: kraus_map_sample_point_distr simp: kraus_family_norm_sample_prob)
+  by (auto intro!: kraus_map_sample_point_distr simp: kf_norm_sample_prob)
 
 lemma denotation_assign_sample: \<open>denotation (assign x e) = denotation_sample (\<lambda>m. point_distr (Classical_Registers.setter x (e m) m))\<close>
   by (simp add: assign_def denotation_sample)
@@ -893,8 +889,8 @@ proof -
 qed
 
 (* TODO move *)
-lemma kraus_equivalent'_map_outcome_id: \<open>kraus_equivalent' (kraus_family_map_outcome (\<lambda>x. x) E) E\<close>
-  by (simp add: kraus_equivalent'_def kraus_family_map'_def kraus_family_filter_map_outcome)
+lemma kraus_equivalent'_map_outcome_id: \<open>kraus_equivalent' (kf_map_outcome (\<lambda>x. x) E) E\<close>
+  by (simp add: kraus_equivalent'_def kf_apply'_def kf_filter_map_outcome)
 
 
 lemma cq_map_local_c_bot[simp]:
@@ -962,27 +958,27 @@ lemma cq_operator_eqI:
   apply transfer'
   by auto
 
-lemma kraus_family_map'_map_outcome_inj[simp]:
+lemma kf_apply'_map_outcome_inj[simp]:
   (* assumes \<open>inj_on f (Set.filter (\<lambda>x. f x \<in> X) (kraus_map_domain E)) \<close> *)
   assumes \<open>inj_on f ((f -` X) \<inter> kraus_map_domain E)\<close>
-  shows  \<open>kraus_family_map' X (kraus_family_map_outcome_inj f E) \<rho> = kraus_family_map' (f -` X) E \<rho>\<close>
+  shows  \<open>kf_apply' X (kf_map_outcome_inj f E) \<rho> = kf_apply' (f -` X) E \<rho>\<close>
 proof -
   from assms
   have \<open>inj_on f (Set.filter (\<lambda>x. f x \<in> X) (kraus_map_domain E))\<close>
     by (smt (verit, del_insts) IntI Set.member_filter inj_onD inj_onI vimage_eq)
   then show ?thesis
-    by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome_inj)
+    by (auto intro!: simp: kf_apply'_def kf_filter_map_outcome_inj)
 qed
 
-lemma kraus_family_map'_empty[simp]:
-  \<open>kraus_family_map' {} E = 0\<close>
-  by (simp add: kraus_family_map'_def)
+lemma kf_apply'_empty[simp]:
+  \<open>kf_apply' {} E = 0\<close>
+  by (simp add: kf_apply'_def)
 
 (* TODO move *)
 lemma Rep_cq_map_apply_quantum_op:
   fixes c :: 'c and \<rho> :: \<open>('c,'q) cq_operator\<close> and E :: \<open>'c \<Rightarrow> ('q ell2, 'r ell2, 'd) kraus_family\<close>
-  assumes \<open>bdd_above (range (\<lambda>c. kraus_family_norm (E c)))\<close>
-  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_quantum_op E) \<rho>) c = kraus_family_map (E c) (Rep_cq_operator \<rho> c)\<close>
+  assumes \<open>bdd_above (range (\<lambda>c. kf_norm (E c)))\<close>
+  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_quantum_op E) \<rho>) c = kf_apply (E c) (Rep_cq_operator \<rho> c)\<close>
   apply (transfer fixing: E c)
   apply (subst infsum_single[where i=c])
   by (simp_all add: assms)
@@ -990,19 +986,19 @@ lemma Rep_cq_map_apply_quantum_op:
 (* TODO move *)
 lemma Rep_cq_map_apply_of_op:
   fixes c :: 'c and \<rho> :: \<open>('c,'q) cq_operator\<close> and a :: \<open>'q ell2 \<Rightarrow>\<^sub>C\<^sub>L 'r ell2\<close>
-  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_of_op a) \<rho>) c = kraus_family_map (kraus_family_of_op a) (Rep_cq_operator \<rho> c)\<close>
+  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_of_op a) \<rho>) c = kf_apply (kf_of_op a) (Rep_cq_operator \<rho> c)\<close>
   by (simp add: cq_map_of_op_def Rep_cq_map_apply_quantum_op power_le_one)
 
 
-(* lemma kraus_family_map'_map_outcome[simp]: \<open>kraus_family_map' X (kraus_family_map_outcome f E) = kraus_family_map' (f -` X) E\<close>
-  by (auto intro!: simp: kraus_family_map'_def kraus_family_filter_map_outcome) *)
+(* lemma kf_apply'_map_outcome[simp]: \<open>kf_apply' X (kf_map_outcome f E) = kf_apply' (f -` X) E\<close>
+  by (auto intro!: simp: kf_apply'_def kf_filter_map_outcome) *)
 
 (* TODO move *)
 lemma cq_map_of_op_id[simp]: \<open>cq_map_apply (cq_map_of_op id_cblinfun) = id\<close>
   by (auto intro!: ext cq_operator_eqI simp: Rep_cq_map_apply_of_op)
 
 lemma Rep_cq_map_apply_partial_trace: \<open>Rep_cq_operator (cq_map_apply cq_map_partial_trace \<rho>) c
-  = kraus_family_map (kraus_map_partial_trace (range ket)) (Rep_cq_operator \<rho> c)\<close>
+  = kf_apply (kraus_map_partial_trace (range ket)) (Rep_cq_operator \<rho> c)\<close>
   apply (transfer' fixing: c)
   apply (subst infsum_single[of c])
   by auto
@@ -1082,15 +1078,15 @@ proof (insert carrier, transfer' fixing: c f X)
   then have 1: \<open>\<rho> j = 0\<close> if \<open>c = f j\<close> and \<open>j \<noteq> c'\<close> for j
     apply (transfer' fixing: j f X)
     using that inj by (auto simp: c'_def)
-  have \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome_inj (\<lambda>_. f d) kraus_family_id) (\<rho> d))
-      = (\<Sum>\<^sub>\<infinity>d. kraus_family_map' ((\<lambda>_::unit. f d) -` {c}) kraus_family_id (\<rho> d))\<close>
-    by (simp add: kraus_family_map'_map_outcome_inj inj_on_def)
-  also have \<open>\<dots> = kraus_family_map' ((\<lambda>_. f c') -` {c}) kraus_family_id (\<rho> c')\<close>
+  have \<open>(\<Sum>\<^sub>\<infinity>d. kf_apply' {c} (kf_map_outcome_inj (\<lambda>_. f d) kf_id) (\<rho> d))
+      = (\<Sum>\<^sub>\<infinity>d. kf_apply' ((\<lambda>_::unit. f d) -` {c}) kf_id (\<rho> d))\<close>
+    by (simp add: kf_apply'_map_outcome_inj inj_on_def)
+  also have \<open>\<dots> = kf_apply' ((\<lambda>_. f c') -` {c}) kf_id (\<rho> c')\<close>
     apply (subst infsum_single[where i=\<open>inv_into X f c\<close>])
     using 1 by (simp_all add: c'_def)
   also from carrier inj have \<open>\<dots> = of_bool (c \<in> f ` X) *\<^sub>C \<rho> c'\<close>
     by (force simp: c'_def)
-  finally show \<open>(\<Sum>\<^sub>\<infinity>d. kraus_family_map' {c} (kraus_family_map_outcome_inj (\<lambda>_. f d) kraus_family_id) (\<rho> d)) = \<dots>\<close>
+  finally show \<open>(\<Sum>\<^sub>\<infinity>d. kf_apply' {c} (kf_map_outcome_inj (\<lambda>_. f d) kf_id) (\<rho> d)) = \<dots>\<close>
     by -
 qed
 
@@ -1138,20 +1134,20 @@ proof (rule cq_operator_eqI)
     using cq_map.right_total
     by (auto simp: right_total_def)
   have \<open>Rep_cq_operator (cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))) d
-    = (\<Sum>\<^sub>\<infinity>e. kraus_family_map' (fst -` {d}) (kraus_family_tensor (E' e) kraus_family_id) (of_bool (c = e) *\<^sub>R tc_tensor \<rho> \<sigma>))\<close>
+    = (\<Sum>\<^sub>\<infinity>e. kf_apply' (fst -` {d}) (kf_tensor (E' e) kf_id) (of_bool (c = e) *\<^sub>R tc_tensor \<rho> \<sigma>))\<close>
     apply (transfer' fixing: c d \<sigma> \<rho>)
     by simp
-  also have \<open>\<dots> = kraus_family_map' (fst -` {d}) (kraus_family_tensor (E' c) kraus_family_id) (tc_tensor \<rho> \<sigma>)\<close>
+  also have \<open>\<dots> = kf_apply' (fst -` {d}) (kf_tensor (E' c) kf_id) (tc_tensor \<rho> \<sigma>)\<close>
     apply (subst infsum_single[where i=c])
     by simp_all
-  also have \<open>\<dots> = kraus_family_map (kraus_family_tensor (kraus_family_filter (\<lambda>x. x=d) (E' c)) (kraus_family_filter (\<lambda>_. True) kraus_family_id)) (tc_tensor \<rho> \<sigma>)\<close>
-    apply (subst kraus_family_filter_tensor[symmetric])
-    by (simp add: kraus_family_map'_def case_prod_unfold)
-  also have \<open>\<dots> = tc_tensor (kraus_family_map (kraus_family_filter (\<lambda>x. x = d) (E' c)) \<rho>) \<sigma>\<close>
-    by (simp add: kraus_family_map_tensor)
-  also have \<open>\<dots> = tc_tensor (kraus_family_map' {d} (E' c) \<rho>) \<sigma>\<close>
-    by (simp add: kraus_family_map'_def)
-  also have \<open>\<dots> = tc_tensor (\<Sum>\<^sub>\<infinity>da. kraus_family_map' {d} (E' da) (of_bool (c = da) *\<^sub>R \<rho>)) \<sigma>\<close>
+  also have \<open>\<dots> = kf_apply (kf_tensor (kf_filter (\<lambda>x. x=d) (E' c)) (kf_filter (\<lambda>_. True) kf_id)) (tc_tensor \<rho> \<sigma>)\<close>
+    apply (subst kf_filter_tensor[symmetric])
+    by (simp add: kf_apply'_def case_prod_unfold)
+  also have \<open>\<dots> = tc_tensor (kf_apply (kf_filter (\<lambda>x. x = d) (E' c)) \<rho>) \<sigma>\<close>
+    by (simp add: kf_apply_tensor)
+  also have \<open>\<dots> = tc_tensor (kf_apply' {d} (E' c) \<rho>) \<sigma>\<close>
+    by (simp add: kf_apply'_def)
+  also have \<open>\<dots> = tc_tensor (\<Sum>\<^sub>\<infinity>da. kf_apply' {d} (E' da) (of_bool (c = da) *\<^sub>R \<rho>)) \<sigma>\<close>
     apply (subst infsum_single[where i=c])
     by auto
   also have \<open>\<dots> = tc_tensor (Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d) \<sigma>\<close>
@@ -1166,14 +1162,14 @@ qed
 
 lemma Rep_apply_fixed_cl_cq_operator:
   assumes \<open>\<rho> \<ge> 0\<close>
-  shows \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d = kraus_family_map' {d} (Rep_cq_map E c) \<rho>\<close>
+  shows \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d = kf_apply' {d} (Rep_cq_map E c) \<rho>\<close>
   apply (transfer' fixing: c d \<rho>)
   apply (subst infsum_single)
   using assms
   by auto
 
-lemma is_kraus_map_kraus_family_map'[iff]: \<open>kraus_map (kraus_family_map' X E)\<close>
-  by (simp add: kraus_family_map'_def)
+lemma is_kraus_map_kf_apply'[iff]: \<open>kraus_map (kf_apply' X E)\<close>
+  by (simp add: kf_apply'_def)
 
 lemma separating_set_kraus_map_range_irrelevant:
   assumes \<open>separating_set (kraus_map :: (('q::chilbert_space,'q) trace_class \<Rightarrow> ('r::chilbert_space,'r) trace_class) \<Rightarrow> bool) S\<close>
@@ -1183,10 +1179,10 @@ lemma separating_set_kraus_map_range_irrelevant:
 lemma kraus_equivalent'_from_separatingI:
   fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
   assumes \<open>separating_set (kraus_map :: (('q,'q) trace_class \<Rightarrow> (complex,complex) trace_class) \<Rightarrow> bool) S\<close>
-  assumes \<open>\<And>x \<rho>. \<rho> \<in> S \<Longrightarrow> kraus_family_map' {x} E \<rho> = kraus_family_map' {x} F \<rho>\<close>
+  assumes \<open>\<And>x \<rho>. \<rho> \<in> S \<Longrightarrow> kf_apply' {x} E \<rho> = kf_apply' {x} F \<rho>\<close>
   shows \<open>kraus_equivalent' E F\<close>
 proof -
-  have \<open>kraus_family_map' {x} E = kraus_family_map' {x} F\<close> for x
+  have \<open>kf_apply' {x} E = kf_apply' {x} F\<close> for x
     apply (rule eq_from_separatingI)
        apply (rule separating_set_kraus_map_range_irrelevant)
        apply (rule assms(1))
@@ -1206,12 +1202,12 @@ proof -
   have \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d
      = Rep_cq_operator (cq_map_apply F (fixed_cl_cq_operator c \<rho>)) d\<close> if \<open>\<rho> \<in> S\<close> for c d \<rho>
     using eq that by presburger
-  then have \<open>kraus_family_map' {x} (E' c) \<rho> = kraus_family_map' {x} (F' c) \<rho>\<close> if \<open>\<rho> \<in> S\<close> for c x \<rho>
+  then have \<open>kf_apply' {x} (E' c) \<rho> = kf_apply' {x} (F' c) \<rho>\<close> if \<open>\<rho> \<in> S\<close> for c x \<rho>
     by (simp add: Rep_apply_fixed_cl_cq_operator E'_def F'_def pos that)
   from sep this have \<open>kraus_equivalent' (E' c) (F' c)\<close> for c
     by (rule kraus_equivalent'_from_separatingI)
-  then have \<open>kraus_family_map' {d} (E' c) \<rho> = kraus_family_map' {d} (F' c) \<rho>\<close> for c d \<rho>
-    by (simp add: kraus_family_map'_eqI)
+  then have \<open>kf_apply' {d} (E' c) \<rho> = kf_apply' {d} (F' c) \<rho>\<close> for c d \<rho>
+    by (simp add: kf_apply'_eqI)
   then have \<open>cq_map_apply E \<rho> = cq_map_apply F \<rho>\<close> for \<rho>
     unfolding E'_def F'_def
     apply (transfer' fixing: S)
@@ -1312,15 +1308,15 @@ lemma scale0_kraus_family[simp]: \<open>0 *\<^sub>R \<EE> = 0\<close> for \<EE> 
   apply transfer'
   by simp
 
-lemma kraus_family_filter_0[simp]: \<open>kraus_family_filter P 0 = 0\<close>
+lemma kf_filter_0[simp]: \<open>kf_filter P 0 = 0\<close>
   apply transfer' by simp
 
-lemma kraus_family_map'_0_left[simp]: \<open>kraus_family_map' X 0 \<rho> = 0\<close>
-  by (simp add: kraus_family_map'_def)
+lemma kf_apply'_0_left[simp]: \<open>kf_apply' X 0 \<rho> = 0\<close>
+  by (simp add: kf_apply'_def)
 
-lemma kraus_family_scale_map':
+lemma kf_scale_map':
   assumes \<open>r \<ge> 0\<close>
-  shows \<open>kraus_family_map' X (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kraus_family_map' X \<EE> \<rho>\<close>
+  shows \<open>kf_apply' X (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kf_apply' X \<EE> \<rho>\<close>
 proof -
   wlog \<open>r > 0\<close>
     using negation assms
@@ -1329,7 +1325,7 @@ proof -
     using \<open>r > 0\<close>
     by (auto intro!: inj_onI simp:)
   show ?thesis
-    unfolding kraus_family_map'_def
+    unfolding kf_apply'_def
     apply (transfer' fixing: r)
     using assms
     by (auto intro!: simp: set_filter_image case_prod_unfold infsum_reindex o_def
@@ -1418,14 +1414,14 @@ lemma localvars_empty: "denotation (localvars empty_cregister empty_qregister P)
   by (simp add: localvars1_empty localvars_def)
 
 
-lift_definition kraus_family_in_qref_strict :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
+lift_definition kf_in_qref_strict :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>\<EE> Q. \<forall>(E,x)\<in>\<EE>. E \<in> Rep_QREGISTER Q\<close>.
-definition kraus_family_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
-  \<open>kraus_family_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. kraus_equivalent' \<EE> \<FF> \<and> kraus_family_in_qref_strict \<FF> Q)\<close>
+definition kf_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
+  \<open>kf_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. kraus_equivalent' \<EE> \<FF> \<and> kf_in_qref_strict \<FF> Q)\<close>
 
 lift_definition qc_map_in_qref :: \<open>('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
-  \<open>\<lambda>\<EE> Q. \<forall>x. kraus_family_in_qref (\<EE> x) Q\<close>
-  apply (auto intro!: simp: cq_map_rel_def kraus_family_in_qref_def)
+  \<open>\<lambda>\<EE> Q. \<forall>x. kf_in_qref (\<EE> x) Q\<close>
+  apply (auto intro!: simp: cq_map_rel_def kf_in_qref_def)
   using kraus_equivalent'_trans kraus_equivalent'_sym
   by meson
 
@@ -1456,39 +1452,39 @@ lemma qc_map_in_qref_local_c:
   shows \<open>qc_map_in_qref (cq_map_local_c X m E) R\<close>
   sorry
 
-lemma kraus_family_in_qref_map_outcome[iff]:
-  assumes \<open>kraus_family_in_qref E Q\<close>
-  shows \<open>kraus_family_in_qref (kraus_family_map_outcome f E) Q\<close>
+lemma kf_in_qref_map_outcome[iff]:
+  assumes \<open>kf_in_qref E Q\<close>
+  shows \<open>kf_in_qref (kf_map_outcome f E) Q\<close>
   sorry
 
-lemma kraus_family_in_qref_from_strictI:
-  assumes \<open>kraus_family_in_qref_strict E Q\<close>
-  shows \<open>kraus_family_in_qref E Q\<close>
-  using assms kraus_family_in_qref_def by blast
+lemma kf_in_qref_from_strictI:
+  assumes \<open>kf_in_qref_strict E Q\<close>
+  shows \<open>kf_in_qref E Q\<close>
+  using assms kf_in_qref_def by blast
 
 
-lemma kraus_family_in_qref_strict_of_op[intro]:
+lemma kf_in_qref_strict_of_op[intro]:
   assumes \<open>A \<in> Rep_QREGISTER Q\<close>
-  shows \<open>kraus_family_in_qref_strict (kraus_family_of_op A) Q\<close>
+  shows \<open>kf_in_qref_strict (kf_of_op A) Q\<close>
   using assms
-  by (simp add: kraus_family_in_qref_strict.rep_eq kraus_family_of_op.rep_eq)
+  by (simp add: kf_in_qref_strict.rep_eq kf_of_op.rep_eq)
 
-lemma kraus_family_in_qref_of_op[intro]:
+lemma kf_in_qref_of_op[intro]:
   assumes \<open>A \<in> Rep_QREGISTER Q\<close>
-  shows \<open>kraus_family_in_qref (kraus_family_of_op A) Q\<close>
-  by (simp add: assms kraus_family_in_qref_from_strictI kraus_family_in_qref_strict_of_op)
+  shows \<open>kf_in_qref (kf_of_op A) Q\<close>
+  by (simp add: assms kf_in_qref_from_strictI kf_in_qref_strict_of_op)
 
-lemma kraus_family_in_qref_strict_0[iff]: \<open>kraus_family_in_qref_strict 0 Q\<close>
-  by (simp add: kraus_family_in_qref_strict.rep_eq zero_kraus_family.rep_eq)
+lemma kf_in_qref_strict_0[iff]: \<open>kf_in_qref_strict 0 Q\<close>
+  by (simp add: kf_in_qref_strict.rep_eq zero_kraus_family.rep_eq)
 
-lemma kraus_family_in_qref_0[iff]: \<open>kraus_family_in_qref 0 Q\<close>
-  by (auto intro!: kraus_family_in_qref_from_strictI)
+lemma kf_in_qref_0[iff]: \<open>kf_in_qref 0 Q\<close>
+  by (auto intro!: kf_in_qref_from_strictI)
 
 lemma qc_map_in_qref_quantum_op:
-  assumes \<open>\<And>x. kraus_family_in_qref (E x) Q\<close>
+  assumes \<open>\<And>x. kf_in_qref (E x) Q\<close>
   shows \<open>qc_map_in_qref (cq_map_quantum_op E) Q\<close>
   using assms apply (transfer fixing: E Q)
-  by (auto intro!: kraus_family_in_qref_map_outcome)
+  by (auto intro!: kf_in_qref_map_outcome)
 
 (* definition fvq_of_cq_map :: \<open>(cl, qu, cl, qu) cq_map \<Rightarrow> QVARIABLE\<close> where
   \<open>fvq_of_cq_map \<EE> = Inf {Q. qc_map_in_qref \<EE> Q}\<close> *)
@@ -1509,20 +1505,20 @@ inductive raw_program_in_qref :: \<open>raw_program \<Rightarrow> QVARIABLE \<Ri
 | raw_program_in_qref_InstantiateOracles: \<open>raw_program_in_qref p Q \<Longrightarrow> (\<And>q. q \<in> set qs \<Longrightarrow> raw_program_in_qref q Q) \<Longrightarrow> raw_program_in_qref (InstantiateOracles p qs) Q\<close>
 | raw_program_in_qref_OracleCall: \<open>raw_program_in_qref (OracleCall i) Q\<close>
 
-lemma kraus_family_in_qref_strict_mono:
+lemma kf_in_qref_strict_mono:
   assumes \<open>Q \<le> R\<close>
-  assumes \<open>kraus_family_in_qref_strict p Q\<close>
-  shows \<open>kraus_family_in_qref_strict p R\<close>
+  assumes \<open>kf_in_qref_strict p Q\<close>
+  shows \<open>kf_in_qref_strict p R\<close>
   using assms
   apply transfer
   using less_eq_QREGISTER.rep_eq by fastforce
 
-lemma kraus_family_in_qref_mono:
+lemma kf_in_qref_mono:
   assumes \<open>Q \<le> R\<close>
-  assumes \<open>kraus_family_in_qref p Q\<close>
-  shows \<open>kraus_family_in_qref p R\<close>
+  assumes \<open>kf_in_qref p Q\<close>
+  shows \<open>kf_in_qref p R\<close>
   using assms
-  by (meson kraus_family_in_qref_def kraus_family_in_qref_strict_mono)
+  by (meson kf_in_qref_def kf_in_qref_strict_mono)
 
 lemma qc_map_in_qref_mono:
   assumes \<open>Q \<le> R\<close>
@@ -1530,7 +1526,7 @@ lemma qc_map_in_qref_mono:
   shows \<open>qc_map_in_qref p R\<close>
   using assms
   apply transfer
-  by (simp add: kraus_family_in_qref_mono)
+  by (simp add: kf_in_qref_mono)
 
 
 lemma raw_program_in_qref_mono:
@@ -1710,65 +1706,65 @@ axiomatization program_write_in_cref :: "program \<Rightarrow> CVARIABLE \<Right
 (* consts fvc_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE" *)
 (* consts fvcw_oracle_program :: "oracle_program \<Rightarrow> CVARIABLE" *)
 
-lemma kraus_family_in_qref_strict_map:
-  assumes \<open>kraus_family_in_qref_strict \<EE> Q\<close>
-  shows \<open>kraus_family_in_qref_strict (kraus_family_map_outcome f \<EE>) Q\<close>
+lemma kf_in_qref_strict_map:
+  assumes \<open>kf_in_qref_strict \<EE> Q\<close>
+  shows \<open>kf_in_qref_strict (kf_map_outcome f \<EE>) Q\<close>
 proof -
-  have \<open>E \<in> Rep_QREGISTER Q\<close> if \<open>(E,x) \<in> Rep_kraus_family (kraus_family_map_outcome f \<EE>)\<close> for E x
+  have \<open>E \<in> Rep_QREGISTER Q\<close> if \<open>(E,x) \<in> Rep_kraus_family (kf_map_outcome f \<EE>)\<close> for E x
   proof -
     from that
-    have \<open>(norm E)\<^sup>2 = kraus_family_op_weight (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E\<close> and \<open>E \<noteq> 0\<close>
-      by (simp_all add: kraus_family_map_outcome.rep_eq)
-    then have \<open>kraus_family_op_weight (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E \<noteq> 0\<close>
+    have \<open>(norm E)\<^sup>2 = kf_op_weight (kf_filter (\<lambda>y. f y = x) \<EE>) E\<close> and \<open>E \<noteq> 0\<close>
+      by (simp_all add: kf_map_outcome.rep_eq)
+    then have \<open>kf_op_weight (kf_filter (\<lambda>y. f y = x) \<EE>) E \<noteq> 0\<close>
       by auto
-    then have \<open>(\<Sum>\<^sub>\<infinity>(F,_)\<in>kraus_family_related_ops (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E. norm (F* o\<^sub>C\<^sub>L F)) \<noteq> 0\<close>
-      by (simp add: kraus_family_op_weight_def)
-    then have \<open>kraus_family_related_ops (kraus_family_filter (\<lambda>y. f y = x) \<EE>) E \<noteq> {}\<close>
+    then have \<open>(\<Sum>\<^sub>\<infinity>(F,_)\<in>kf_related_ops (kf_filter (\<lambda>y. f y = x) \<EE>) E. norm (F* o\<^sub>C\<^sub>L F)) \<noteq> 0\<close>
+      by (simp add: kf_op_weight_def)
+    then have \<open>kf_related_ops (kf_filter (\<lambda>y. f y = x) \<EE>) E \<noteq> {}\<close>
       by force
-    then obtain F y r where \<open>(F,y) \<in> Rep_kraus_family (kraus_family_filter (\<lambda>y. f y = x) \<EE>)\<close> and \<open>E = r *\<^sub>R F\<close>
-      by (auto simp add: kraus_family_related_ops_def)
+    then obtain F y r where \<open>(F,y) \<in> Rep_kraus_family (kf_filter (\<lambda>y. f y = x) \<EE>)\<close> and \<open>E = r *\<^sub>R F\<close>
+      by (auto simp add: kf_related_ops_def)
     then have \<open>(F,y) \<in> Rep_kraus_family \<EE>\<close>
-      by (simp add: kraus_family_filter.rep_eq)
+      by (simp add: kf_filter.rep_eq)
     with assms have \<open>F \<in> Rep_QREGISTER Q\<close>
-      by (metis (no_types, lifting) case_prodE fst_conv kraus_family_in_qref_strict.rep_eq)
+      by (metis (no_types, lifting) case_prodE fst_conv kf_in_qref_strict.rep_eq)
     with \<open>E = r *\<^sub>R F\<close> show \<open>E \<in> Rep_QREGISTER Q\<close>
       using Rep_QREGISTER[of Q]
       by (auto intro!: complex_vector.subspace_scale
           simp: scaleR_scaleC valid_qregister_range_def von_neumann_algebra_def_sot)
   qed
   then show ?thesis
-    by (force simp: kraus_family_in_qref_strict.rep_eq)
+    by (force simp: kf_in_qref_strict.rep_eq)
 qed
 
 
-lemma kraus_family_in_qref_map:
-  assumes \<open>kraus_family_in_qref \<EE> Q\<close>
-  shows \<open>kraus_family_in_qref (kraus_family_map_outcome f \<EE>) Q\<close>
+lemma kf_in_qref_map:
+  assumes \<open>kf_in_qref \<EE> Q\<close>
+  shows \<open>kf_in_qref (kf_map_outcome f \<EE>) Q\<close>
 proof -
   from assms
-  obtain \<FF> where eq: \<open>kraus_equivalent' \<EE> \<FF>\<close> and qref: \<open>kraus_family_in_qref_strict \<FF> Q\<close>
-    by (auto simp: kraus_family_in_qref_def)
-  define \<FF>' where \<open>\<FF>' = kraus_family_map_outcome f \<FF>\<close>
-  have eq': \<open>kraus_equivalent' (kraus_family_map_outcome f \<EE>) \<FF>'\<close>
+  obtain \<FF> where eq: \<open>kraus_equivalent' \<EE> \<FF>\<close> and qref: \<open>kf_in_qref_strict \<FF> Q\<close>
+    by (auto simp: kf_in_qref_def)
+  define \<FF>' where \<open>\<FF>' = kf_map_outcome f \<FF>\<close>
+  have eq': \<open>kraus_equivalent' (kf_map_outcome f \<EE>) \<FF>'\<close>
     by (simp add: \<FF>'_def eq kraus_equivalent'_map_cong)
-  have qref': \<open>kraus_family_in_qref_strict \<FF>' Q\<close>
-    using qref[THEN kraus_family_in_qref_strict_map]
+  have qref': \<open>kf_in_qref_strict \<FF>' Q\<close>
+    using qref[THEN kf_in_qref_strict_map]
     by (auto simp: \<FF>'_def )
-  from eq' qref' show \<open>kraus_family_in_qref (kraus_family_map_outcome f \<EE>) Q\<close>
-    by (auto intro!: exI[of _ \<FF>'] simp add: kraus_family_in_qref_def)
+  from eq' qref' show \<open>kf_in_qref (kf_map_outcome f \<EE>) Q\<close>
+    by (auto intro!: exI[of _ \<FF>'] simp add: kf_in_qref_def)
 qed
 
-lemma kraus_family_in_qref_strict_id[iff]: \<open>kraus_family_in_qref_strict kraus_family_id Q\<close>
+lemma kf_in_qref_strict_id[iff]: \<open>kf_in_qref_strict kf_id Q\<close>
   using Rep_QREGISTER valid_qregister_range_def_sot
-  by (auto intro!: simp: kraus_family_id_def  kraus_family_of_op.rep_eq kraus_family_in_qref_strict_def
-      simp del: kraus_family_of_op_id)
+  by (auto intro!: simp: kf_id_def  kf_of_op.rep_eq kf_in_qref_strict_def
+      simp del: kf_of_op_id)
 
-lemma kraus_family_in_qref_id[iff]: \<open>kraus_family_in_qref kraus_family_id Q\<close>
-  by (auto intro!: exI[of _ kraus_family_id] simp: kraus_family_in_qref_def)
+lemma kf_in_qref_id[iff]: \<open>kf_in_qref kf_id Q\<close>
+  by (auto intro!: exI[of _ kf_id] simp: kf_in_qref_def)
 
 lemma qc_map_in_qref_id[iff]: \<open>qc_map_in_qref cq_map_id Q\<close>
   apply (transfer fixing: Q)
-  by (auto intro!: kraus_family_in_qref_map)
+  by (auto intro!: kf_in_qref_map)
 
 lemma program_in_qref_mono:
   assumes \<open>Q \<le> R\<close>
@@ -1834,17 +1830,17 @@ next
 qed *)
 
 
-lemma kraus_family_in_qref_strict_sample[iff]: \<open>kraus_family_in_qref_strict (kraus_map_sample f) Q\<close>
+lemma kf_in_qref_strict_sample[iff]: \<open>kf_in_qref_strict (kraus_map_sample f) Q\<close>
   using Rep_QREGISTER[of Q]
   by (auto intro!:complex_vector.subspace_scale
-      simp: valid_qregister_range_def_sot scaleR_scaleC kraus_map_sample.rep_eq kraus_family_in_qref_strict_def)
+      simp: valid_qregister_range_def_sot scaleR_scaleC kraus_map_sample.rep_eq kf_in_qref_strict_def)
 
-lemma kraus_family_in_qref_sample[iff]: \<open>kraus_family_in_qref (kraus_map_sample f) Q\<close>
-  by (auto intro!: exI[of _ \<open>kraus_map_sample f\<close>] simp: kraus_family_in_qref_def)
+lemma kf_in_qref_sample[iff]: \<open>kf_in_qref (kraus_map_sample f) Q\<close>
+  by (auto intro!: exI[of _ \<open>kraus_map_sample f\<close>] simp: kf_in_qref_def)
 
 lemma qc_map_in_qref_sample[iff]: \<open>qc_map_in_qref (cq_map_sample f) Q\<close>
   apply (transfer fixing: Q)
-  by (auto intro!: kraus_family_in_qref_map)
+  by (auto intro!: kf_in_qref_map)
 
 lemma program_in_qref_sample:
   shows \<open>program_in_qref (sample X f) Q\<close>
@@ -1885,8 +1881,8 @@ lemma program_write_in_cref_assign:
 (* lemma fvq_program_assign: "fvq_program (assign x e) = QREGISTER_unit"
   by (simp add: fvq_program_def denotation_assign_sample) *)
 
-lemma kraus_family_in_qref_top[iff]: \<open>kraus_family_in_qref E \<top>\<close>
-  by (auto intro!: exI[of _ E] simp add: kraus_family_in_qref_def kraus_family_in_qref_strict_def top_QREGISTER.rep_eq)
+lemma kf_in_qref_top[iff]: \<open>kf_in_qref E \<top>\<close>
+  by (auto intro!: exI[of _ E] simp add: kf_in_qref_def kf_in_qref_strict_def top_QREGISTER.rep_eq)
 
 lemma program_in_qref_ifthenelse1:
   assumes \<open>program_in_qref p Q\<close>
@@ -1975,7 +1971,7 @@ lemma fvq_program_while: "fvq_program (while c b) = (fvq_program (block b))"
   by xxx *)
 
 lemma program_in_qref_qapply[iff]: \<open>program_in_qref (qapply Q e) (QREGISTER_of Q)\<close>
-  by (auto intro!: qc_map_in_qref_quantum_op kraus_family_in_qref_of_op
+  by (auto intro!: qc_map_in_qref_quantum_op kf_in_qref_of_op
       simp add: program_in_qref_def denotation.rep_eq qapply.rep_eq QREGISTER_of.rep_eq)
 
 lemma program_in_cref_qapply[intro]: 
