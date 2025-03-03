@@ -4,8 +4,9 @@ begin
 
 
 (* Equivalence class of cregisters *)
+(* NOTE: The second part is in analogy to the adj-closure of valid_qregister_range and used to make QREGISTER_of_CREGISTER be a QREGISTER *)
 definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
-  \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF>\<close>
+  \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF> \<and> (\<forall>F\<in>\<FF>. \<forall>m. F m \<noteq> None \<longrightarrow> (\<exists>G\<in>\<FF>. (G \<circ>\<^sub>m F) m = Some m))\<close>
 
 definition actual_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
   \<open>actual_cregister_range \<FF> \<longleftrightarrow> valid_cregister_range \<FF> \<and> (\<forall>m m'. \<exists>a\<in>\<FF>. \<exists>b\<in>map_commutant \<FF>. (a \<circ>\<^sub>m b) m = Some m')\<close>
@@ -96,7 +97,26 @@ proof (insert assms, transfer)
     ultimately show ?thesis
       by auto
   qed
-  from range_F_comm_X trans show \<open>actual_cregister_range (range F)\<close>
+  have rew: \<open>\<exists>h\<in>range F. (h \<circ>\<^sub>m f) m = Some m\<close>
+    if \<open>f \<in> range F\<close> and fm_def: \<open>f m \<noteq> None\<close> for f m
+  proof -
+    from that obtain f' where ff': \<open>f = F f'\<close>
+      by blast
+    from fm_def obtain a where f'gm: \<open>f' (g m) = Some a\<close>
+      apply (cases \<open>f' (g m)\<close>)
+      by (auto intro!: simp: register_from_getter_setter_def F_gs ff')
+    define h' h h'f' where \<open>h' = [a \<mapsto> g m]\<close> and \<open>h = F h'\<close> and \<open>h'f' = h' \<circ>\<^sub>m f'\<close>
+    have h'f'gm: \<open>h'f' (g m) = Some (g m)\<close>
+      by (simp add: f'gm h'_def h'f'_def)
+    have \<open>(h \<circ>\<^sub>m f) m = F h'f' m\<close>
+      by (simp add: ff' h_def register_mult h'f'_def)
+    also have \<open>\<dots> = Some m\<close>
+      by (simp add: register_from_getter_setter_def[abs_def] F_gs h'f'gm)
+    finally show ?thesis
+      using \<open>h = F h'\<close>
+      by auto
+  qed
+  from range_F_comm_X trans rew show \<open>actual_cregister_range (range F)\<close>
     by (simp add: actual_cregister_range_def valid_cregister_range_def)
 qed
 
