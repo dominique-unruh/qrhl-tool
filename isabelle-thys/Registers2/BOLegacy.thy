@@ -81,12 +81,12 @@ unbundle cblinfun_syntax
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
 adhoc_overloading
-  cdot "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
+  cdot \<rightleftharpoons> "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
 
 consts tensor :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<otimes>" 70)
 
 adhoc_overloading
-  tensor \<open>\<lambda>x. tensor_ell2 x\<close> \<open>\<lambda>x. tensor_op x\<close> \<open>\<lambda>x. tensor_ccsubspace x\<close>
+  tensor \<rightleftharpoons> \<open>\<lambda>x. tensor_ell2 x\<close> \<open>\<lambda>x. tensor_op x\<close> \<open>\<lambda>x. tensor_ccsubspace x\<close>
 
 (* TODO remove (seems to be a [simp] rule already) *)
 lemma bot_plus[simp]: "sup bot x = x" 

@@ -1,5 +1,6 @@
 theory Programs
-  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps.Kraus_Maps CQ_Operators
+  imports QRHL_Core Expressions Wlog.Wlog Kraus_Maps.Kraus_Maps
+    CQ_Operators
 begin
 
 no_notation Lattice.join (infixl "\<squnion>\<index>" 65)
@@ -9,57 +10,14 @@ no_notation Order.bottom ("\<bottom>\<index>")
   \<open>\<lambda>e c. kraus_map_sample (prob (e c))\<close>
   by (auto intro!: bdd_aboveI simp: kraus_map_sample_norm prob_summable) *)
 
-definition cq_operator_distrib :: "('cl,'qu) cq_operator \<Rightarrow> 'cl distr" where
-  \<open>cq_operator_distrib \<rho> = (if is_distribution (cq_prob \<rho>) then Abs_distr (cq_prob \<rho>) else 0)\<close>
+type_synonym program_state = \<open>((cl\<times>qu) ell2, (cl\<times>qu) ell2) trace_class\<close>
 
-definition denotation_rel :: \<open>(cl,qu) cq_map2 \<Rightarrow> (cl,qu) cq_map2 \<Rightarrow> bool\<close> where 
-  \<open>denotation_rel D E \<longleftrightarrow> kraus_equivalent D E \<and> is_cq_map D \<and> kf_norm D \<le> 1\<close>
+typedef denotation = \<open>{\<EE> :: program_state \<Rightarrow> program_state. is_cq_map qFst \<EE> \<and> km_norm \<EE> \<le> 1}\<close>
+  by (auto intro!: exI[of _ 0])
+setup_lifting type_definition_denotation
 
-lemma denotation_relI:
-  assumes \<open>kraus_equivalent D E\<close>
-  assumes \<open>is_cq_map D\<close>
-  assumes \<open>kf_norm D \<le> 1\<close>
-  shows \<open>denotation_rel D E\<close>
-  using assms by (simp add: denotation_rel_def)
-
-lemma symp_denotation_rel[iff]: \<open>symp denotation_rel\<close>
-proof (rule sympI)
-  write kraus_equivalent (infix "===" 10)
-  write kraus_equivalent' (infix "===''" 10)
-  fix D E
-  assume rel: \<open>denotation_rel D E\<close>
-  have \<open>E === D\<close>
-    by (metis rel denotation_rel_def kraus_equivalent_def)
-  moreover 
-  have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id === E\<close>
-  proof -
-    have \<open>E ===' D\<close>
-      by (simp add: \<open>E === D\<close> kraus_equivalent_imp_equivalent'_CARD_1)
-    have \<open>cq_map_comp (cq_map_comp cq_map_id E) cq_map_id ===' cq_map_comp (cq_map_comp cq_map_id D) cq_map_id\<close>
-      by (auto intro!: kf_flatten_cong' kf_comp_cong kraus_equivalent_kf_map_outcome_right \<open>E === D\<close> simp add: cq_map_comp_def)
-    also have \<open>\<dots> ===' D\<close>
-      apply (rule kraus_equivalent_imp_equivalent'_CARD_1)
-      using denotation_rel_def is_cq_map_def rel by blast
-    also have \<open>\<dots> ===' E\<close>
-      using \<open>E ===' D\<close> kraus_equivalent'_sym by blast
-    finally show ?thesis
-      using kraus_equivalent'_imp_equivalent by blast
-  qed
-  then have \<open>is_cq_map E\<close>
-    using is_cq_map_def by blast
-  moreover have \<open>kf_norm E \<le> 1\<close>
-    by (metis rel denotation_rel_def kf_norm_welldefined)
-  ultimately show \<open>denotation_rel E D\<close>
-    by (simp add: denotation_rel_def)
-qed
-
-lemma transp_denotation_rel[iff]: \<open>transp denotation_rel\<close>
-  by (metis denotation_rel_def kraus_equivalent_def transpI)
-
-
-quotient_type denotation = \<open>(cl,qu) cq_map2\<close> / partial: denotation_rel
-  by (auto intro!: part_equivpI exI[of _ 0] simp: denotation_rel_def)
-
+definition cq_operator_distrib :: "program_state \<Rightarrow> cl distr" where
+  \<open>cq_operator_distrib \<rho> = (if is_distribution (cq_prob qFst \<rho>) then Abs_distr (cq_prob qFst \<rho>) else 0)\<close>
 
 datatype raw_program =
   Seq \<open>raw_program\<close> \<open>raw_program\<close>
@@ -67,7 +25,7 @@ datatype raw_program =
   | Sample \<open>cl distr expression\<close>
   | IfThenElse \<open>bool expression\<close> \<open>raw_program\<close> \<open>raw_program\<close>
   | While \<open>bool expression\<close> \<open>raw_program\<close>
-  | QuantumOp \<open>(qu ell2, qu ell2, unit) kraus_family expression\<close>
+  | QuantumOp \<open>cl \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (qu ell2, qu ell2) trace_class\<close>
   | Measurement \<open>(cl, qu) measurement expression\<close>
   | InstantiateOracles \<open>raw_program\<close> \<open>raw_program list\<close>
      \<comment> \<open>\<^term>\<open>InstantiateOracles p q\<close> replace the first oracles in p by q, and decrease the index of all other oracle calls by len q.\<close>
@@ -308,7 +266,7 @@ valid_oracle_program_Seq:  \<open>valid_oracle_program c \<Longrightarrow> valid
 | valid_oracle_program_Sample: \<open>(\<And>m. weight (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (Sample e)\<close>
 | valid_oracle_program_IfThenElse: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program d \<Longrightarrow> valid_oracle_program (IfThenElse e c d)\<close>
 | valid_oracle_program_While: \<open>valid_oracle_program c \<Longrightarrow> valid_oracle_program (While e c)\<close>
-| valid_oracle_program_QuantumOp: \<open>(\<And>m. kf_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
+| valid_oracle_program_QuantumOp: \<open>(\<And>m. km_norm (e m) \<le> 1) \<Longrightarrow> valid_oracle_program (QuantumOp e)\<close>
 | valid_oracle_program_Measurement: \<open>valid_oracle_program (Measurement e)\<close>
 | valid_oracle_program_InstantiateOracles: \<open>(\<And>d. d \<in> set ds \<Longrightarrow> valid_oracle_program d \<and> no_oracles d) \<Longrightarrow> valid_oracle_program c \<Longrightarrow> 
   oracle_number c \<le> length ds \<Longrightarrow> valid_oracle_program (InstantiateOracles c ds)\<close>
@@ -536,7 +494,7 @@ definition assign :: \<open>'a cvariable \<Rightarrow> 'a expression \<Rightarro
 
 lift_definition qapply :: \<open>'a qvariable \<Rightarrow> ('a,'a) l2bounded expression \<Rightarrow> program\<close> is
   \<open>\<lambda>Q e. if qregister Q then
-      QuantumOp (\<lambda>m. kf_of_op (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
+      QuantumOp (\<lambda>m. sandwich_tc (apply_qregister Q (if norm (e m) \<le> 1 then e m else 0))) else Skip\<close>
   apply (auto intro!: valid_oracle_program.intros no_oracles.intros simp: valid_program_def)
   by (simp add: power_le_one)
 
@@ -595,11 +553,11 @@ lemma is_cq_map_cq_map_local_c[intro]:
   shows \<open>is_cq_map (cq_map_local_c F init \<EE>)\<close>
   by (simp add: cq_map_local_c_def)
 
-lemma kf_norm_cq_map_local_c: \<open>kf_norm (cq_map_local_c F init \<EE>) \<le> kf_norm \<EE>\<close>
+lemma kf_norm_cq_map_local_c: \<open>kf_norm (cq_map_local_c F init \<EE>) \<le> kf_norm \<EE>\<close> //
   by (auto intro!: kf_norm_cq_map_from_pointwise kf_norm_cq_map_to_pointwise
       simp: cq_map_local_c_def)
 
-lemma cq_map_local_c_cong:
+lemma cq_map_local_c_cong: //
   assumes \<open>kraus_equivalent \<EE> \<FF>\<close>
   shows \<open>kraus_equivalent (cq_map_local_c F init \<EE>) (cq_map_local_c F init \<FF>)\<close>
   using assms
@@ -697,11 +655,11 @@ lift_definition denotation_measurement :: \<open>(cl \<Rightarrow> (cl, qu) meas
   \<open>\<lambda>m c. kraus_map_from_measurement (m c)\<close>
   by (auto intro!: kraus_map_from_measurement_norm_leq1 simp: bdd_above_def) *)
 
-lift_definition denotation_id :: denotation is cq_map_id
-  by x
+lift_definition denotation_id :: denotation is \<open>cq_id qFst\<close>
+  by simp
 
 lift_definition denotation_seq :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
-  \<open>\<lambda>D E. cq_map_comp E D\<close>
+  \<open>\<lambda>D E. E o D\<close>
   by x
 
 lift_definition denotation_sample :: \<open>(cl \<Rightarrow> cl distr) \<Rightarrow> denotation\<close> is

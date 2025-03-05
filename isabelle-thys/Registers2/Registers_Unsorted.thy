@@ -287,6 +287,13 @@ proof -
     by (metis apply_qregister_abs_op of_real_hom.injectivity trace_abs_op trace_sandwich_isometry unitary_isometry)
 qed
 
+lemma apply_iso_qregister_tc_norm:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>norm (apply_qregister_tc X t) = norm t\<close>
+  apply (transfer' fixing: X)
+  by (simp add: apply_iso_qregister_trace_norm assms iso_qregister_co_dim)
+
+
 lemma apply_qregister_tc_0[simp]: \<open>apply_qregister_tc Q 0 = 0\<close>
   apply (transfer' fixing: Q)
   by auto

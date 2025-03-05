@@ -200,7 +200,7 @@ abbreviation (input) \<open>colocal_op_qvars == distinct_qvars_op_vars\<close> (
 abbreviation (input) \<open>colocal_pred_qvars == distinct_qvars_pred_vars\<close> (* Legacy *)
 
 consts colocal :: "'a \<Rightarrow> 'b \<Rightarrow> bool" (* Legacy *)
-adhoc_overloading colocal \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_pred x y\<close>
+adhoc_overloading colocal \<rightleftharpoons> \<open>\<lambda>x y. distinct_qvars_pred_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_vars x y\<close> \<open>\<lambda>x y. distinct_qvars_op_pred x y\<close>
 (* Having non-eta reduced terms in the adhoc_overloading effectively makes the overloading input-only,
    as appropropriate for a legacy name *)
 
@@ -362,7 +362,7 @@ notation (input) variable_is (infix "=\<^sub>q" 80)
 consts lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<guillemotright>" 90)
 syntax lift :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl ">>" 90)
 adhoc_overloading
-  lift liftOp \<open>(\<lambda>x. liftSpace x)\<close>
+  lift \<rightleftharpoons> liftOp \<open>(\<lambda>x. liftSpace x)\<close>
 
 lemma predicate_localE:
   assumes "predicate_local S Q"
@@ -710,7 +710,7 @@ lemma kraus_map_from_measurement_norm_leq1:
   shows \<open>kf_norm (kraus_map_from_measurement M) \<le> 1\<close>
   using kraus_map_from_measurement_bound_leq1[of M]
   apply (simp add: kf_norm_def)
-  by (metis kf_bound_pos norm_cblinfun_id norm_cblinfun_mono)
+  using norm_cblinfun_mono by fastforce
 
 section \<open>Quantum predicates (ctd.)\<close>
 
