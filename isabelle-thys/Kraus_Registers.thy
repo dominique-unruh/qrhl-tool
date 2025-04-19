@@ -768,6 +768,22 @@ lemma km_operators_in_km_apply_qregister_invalid_Q:
   shows \<open>km_operators_in (km_apply_qregister Q \<EE>) X\<close>
   by (metis assms empty_subsetI kf_operators_kf_apply_qregister_invalid km_apply_qregister_def km_operators_in_def)
 
+lemma km_operators_in_km_apply_qregister:
+  assumes \<open>km_operators_in \<EE> S\<close>
+  shows \<open>km_operators_in (km_apply_qregister Q \<EE>) (apply_qregister Q ` S)\<close>
+proof -
+  wlog [iff]: \<open>qregister Q\<close>
+    using negation
+    by (simp add: km_operators_in_km_apply_qregister_invalid_Q)
+  from assms
+  obtain \<EE>' :: \<open>(_,_,unit) kraus_family\<close> where \<EE>_def: \<open>\<EE> = kf_apply \<EE>'\<close> and \<EE>'S: \<open>kf_operators \<EE>' \<subseteq> S\<close>
+    by (metis km_operators_in_def)
+  have \<open>apply_qregister Q ` kf_operators \<EE>' \<subseteq> apply_qregister Q ` S\<close>
+    using \<EE>'S by blast
+  then show ?thesis
+    by (simp add: \<EE>_def km_apply_qregister_kf_apply km_operators_in_kf_apply_flattened kf_operators_kf_apply_qregister)
+qed
+
 
 
 
