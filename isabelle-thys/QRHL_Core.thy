@@ -671,7 +671,7 @@ next
     by (simp add: is_Proj_algebraic sum.insert insert cblinfun_compose_add_right cblinfun_compose_add_left adj_plus)
 qed
 
-lemma kraus_map_from_measurement_norm_leq1_aux:
+lemma kf_from_measurement_norm_leq1_aux:
   assumes \<open>is_measurement M\<close>
   assumes \<open>finite F\<close> and \<open>F \<subseteq> range (\<lambda>x. (M x, x))\<close>
   shows \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> id_cblinfun\<close>
@@ -689,26 +689,26 @@ proof -
     using is_Proj_leq_id by blast
 qed
 
-lift_definition kraus_map_from_measurement :: \<open>('x,'a) measurement \<Rightarrow> ('a ell2,'a ell2,'x) kraus_family\<close> is
+lift_definition kf_from_measurement :: \<open>('x,'a) measurement \<Rightarrow> ('a ell2,'a ell2,'x) kraus_family\<close> is
   \<open>\<lambda>m :: 'x\<Rightarrow>('a,'a) l2bounded. range (\<lambda>x. (m x, x))\<close>
     apply (intro CollectI kraus_familyI bdd_aboveI2)
-    apply (rule kraus_map_from_measurement_norm_leq1_aux)
-    using kraus_map_from_measurement_norm_leq1_aux
+    apply (rule kf_from_measurement_norm_leq1_aux)
+    using kf_from_measurement_norm_leq1_aux
     by auto
 
 (* TODO move to QRHL_Core *)
 lemma is_measurement_mproj[iff]: \<open>is_measurement (mproj M)\<close>
   using mproj by auto
 
-lemma kraus_map_from_measurement_bound_leq1: 
-  shows \<open>kf_bound (kraus_map_from_measurement M) \<le> id_cblinfun\<close>
+lemma kf_from_measurement_bound_leq1: 
+  shows \<open>kf_bound (kf_from_measurement M) \<le> id_cblinfun\<close>
   apply (rule kf_bound_leqI)
-  apply (rule kraus_map_from_measurement_norm_leq1_aux[of \<open>mproj M\<close>])
-  by (auto intro!: kf_bound_leqI simp: kraus_map_from_measurement.rep_eq)
+  apply (rule kf_from_measurement_norm_leq1_aux[of \<open>mproj M\<close>])
+  by (auto intro!: kf_bound_leqI simp: kf_from_measurement.rep_eq)
 
-lemma kraus_map_from_measurement_norm_leq1:
-  shows \<open>kf_norm (kraus_map_from_measurement M) \<le> 1\<close>
-  using kraus_map_from_measurement_bound_leq1[of M]
+lemma kf_from_measurement_norm_leq1:
+  shows \<open>kf_norm (kf_from_measurement M) \<le> 1\<close>
+  using kf_from_measurement_bound_leq1[of M]
   apply (simp add: kf_norm_def)
   using norm_cblinfun_mono by fastforce
 
@@ -1688,7 +1688,7 @@ proof rule
   have bij_of_bool: "bij (of_bool :: _ \<Rightarrow> bit)"
     by (smt (verit, best) add_bit_eq_xor bijI' diff_add_cancel of_bool_eq_iff xor_bit_def)
   then show "bij (\<lambda>x. of_bool (f x) :: bit)" if "bij f"
-    using Fun.bij_comp[of f of_bool] that unfolding o_def by simp
+    using bij_comp[of f of_bool] that unfolding o_def by simp
   show "bij f" if "bij (\<lambda>x. of_bool (f x) :: bit)"
     using that bij_of_bool
     by (smt (verit, best) bijI' bij_pointE)

@@ -1,7 +1,9 @@
 theory Classical_Registers
   imports Registers.Classical_Extra
-    Misc_Missing
+    Misc_Missing Registers.Laws_Complement_Classical
 begin
+
+unbundle register_syntax
 
 subsection \<open>Raw\<close>
 
@@ -472,12 +474,10 @@ lemma setter_non_cregister[simp]: \<open>setter non_cregister a = id\<close>
   apply transfer by (simp add: non_cregister_raw)
 
 lemma getter_setter_same[simp]: \<open>cregister x \<Longrightarrow> getter x (setter x a m) = a\<close>
-  apply transfer apply (simp add: non_cregister_raw)
-  by (meson valid_getter_setter_def valid_getter_setter_getter_setter)
+  apply transfer by (simp add: non_cregister_raw)
 
 lemma setter_setter_same[simp]: \<open>setter x b (setter x a m) = setter x b m\<close>
-  apply transfer apply (simp add: non_cregister_raw)
-  by (meson valid_getter_setter_def valid_getter_setter_getter_setter)
+  apply transfer by (simp add: non_cregister_raw)
 
 (* TODO move to Registers.Classical_Extra *)
 lemma getter_setter: \<open>Axioms_Classical.getter F (Axioms_Classical.setter G a m) = Axioms_Classical.getter F m\<close> if \<open>Laws_Classical.compatible F G\<close> for F G
@@ -572,8 +572,7 @@ lemma setter_setter_compatI:
   unfolding ccompatible_def using assms
   apply transfer by (auto simp add: non_cregister_raw setter_setter_compatI_raw)
 lemma setter_getter_same[simp]: \<open>setter x (getter x m) m = m\<close>
-  apply transfer apply (simp add: non_cregister_raw)
-  by (metis valid_getter_setter_def valid_getter_setter_getter_setter)
+  apply transfer by (simp add: non_cregister_raw)
 
 lift_definition cregister_from_getter_setter :: \<open>('b \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> ('a,'b) cregister\<close> is
   \<open>\<lambda>g s. if valid_getter_setter g s then register_from_getter_setter g s else non_cregister_raw\<close>
@@ -875,8 +874,7 @@ lemma register_apply_via_setter_getter:
 lemma getter_register_apply:
   assumes [simp]: \<open>cregister_raw F\<close>
   shows \<open>Axioms_Classical.getter F (register_apply F f m) = f (Axioms_Classical.getter F m)\<close>
-  apply (simp add: register_apply_via_setter_getter)
-  by (metis assms valid_getter_setter_def valid_getter_setter_getter_setter)
+  by (simp add: register_apply_via_setter_getter)
 
 lemma cregister_eqI_setter_raw: 
   assumes [simp]: \<open>cregister_raw F\<close> \<open>cregister_raw G\<close>
@@ -912,6 +910,113 @@ lemma apply_cregister_getter_setter:
   apply (transfer' fixing: a)
   apply (subst register_from_getter_setter_of_getter_setter[symmetric])
   by (auto intro!: simp: register_from_getter_setter_def[abs_def])
+
+abbreviation \<open>ccomplement_domain F \<equiv> complement_domain (apply_cregister F)\<close>
+
+lift_definition ccomplements :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is Laws_Complement_Classical.complements.
+
+lemma ccomplement_exists:
+  fixes F :: \<open>('a,'b) cregister\<close>
+  assumes \<open>cregister F\<close>
+  shows \<open>let 'c::type = ccomplement_domain F in
+          \<exists>G :: ('c,'b) cregister. ccomplements F G\<close>
+proof -
+  have *: \<open>(\<exists>G :: 'c cupdate \<Rightarrow> 'b cupdate. Laws_Complement_Classical.complements (apply_cregister F) G)
+    \<longleftrightarrow> (\<exists>G :: ('c,'b) cregister. ccomplements F G)\<close>
+    apply (rule Ex_iffI[where f=Abs_cregister and g=apply_cregister])
+    by (auto simp: ccomplements_def complements_def Abs_cregister_inverse Laws_Classical.compatible_register2)
+  show ?thesis
+    apply (subst *[symmetric])
+    apply (rule complement_exists)
+    using assms cregister.rep_eq by blast
+qed
+
+lemma iso_cregister_rep_eq: \<open>iso_cregister F \<longleftrightarrow> iso_register (apply_cregister F)\<close>
+  by (smt (verit, del_insts) apply_cregister_inject cregister.rep_eq cregister_chain.rep_eq cregister_id.rep_eq cregister_inv.rep_eq
+      inj_cregister inj_iff iso_cregister_def iso_register_def iso_register_inv iso_register_inv_comp2)
+
+
+lemma iso_cregister_injective_getter:
+  assumes \<open>cregister F\<close>
+  shows \<open>iso_cregister F \<longleftrightarrow> inj (getter F)\<close>
+  using iso_register_injective_getter
+  by (metis assms cregister.rep_eq getter.rep_eq iso_cregister_rep_eq)
+
+lemma iso_cregister_setter_from_getter:
+  assumes \<open>iso_cregister F\<close>
+  shows \<open>setter F a m = inv (getter F) a\<close>
+  by (metis assms getter_setter_same inv_f_eq iso_cregister_def iso_cregister_injective_getter)
+
+lemma surj_getter:
+  assumes \<open>cregister F\<close>
+  shows \<open>surj (getter F)\<close>
+  by (metis assms cregister.rep_eq getter.rep_eq surj_getter)
+
+
+lemma iso_register_from_getter:
+  assumes [iff]: \<open>iso_cregister F\<close>
+  shows \<open>apply_cregister F f = inv_map (Some o getter F) \<circ>\<^sub>m f \<circ>\<^sub>m (Some o getter F)\<close>
+proof (rule ext)
+  fix m :: 'b
+  have [iff]: \<open>cregister F\<close>
+    using iso_cregister_def by blast
+  show \<open>apply_cregister F f m = (inv_map (Some o getter F) \<circ>\<^sub>m f \<circ>\<^sub>m (Some o getter F)) m\<close>
+    apply (cases \<open>f (Classical_Registers.getter F m)\<close>)
+    by (auto intro!: ext simp: apply_cregister_getter_setter iso_cregister_setter_from_getter
+        o_def inv_map_total[unfolded o_def] surj_getter)
+qed
+
+lemma apply_cregister_inj_map_iff: 
+  fixes X :: \<open>('a,'b) cregister\<close>
+  assumes [iff]: \<open>cregister X\<close>
+  shows \<open>inj_map (apply_cregister X f) \<longleftrightarrow> inj_map f\<close>
+proof (intro iffI inj_map_def[THEN iffD2] allI impI conjI; rename_tac m n)
+  fix a b :: 'a and m :: 'b
+  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
+  assume inj_Xf: \<open>inj_map (apply_cregister X f)\<close> and \<open>f a = f b \<and> f a \<noteq> None\<close>
+  then obtain c where fa: \<open>f a = Some c\<close> and fb: \<open>f b = Some c\<close>
+    by fastforce
+  have gXsX[simp]: \<open>gX (sX a m) = a\<close> for a m
+    using assms gX_def sX_def by auto
+  have sXsX[simp]: \<open>sX a (sX b m) = sX a m\<close> for a b m
+    by (simp add: sX_def)
+  have Xfsam_Some: \<open>apply_cregister X f (sX a m) \<noteq> None\<close>
+    by (simp add: inj_map_def apply_cregister_getter_setter[OF assms] fa
+        flip: sX_def gX_def)
+  have Xfsbm_Some:\<open>apply_cregister X f (sX b m) \<noteq> None\<close>
+    by (simp add: inj_map_def apply_cregister_getter_setter[OF assms] fb
+        flip: sX_def gX_def)
+  have Xfsbm_Xfsam: \<open>apply_cregister X f (sX a m) = apply_cregister X f (sX b m)\<close>
+    by (simp add: apply_cregister_getter_setter fa fb flip: gX_def sX_def)
+  from Xfsbm_Xfsam Xfsam_Some Xfsbm_Some inj_Xf have \<open>sX a m = sX b m\<close>
+    by (simp add: inj_map_def)  
+  then have \<open>gX (sX a m) = gX (sX b m)\<close>
+    by simp
+  then show \<open>a = b\<close>
+    by simp
+next
+  fix m n :: 'b
+  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
+  assume \<open>inj_map f\<close>
+  assume \<open>apply_cregister X f m = apply_cregister X f n \<and> apply_cregister X f m \<noteq> None\<close>
+  then obtain k where Xfm_k: \<open>apply_cregister X f m = Some k\<close> and Xfn_k: \<open>apply_cregister X f n = Some k\<close>
+    by fastforce
+  from Xfm_k obtain c where fgm_c: \<open>f (gX m) = Some c\<close>
+    apply (simp add: apply_cregister_getter_setter flip: gX_def sX_def)
+    by fastforce
+  from Xfn_k obtain d where fgn_d: \<open>f (gX n) = Some d\<close>
+    apply (simp add: apply_cregister_getter_setter flip: gX_def sX_def)
+    by fastforce
+  from Xfm_k have \<open>sX c m = k\<close>
+    by (simp add: apply_cregister_getter_setter fgm_c flip: gX_def sX_def)
+  moreover from Xfn_k have \<open>sX d n = k\<close>
+    by (simp add: apply_cregister_getter_setter fgn_d flip: gX_def sX_def)
+  ultimately have \<open>c = d\<close>
+    by (metis assms getter_setter_same sX_def)
+  with fgm_c fgn_d \<open>inj_map f\<close>
+  show \<open>m = n\<close>
+    by (metis \<open>sX c m = k\<close> \<open>sX d n = k\<close> gX_def inj_map_def option.simps(2) sX_def setter_getter_same setter_setter_same)
+qed
 
 
 

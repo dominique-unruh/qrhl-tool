@@ -345,6 +345,163 @@ proof -
 qed
 
 
+lemma apply_qregister_tc_plus:
+  \<open>apply_qregister_tc Q (t + u) = apply_qregister_tc Q t + apply_qregister_tc Q u\<close>
+    apply transfer'
+    by (simp add: apply_qregister_plus)
+
+lemma apply_qregister_tc_scale:
+  \<open>apply_qregister_tc Q (c *\<^sub>C t) = c *\<^sub>C apply_qregister_tc Q t\<close>
+    apply transfer'
+    by (simp add: apply_qregister_plus apply_qregister_scaleC)
+
+lemma bounded_clinear_apply_qregister_tc[bounded_clinear]:
+  assumes \<open>iso_qregister Q\<close>
+    \<comment> \<open>This assumption is actually not needed\<close>
+  shows \<open>bounded_clinear (apply_qregister_tc Q)\<close>
+  apply (rule bounded_clinearI[where K=1])
+  by (simp_all add: assms apply_iso_qregister_tc_norm apply_qregister_tc_scale apply_qregister_tc_plus)
+
+lemma clinear_apply_qregister_tc:
+  shows \<open>clinear (apply_qregister_tc Q)\<close>
+  apply (rule clinearI)
+  by (simp_all add: apply_qregister_tc_scale apply_qregister_tc_plus)
+
+lemma bij_iso_qregister_tc:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>bij (apply_qregister_tc Q)\<close>
+proof (rule bijI)
+  have \<open>qregister Q\<close>
+    using assms iso_qregister_def' by blast
+  then show \<open>inj (apply_qregister_tc Q)\<close>
+    by (smt (verit) apply_qregister_inject' apply_qregister_tc.rep_eq assms from_trace_class_inverse inj_onI
+        iso_qregister_co_dim)
+  show \<open>surj (apply_qregister_tc Q)\<close>
+    apply (rule surjI[where f=\<open>apply_qregister_tc (qregister_inv Q)\<close>])
+    by (smt (verit, ccfv_SIG) apply_qregister_inv_inverse apply_qregister_tc.rep_eq assms from_trace_class_inverse iso_qregister_co_dim
+        iso_qregister_inv_iso)
+qed
+
+
+lemma separating_set_bounded_clinear_iso_qregister_tc_nested:
+  fixes Q :: \<open>('a,'b) qregister\<close> and S :: \<open>('a ell2, 'a ell2) trace_class set\<close>
+  assumes \<open>iso_qregister Q\<close>
+  assumes \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) S\<close>
+  shows \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) (apply_qregister_tc Q ` S)\<close>
+proof (intro separating_setI)
+  fix f g :: \<open>('b ell2, 'b ell2) trace_class \<Rightarrow> 'c\<close>
+  assume \<open>bounded_clinear f\<close> and \<open>bounded_clinear g\<close>
+  assume fg_QS: \<open>f u = g u\<close> if \<open>u \<in> apply_qregister_tc Q ` S\<close> for u
+  define f' g' where \<open>f' t = f (apply_qregister_tc Q t)\<close> and \<open>g' t = g (apply_qregister_tc Q t)\<close> for t
+  have [iff]: \<open>bounded_clinear f'\<close>  \<open>bounded_clinear g'\<close>
+    by (auto intro!: 
+        comp_bounded_clinear[OF \<open>bounded_clinear f\<close>, unfolded o_def]
+        comp_bounded_clinear[OF \<open>bounded_clinear g\<close>, unfolded o_def] 
+        bounded_clinear_apply_qregister_tc assms
+        simp: f'_def[abs_def] g'_def[abs_def])
+  have \<open>f' t = g' t\<close> if \<open>t \<in> S\<close> for t
+    by (simp add: f'_def fg_QS g'_def that)
+  then have \<open>f' = g'\<close>
+    apply (rule_tac eq_from_separatingI[OF assms(2)])
+    by auto
+  show \<open>f = g\<close>
+  proof (rule ext)
+    fix t :: \<open>('b ell2, 'b ell2) trace_class\<close>
+    from assms have surj_Q: \<open>surj (apply_qregister_tc Q)\<close>
+      by (meson bij_def bij_iso_qregister_tc)
+    then obtain u where u: \<open>t = apply_qregister_tc Q u\<close>
+      by fast
+    with \<open>f' = g'\<close>
+    have \<open>f' u = g' u\<close>
+      by simp
+    then show \<open>f t = g t\<close>
+      by (simp add: f'_def g'_def u)
+  qed
+qed
+
+
+lemma qregister_chain_apply_tc:
+  assumes \<open>iso_qregister F\<close> and \<open>iso_qregister G\<close>
+  shows \<open>apply_qregister_tc (qregister_chain F G) = apply_qregister_tc F o apply_qregister_tc G\<close>
+  apply (transfer' fixing: F G)
+  using assms
+  by (simp add: iso_qregister_co_dim)
+
+lemma apply_qregister_tc_id[simp]: \<open>apply_qregister_tc qregister_id = id\<close>
+  apply transfer'
+  by (simp add: iso_qregister_co_dim iso_qregister_def')
+
+
+lemma apply_qregister_tc_transform_qregister: \<open>unitary U \<Longrightarrow> apply_qregister_tc (transform_qregister U) a = sandwich_tc U a\<close>
+  apply (transfer' fixing: U)
+  using apply_qregister_transform_qregister
+  by (smt (verit, best) iso_qregister_co_dim iso_qregister_def' qregister_chain_transform_qregister qregister_transform_qregister
+      transform_qregister_id unitary_adj unitary_def)
+
+lemma iso_qregister_transform_qregister:
+  assumes \<open>unitary U\<close>
+  shows \<open>iso_qregister (transform_qregister U)\<close>
+  by (metis assms iso_qregister_def' qregister_chain_transform_qregister qregister_transform_qregister transform_qregister_id
+      unitary_adj unitary_def)
+
+lemma inv_transform_qregister:
+  assumes \<open>unitary U\<close>
+  shows \<open>qregister_inv (transform_qregister U) = transform_qregister (U*)\<close>
+proof -
+  have [simp]: \<open>apply_qregister (transform_qregister U) = (*\<^sub>V) (sandwich U)\<close>
+    by (simp add: assms transform_qregister.rep_eq)
+  have [simp]: \<open>apply_qregister (transform_qregister (U*)) = (*\<^sub>V) (sandwich (U*))\<close>
+    by (simp add: assms transform_qregister.rep_eq)
+  have [simp]: \<open>inv ((*\<^sub>V) (sandwich U)) x = sandwich (U*) *\<^sub>V x\<close> for x
+    by (smt (verit, ccfv_SIG) \<open>apply_qregister (transform_qregister (U*)) = (*\<^sub>V) (sandwich (U*))\<close>
+        \<open>apply_qregister (transform_qregister U) = (*\<^sub>V) (sandwich U)\<close> apply_qregister_inv_inverse assms cblinfun_apply_cblinfun_compose
+        cblinfun_compose_id_right iso_qregister_inv_iso_apply iso_qregister_transform_qregister sandwich_compose unitary_adj
+        unitary_def)
+
+  show ?thesis
+    apply (rule qregister_eqI_separating)
+     apply (rule separating_UNIV)
+    apply (subst iso_qregister_inv_iso_apply)
+    using assms apply (rule iso_qregister_transform_qregister)
+    by simp
+qed
+
+lemma qregister_tensor_empty_empty[simp]: \<open>qregister_tensor empty_qregister empty_qregister = empty_qregister\<close>
+  apply (rule empty_qregisters_same)
+  by (simp add: qregister_qregister_tensor)
+
+lemma swap_QREGISTER_bot[simp]: \<open>swap_QREGISTER (\<bottom> :: 'a QREGISTER) = id_cblinfun\<close>
+proof -
+  let ?empty = \<open>empty_qregister :: (unit,'a) qregister\<close>
+  have \<open>swap_QREGISTER (\<bottom> :: 'a QREGISTER) = swap_QREGISTER (QREGISTER_of ?empty)\<close>
+    by fastforce
+  also have \<open>\<dots> = apply_qregister (qregister_tensor ?empty ?empty) swap_ell2\<close>
+    using empty_qregister_is_register swap_QREGISTER_QREGISTER_of by blast
+  also have \<open>\<dots> = id_cblinfun\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+lemma norm_swap_QREGISTER_01: \<open>norm (swap_QREGISTER Q) \<in> {0,1}\<close>
+proof (cases \<open>card (Collect (is_swap_on_qupdate_set (Rep_QREGISTER Q))) = 1\<close>)
+  case True
+  have \<open>is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>
+    using the_default_memI[OF True, of 0]
+    by (simp add: swap_QREGISTER.rep_eq)
+  then have \<open>unitary (swap_QREGISTER Q)\<close>
+    using is_swap_on_qupdate_set_def by blast
+  then show ?thesis
+    using unitary_norm_01 by auto
+next
+  case False
+  have \<open>swap_QREGISTER Q = 0\<close>
+    using the_default_default[OF False, of 0]
+    by (simp add: swap_QREGISTER.rep_eq)
+  then show ?thesis
+    by simp
+qed
+
 
 
 end

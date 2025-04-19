@@ -1,5 +1,5 @@
 theory Quantum_From_Classical_Reg
-  imports Classical_Registers Quantum_Registers
+  imports Classical_Reg_Ranges Quantum_Reg_Ranges
 begin
 
 lemma permute_and_tensor1_cblinfun_exists_register: \<open>permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close> if \<open>cregister F\<close>
@@ -326,5 +326,285 @@ next
   then show ?thesis
     by (auto simp add: non_cregister)
 qed
+
+
+lemma qregister_of_cregister_alt_def_has_sum:
+  assumes \<open>cregister F\<close>
+  shows \<open>((\<lambda>(x,y). ket y \<bullet>\<^sub>C a (ket x)) has_sum
+      of_bool (same_outside_cregister F n m) *\<^sub>C ket (Classical_Registers.getter F n) \<bullet>\<^sub>C a (ket (Classical_Registers.getter F m)))
+          {(x,y). apply_cregister F [x\<mapsto>y] m = Some n}\<close>
+proof (rule has_sum_single[where i=\<open>(getter F m, getter F n)\<close>])
+  show \<open>j \<in> {(x, y). apply_cregister F [x \<mapsto> y] m = Some n} \<Longrightarrow> (case j of (x, y) \<Rightarrow> ket y \<bullet>\<^sub>C a (ket x)) = 0\<close>
+    if \<open>j \<noteq> (Classical_Registers.getter F m, Classical_Registers.getter F n)\<close> for j
+    apply (simp add: case_prod_unfold)
+    using that
+    by (metis (no_types, lifting) \<open>cregister F\<close> apply_cregister_getter_setter apply_cregister_of_0 array_rules(2) getter_setter_same option.case(2) option.simps(2)
+        surjective_pairing )
+  have *: \<open>apply_cregister F [Classical_Registers.getter F m \<mapsto> Classical_Registers.getter F n] m = Some n \<longleftrightarrow> same_outside_cregister F n m\<close>
+    by (auto simp: same_outside_cregister_def \<open>cregister F\<close> apply_cregister_getter_setter)
+  show \<open>of_bool (same_outside_cregister F n m) *\<^sub>C ket (Classical_Registers.getter F n) \<bullet>\<^sub>C a (ket (Classical_Registers.getter F m)) =
+    (if (Classical_Registers.getter F m, Classical_Registers.getter F n) \<in> {(x, y). apply_cregister F [x \<mapsto> y] m = Some n}
+     then case (Classical_Registers.getter F m, Classical_Registers.getter F n) of (x, y) \<Rightarrow> ket y \<bullet>\<^sub>C a (ket x) else 0)\<close>
+    by (simp add: * )
+qed
+
+
+lemma qregister_of_cregister_alt_def_exists: \<open>explicit_cblinfun_exists (\<lambda>n m. 
+          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+proof -
+  wlog \<open>cregister F\<close>
+    using negation
+    by (simp add: non_cregister non_cregister.rep_eq non_cregister_raw_def case_prod_unfold)
+  have \<open>explicit_cblinfun_exists (\<lambda>n m. 
+          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))
+              = permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close>
+    unfolding permute_and_tensor1_cblinfun_exists_def
+    apply (intro arg_cong[where f=explicit_cblinfun_exists] ext)
+    unfolding infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>]]
+    by (simp add: cinner_ket_left)
+  moreover have \<open>permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close>
+    by (simp add: \<open>cregister F\<close> permute_and_tensor1_cblinfun_exists_register)
+  ultimately show ?thesis
+    by simp
+qed
+
+lemma qregister_of_cregister_alt_def:
+  shows \<open>apply_qregister (qregister_of_cregister F) a = explicit_cblinfun (\<lambda>n m. 
+          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+proof -
+  wlog [iff]: \<open>cregister F\<close>
+    using negation
+    by (simp add: non_cregister non_cregister.rep_eq non_cregister_raw_def)
+  have \<open>apply_qregister (qregister_of_cregister F) a = permute_and_tensor1_cblinfun (Classical_Registers.getter F) (same_outside_cregister F) a\<close>
+    by (simp add: apply_qregister_of_cregister)
+  also have \<open>\<dots> = explicit_cblinfun (\<lambda>n m. of_bool (same_outside_cregister F n m) * Rep_ell2 (a *\<^sub>V ket (Classical_Registers.getter F m)) (Classical_Registers.getter F n))\<close>
+    by (simp add: permute_and_tensor1_cblinfun_def)
+  also have \<open>\<dots> = explicit_cblinfun (\<lambda>n m. \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+    apply (intro arg_cong[where f=explicit_cblinfun] ext)
+    unfolding infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>], symmetric]
+    using infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>], symmetric]
+    by (simp add: cinner_ket_left)
+  finally show ?thesis
+    by -
+qed
+
+lift_definition QREGISTER_of_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a QREGISTER\<close> is
+  \<open>\<lambda>C :: ('a \<rightharpoonup> 'a) set. commutant (commutant (let ops = {classical_operator f | f. f \<in> C \<and> inj_map f} in ops \<union> adj ` ops))\<close>
+proof (intro CollectI valid_qregister_range_def[THEN iffD2] von_neumann_algebra_def[THEN iffD2] conjI ballI)
+  fix C :: \<open>('a \<rightharpoonup> 'a) set\<close> and a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
+  assume \<open>C \<in> Collect valid_cregister_range\<close>
+  then have \<open>valid_cregister_range C\<close>
+    by simp
+  define ops where \<open>ops = {classical_operator f | f. f \<in> C \<and> inj_map f}\<close>
+  show \<open>commutant (commutant (commutant (commutant (let ops = ops in ops \<union> adj ` ops)))) = commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
+    by simp
+  fix a
+  assume \<open>a \<in> commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
+  then have \<open>a* \<in> adj ` \<dots>\<close>
+    by blast
+  also have \<open>\<dots> = commutant (commutant (adj ` ops \<union> ops))\<close>
+    by (simp add: commutant_adj image_Un image_image)
+  also have \<open>\<dots> = commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
+    by (simp add: Un_commute)
+  finally show \<open>a* \<in> commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
+    by simp
+qed
+
+lemma QREGISTER_of_CREGISTER_bot[simp]: \<open>QREGISTER_of_CREGISTER \<bottom> = \<bottom>\<close>
+proof transfer'
+  define ops where \<open>ops = {classical_operator f | f::'a\<rightharpoonup>'a. f \<in> empty_cregister_range \<and> inj_map f}\<close>
+
+  have \<open>ops \<subseteq> one_algebra\<close>
+    apply (simp add: ops_def empty_cregister_range_def one_algebra_def)
+    by force
+  moreover then have \<open>adj ` ops \<subseteq> one_algebra\<close>
+    by (metis (mono_tags, lifting) commutant_UNIV commutant_adj commutant_one_algebra image_mono image_subset_iff subset_UNIV von_neumann_algebra_adj_image
+        von_neumann_algebra_def)
+  ultimately have \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) \<subseteq> commutant (commutant one_algebra)\<close>
+    by (auto intro!: commutant_antimono Un_least simp: Let_def)
+  also have \<open>\<dots> = one_algebra\<close>
+    by (simp add: commutant_UNIV commutant_one_algebra)
+  finally have \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) \<subseteq> one_algebra\<close>
+    by -
+  then show \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) = one_algebra\<close>
+    by (metis (no_types, lifting) \<open>adj ` ops \<subseteq> one_algebra\<close> \<open>ops \<subseteq> one_algebra\<close> commutant_UNIV commutant_empty commutant_one_algebra double_commutant_Un_right
+        subset_Un_eq sup_bot.comm_neutral)
+qed
+
+lemma QREGISTER_of_qregister_of_cregister: \<open>QREGISTER_of (qregister_of_cregister X) = QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
+proof -
+  have 1: \<open>QREGISTER_of (qregister_of_cregister X) = QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
+    if \<open>\<not> cregister X\<close>
+    using that by (simp add: non_cregister)
+  define ops where \<open>ops = {classical_operator f |f. f \<in> range (apply_cregister X) \<and> inj_map f}\<close>
+  define ccops where \<open>ccops = commutant (commutant (ops \<union> adj ` ops))\<close>
+  define apply_qX where \<open>apply_qX = apply_qregister (qregister_of_cregister X)\<close>
+  have [iff]: \<open>bounded_clinear apply_qX\<close>
+    by (simp add: apply_qX_def)
+  have [iff]: \<open>continuous_map weak_star_topology weak_star_topology apply_qX\<close>
+    using apply_qX_def by fastforce
+  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
+  have 2: \<open>QREGISTER_of (qregister_of_cregister X) \<le> QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
+    if [iff]: \<open>cregister X\<close>
+  proof -
+    have \<open>range apply_qX \<subseteq> ccops\<close>
+    proof (intro image_subsetI)
+      fix x :: \<open>'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+      have [iff]: \<open>csubspace ccops\<close>
+        by (simp add: ccops_def)
+      have [iff]: \<open>closedin weak_star_topology ccops\<close>
+        using ccops_def by auto
+      have \<open>apply_qX (butterfly (ket a) (ket b)) \<in> ops\<close> for a b
+      proof (unfold ops_def, intro CollectI exI conjI)
+        show \<open>apply_cregister X [b \<mapsto> a] \<in> range (apply_cregister X)\<close>
+          by fast
+        have \<open>inj_map [b\<mapsto>a]\<close>
+          by (simp add: inj_map_def)
+        then show inj: \<open>inj_map (apply_cregister X [b\<mapsto>a])\<close>
+          by (simp add: apply_cregister_inj_map_iff \<open>cregister X\<close>)
+        show \<open>apply_qX (butterfly (ket a) (ket b)) = classical_operator (apply_cregister X [b \<mapsto> a])\<close>
+        proof (intro equal_ket cinner_ket_eqI, rename_tac m n)
+          fix m n :: 'a
+          have \<open>ket n \<bullet>\<^sub>C (apply_qX (butterfly (ket a) (ket b)) *\<^sub>V ket m)
+                 = of_bool (same_outside_cregister X n m) *\<^sub>C ket (gX n) \<bullet>\<^sub>C (butterfly (ket a) (ket b) *\<^sub>V ket (gX m))\<close>
+            unfolding qregister_of_cregister_alt_def apply_qX_def
+            apply (subst Rep_ell2_explicit_cblinfun_ket[folded cinner_ket_left])
+             apply (rule qregister_of_cregister_alt_def_exists)
+            apply (subst qregister_of_cregister_alt_def_has_sum[THEN infsumI, OF \<open>cregister X\<close>])
+            by (simp add: gX_def)
+          also 
+          have \<open>\<dots> = of_bool (same_outside_cregister X n m \<and> gX n = a \<and> gX m = b)\<close>
+            by (auto simp: cinner_ket)
+          also
+          have \<open>\<dots> = of_bool (apply_cregister X [b \<mapsto> a] m = Some n)\<close>
+            apply (rule arg_cong[where f=of_bool])
+            by (auto simp add: gX_def sX_def apply_cregister_getter_setter same_outside_cregister_def)
+          also
+          have \<open>\<dots> = ket n \<bullet>\<^sub>C (classical_operator (apply_cregister X [b \<mapsto> a]) *\<^sub>V ket m)\<close>
+            apply (cases \<open>apply_cregister X [b \<mapsto> a] m\<close>)
+            using inj
+            by (auto simp add: classical_operator_ket classical_operator_exists_inj apply_cregister_inj_map_iff
+                cinner_ket)
+          finally
+          show \<open>ket n \<bullet>\<^sub>C (apply_qX (butterfly (ket a) (ket b)) *\<^sub>V ket m) = ket n \<bullet>\<^sub>C (classical_operator (apply_cregister X [b \<mapsto> a]) *\<^sub>V ket m)\<close>
+            by -
+        qed
+      qed
+      then have \<open>apply_qX (butterfly (ket a) (ket b)) \<in> ccops\<close> for a b
+        by (simp add: ccops_def double_commutant_grows')
+      then have *: \<open>apply_qX (butterfly (ket a) (ket a) o\<^sub>C\<^sub>L x o\<^sub>C\<^sub>L butterfly (ket b) (ket b)) \<in> ccops\<close> for a b
+        using \<open>csubspace ccops\<close>
+        by (simp add: cblinfun_comp_butterfly clinear.scaleC bounded_clinear.clinear complex_vector.subspace_scale)
+      have **: \<open>apply_qX (butterfly (ket a) (ket a) o\<^sub>C\<^sub>L x o\<^sub>C\<^sub>L id_cblinfun) \<in> ccops\<close> for a
+      proof -
+        define f where \<open>f p = apply_qX (butterfly (ket a) (ket a) o\<^sub>C\<^sub>L x o\<^sub>C\<^sub>L p)\<close> for p
+        have cont: \<open>continuous_map weak_star_topology weak_star_topology f\<close>
+          unfolding f_def
+          apply (rule continuous_map_compose[unfolded o_def, where g=apply_qX])
+           apply (rule continuous_map_left_comp_weak_star)
+          by blast
+        have add: \<open>Modules.additive f\<close>
+          by (simp add: Modules.additive_def f_def bounded_clinear.clinear
+              cblinfun_compose_add_right complex_vector.linear_add)
+        from has_sum_butterfly_ket
+        have sum: \<open>has_sum_in weak_star_topology (\<lambda>a. f (selfbutter (ket a))) UNIV (f id_cblinfun)\<close>
+          apply (rule has_sum_in_comm_additive[unfolded o_def, where g=f, rotated -1])
+          by (auto intro!: cont add)
+        from * have \<open>f (butterfly (ket b) (ket b)) \<in> ccops\<close> for b
+          by (simp add: f_def)
+        with sum have \<open>f id_cblinfun \<in> ccops\<close>
+          apply (rule has_sum_in_in_closedsubspace)
+          by auto
+        then show ?thesis
+          by (simp add: f_def)
+      qed
+      then have \<open>apply_qX (id_cblinfun o\<^sub>C\<^sub>L x) \<in> ccops\<close>
+      proof -
+        define f where \<open>f p = apply_qX (p o\<^sub>C\<^sub>L x)\<close> for p
+        have cont: \<open>continuous_map weak_star_topology weak_star_topology f\<close>
+          unfolding f_def
+          apply (rule continuous_map_compose[unfolded o_def, where g=apply_qX])
+           apply (rule continuous_map_right_comp_weak_star)
+          by blast
+        have add: \<open>Modules.additive f\<close>
+          by (simp add: Modules.additive_def f_def bounded_clinear.clinear
+              cblinfun_compose_add_left complex_vector.linear_add)
+        from has_sum_butterfly_ket
+        have sum: \<open>has_sum_in weak_star_topology (\<lambda>a. f (selfbutter (ket a))) UNIV (f id_cblinfun)\<close>
+          apply (rule has_sum_in_comm_additive[unfolded o_def, where g=f, rotated -1])
+          by (auto intro!: cont add)
+        from ** have \<open>f (butterfly (ket b) (ket b)) \<in> ccops\<close> for b
+          by (simp add: f_def)
+        with sum have \<open>f id_cblinfun \<in> ccops\<close>
+          apply (rule has_sum_in_in_closedsubspace)
+          by auto
+        then show ?thesis
+          by (simp add: f_def)
+      qed
+      then show \<open>apply_qX x \<in> ccops\<close>
+        by simp
+    qed
+    then show ?thesis
+      by (simp add: less_eq_QREGISTER_def QREGISTER_of.rep_eq QREGISTER_of_CREGISTER.rep_eq CREGISTER_of.rep_eq ccops_def apply_qX_def
+          flip: ops_def)
+  qed
+  have 3: \<open>QREGISTER_of_CREGISTER (CREGISTER_of X) \<le> QREGISTER_of (qregister_of_cregister X)\<close>
+    if \<open>cregister X\<close>
+  proof -
+    have ops1: \<open>ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
+    proof (intro subsetI)
+      fix x assume \<open>x \<in> ops\<close>
+      then obtain f where x_def: \<open>x = classical_operator f\<close> and [iff]: \<open>inj_map f\<close> and \<open>f \<in> range (apply_cregister X)\<close>
+        by (auto simp: ops_def)
+      then obtain g where fg: \<open>f = apply_cregister X g\<close>
+        by auto
+      then have f_get_set: \<open>f m = (case g (gX m) of None \<Rightarrow> None | Some b \<Rightarrow> Some (sX b m))\<close> for m
+        by (metis apply_cregister_getter_setter gX_def sX_def that)
+      from fg \<open>inj_map f\<close> have [iff]: \<open>inj_map g\<close>
+        by (simp add: fg apply_cregister_inj_map_iff \<open>cregister X\<close>)
+      have aux1: \<open>same_outside_cregister X m n \<Longrightarrow> ket m \<bullet>\<^sub>C ket (sX a n) = ket (gX m) \<bullet>\<^sub>C ket a\<close> for a n m
+        by (metis cinner_ket_same gX_def getter_setter_same orthogonal_ket sX_def same_outside_cregister_def that)
+      have aux2: \<open>g (gX n) = Some a \<Longrightarrow> \<not> same_outside_cregister X (sX a n) n \<Longrightarrow> m = sX a n \<Longrightarrow> False\<close> for a n m
+        by (simp add: sX_def same_outside_cregister_def that)
+
+      define a where \<open>a = classical_operator g\<close>
+      have *: \<open>ket m \<bullet>\<^sub>C (x *\<^sub>V ket n) =
+           of_bool (same_outside_cregister X m n) *\<^sub>C ket (gX m) \<bullet>\<^sub>C (a *\<^sub>V ket (gX n))\<close> for m n
+        apply (cases \<open>g (gX n)\<close>)
+         apply (simp_all add: a_def x_def classical_operator_ket classical_operator_exists_inj f_get_set
+            flip: sX_def gX_def)
+        using aux1 aux2           
+        by blast
+      have \<open>x = explicit_cblinfun (\<lambda>n m. \<Sum>\<^sub>\<infinity>(x, y) | apply_cregister X [x \<mapsto> y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
+        apply (intro equal_ket cinner_ket_eqI)
+        apply (subst Rep_ell2_explicit_cblinfun_ket[folded cinner_ket_left])
+         apply (rule qregister_of_cregister_alt_def_exists)
+        apply (subst qregister_of_cregister_alt_def_has_sum[THEN infsumI, OF \<open>cregister X\<close>])
+        using *
+        by (simp flip: gX_def)
+      also have \<open>\<dots> \<in> range (apply_qregister (qregister_of_cregister X))\<close>
+        by (simp add: qregister_of_cregister_alt_def[abs_def])
+      finally show \<open>x \<in> \<dots>\<close>
+        by -
+    qed
+    then have ops2: \<open>adj ` ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
+      apply (subst von_neumann_algebra_adj_image[where X=\<open>range _\<close>, symmetric])
+      using qregister_qregister_of_cregister that valid_qregister_range valid_qregister_range_def apply blast 
+      by fast
+    from ops1 ops2 have \<open>ops \<union> adj ` ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
+      by fast
+    then have \<open>commutant (commutant (ops \<union> adj ` ops)) \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
+      apply (rule double_commutant_in_vn_algI[rotated])
+      using qregister_qregister_of_cregister that valid_qregister_range valid_qregister_range_def by blast 
+    then show ?thesis
+      by (simp add: less_eq_QREGISTER_def QREGISTER_of.rep_eq that QREGISTER_of_CREGISTER.rep_eq CREGISTER_of.rep_eq 
+        flip: ops_def)
+  qed
+  from 1 2 3 show ?thesis
+    apply (cases \<open>cregister X\<close>)
+    by (auto intro!: order.antisym simp: )
+qed
+
+
 
 end

@@ -47,7 +47,7 @@ next
     unfolding surj_def by metis
 qed
 
-lemma bij_comp[simp]: "bij ((\<circ>) f) = bij f" 
+lemma bij_comp_with_bij[simp]: "bij ((\<circ>) f) = bij f" 
   unfolding bij_def by simp
 
 class xor_group = ab_group_add +
@@ -914,6 +914,157 @@ lemma with_type_mp2:
   shows \<open>with_type C R S p (\<lambda>Rep abs_ops. with_type C' R' S' p' (Q Rep abs_ops))\<close>
   using assms by (auto simp add: with_type_def case_prod_beta type_definition_bij_betw_iff)
 
+lemma map_comp_Some_map_option: \<open>map_comp (\<lambda>x. Some (f x)) g = map_option f o g\<close>
+  by (auto intro!: ext simp: map_comp_def map_option_case)
+
+lemma inj_map_tensor_update:
+  assumes \<open>inj_map f\<close> and \<open>inj_map g\<close>
+  shows \<open>inj_map (tensor_update f g)\<close>
+  using assms by (auto intro!: simp: inj_map_def tensor_update_def split: option.split)
+
+lemma inv_map_f_eq:
+  assumes \<open>inj_map f\<close> and \<open>f x = Some y\<close>
+  shows \<open>inv_map f y = Some x\<close>
+proof -
+  from assms have range: \<open>Some y \<in> range f\<close>
+    by (metis range_eqI)
+  have \<open>f (inv f (Some y)) = Some y\<close>
+    by (simp add: range f_inv_into_f)
+  with assms have \<open>f (inv f (Some y)) = f x\<close>
+    by simp
+  then have \<open>inv f (Some y) = x\<close>
+    apply (rule_tac \<open>inj_map f\<close>[unfolded inj_map_def, rule_format])
+    by (auto simp: assms)
+  moreover from range have \<open>inv_map f y = Some (inv f (Some y))\<close>
+    by (simp add: inv_map_def)
+  ultimately show ?thesis
+    by simp
+qed
+
+lemma inv_map_tensor_update:
+  fixes f :: \<open>'a \<Rightarrow> 'c option\<close> and g :: \<open>'b \<Rightarrow> 'd option\<close>
+  assumes \<open>inj_map f\<close> and \<open>inj_map g\<close>
+  shows \<open>inv_map (tensor_update f g) = tensor_update (inv_map f) (inv_map g)\<close>
+proof (rule ext)
+  fix cd :: \<open>'c \<times> 'd\<close>
+  obtain c d where cd: \<open>cd = (c,d)\<close>
+    by fastforce
+  consider (fg) \<open>c \<in> ran f\<close> \<open>d \<in> ran g\<close> | (notf) \<open>c \<notin> ran f\<close> | (notg) \<open>d \<notin> ran g\<close>
+    by auto
+  then show \<open>inv_map (tensor_update f g) cd = tensor_update (inv_map f) (inv_map g) cd\<close>
+  proof cases
+    case fg
+    then obtain a where fa: \<open>f a = Some c\<close>
+      by (auto simp: ran_def)
+    from fg obtain b where gb: \<open>g b = Some d\<close>
+      by (auto simp: ran_def)
+    from fa gb have \<open>tensor_update f g (a,b) = Some (c,d)\<close>
+      by (simp add: tensor_update_def)
+    moreover have \<open>inj_map (tensor_update f g)\<close>
+      by (simp add: assms(1,2) inj_map_tensor_update)
+    ultimately have 1: \<open>inv_map (tensor_update f g) (c,d) = Some (a,b)\<close>
+      by (auto intro!: inv_map_f_eq)
+    from fa have \<open>inv_map f c = Some a\<close>
+      by (simp add: assms(1) inv_map_f_eq)
+    moreover from gb have \<open>inv_map g d = Some b\<close>
+      by (simp add: assms(2) inv_map_f_eq)
+    ultimately have 2: \<open>tensor_update (inv_map f) (inv_map g) (c,d) = Some (a,b)\<close>
+      by (simp add: tensor_update_def)
+    from 1 2 show ?thesis
+      by (simp add: cd)
+  next
+    case notf
+    then have \<open>inv_map f c = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    then have 1: \<open>tensor_update (inv_map f) (inv_map g) (c,d) = None\<close>
+      by (simp add: tensor_update_def)
+    from notf have \<open>(c,d) \<notin> ran (tensor_update f g)\<close>
+      by (auto simp: ran_def tensor_update_def split: option.split)
+    then have 2: \<open>inv_map (tensor_update f g) (c,d) = None\<close>
+      by (force simp: ran_def inv_map_def)
+    from 1 2 show ?thesis
+      by (simp add: cd)
+  next
+    case notg
+    then have \<open>inv_map g d = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    then have 1: \<open>tensor_update (inv_map f) (inv_map g) (c,d) = None\<close>
+      by (simp add: tensor_update_def option.case_eq_if)
+    from notg have \<open>(c,d) \<notin> ran (tensor_update f g)\<close>
+      by (auto simp: ran_def tensor_update_def split: option.split)
+    then have 2: \<open>inv_map (tensor_update f g) (c,d) = None\<close>
+      by (force simp: ran_def inv_map_def)
+    from 1 2 show ?thesis
+      by (simp add: cd)
+  qed
+qed
+
+lemma inv_map_comp:
+  assumes \<open>inj_map f\<close> and \<open>inj_map g\<close>
+  shows \<open>inv_map (f \<circ>\<^sub>m g) = inv_map g \<circ>\<^sub>m inv_map f\<close>
+proof (rule ext)
+  fix x :: 'b
+  consider (fg) \<open>x \<in> ran (f \<circ>\<^sub>m g)\<close> | (f) \<open>x \<in> ran f\<close> \<open>x \<notin> ran (f \<circ>\<^sub>m g)\<close> | (none) \<open>x \<notin> ran f\<close>
+    by metis
+  then show \<open>inv_map (f \<circ>\<^sub>m g) x = (inv_map g \<circ>\<^sub>m inv_map f) x\<close>
+  proof cases
+    case fg
+    then obtain y where fgy: \<open>(f \<circ>\<^sub>m g) y = Some x\<close>
+      by (auto simp: ran_def)
+    then obtain z where gy: \<open>g y = Some z\<close>
+      by (auto intro!: simp: map_comp_def split!: option.split_asm)
+    with fgy have fz: \<open>f z = Some x\<close>
+      by simp
+    from fgy have ifgx: \<open>inv_map (f \<circ>\<^sub>m g) x = Some y\<close>
+      by (simp add: assms(1,2) inv_map_f_eq)
+    from gy have igz: \<open>inv_map g z = Some y\<close>
+      by (simp add: assms(2) inv_map_f_eq)
+    from fz have ifx: \<open>inv_map f x = Some z\<close>
+      by (simp add: assms(1) inv_map_f_eq)
+    from igz ifx have \<open>(inv_map g \<circ>\<^sub>m inv_map f) x = Some y\<close>
+      by simp
+    with ifgx show ?thesis 
+      by simp
+  next
+    case f
+    then obtain y where fy: \<open>f y = Some x\<close>
+      by (auto simp: ran_def)
+    with f have yg: \<open>y \<notin> ran g\<close>
+      by (smt (verit, ccfv_SIG) map_comp_simps(2) mem_Collect_eq ran_def)
+    from fy have ifx: \<open>inv_map f x = Some y\<close>
+      by (simp add: assms(1) inv_map_f_eq)
+    from yg have igy: \<open>inv_map g y = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    with ifx have igifx: \<open>(inv_map g \<circ>\<^sub>m inv_map f) x = None\<close>
+      by fastforce
+    from f have \<open>inv_map (f \<circ>\<^sub>m g) x = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    with igifx show ?thesis 
+      by simp
+  next
+    case none
+    then have \<open>inv_map f x = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    then have igifx: \<open>(inv_map g \<circ>\<^sub>m inv_map f) x = None\<close>
+      by simp
+    from none have \<open>x \<notin> ran (f \<circ>\<^sub>m g)\<close>
+      by (simp add: map_comp_Some_iff ran_def)
+    then have \<open>inv_map (f \<circ>\<^sub>m g) x = None\<close>
+      by (auto simp: ran_def inv_map_def)
+    with igifx show ?thesis 
+      by simp
+  qed
+qed
+
+lemma the_default_memI:
+  assumes \<open>card S = 1\<close>
+  shows \<open>the_default x S \<in> S\<close>
+  by (metis assms card_1_singletonE card_eq_Suc_0_ex1 numeral_nat(7) singletonD the_default_singleton)
+
+lemma the_default_default:
+  assumes \<open>card S \<noteq> 1\<close>
+  shows \<open>the_default x S = x\<close>
+  by (meson assms the_default_def)
 
 
 end

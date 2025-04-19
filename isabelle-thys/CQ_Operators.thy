@@ -1,474 +1,19 @@
 theory CQ_Operators
   imports Kraus_Maps.Kraus_Maps Registers2.Missing_Bounded_Operators Registers2.Quantum_Registers
-    Registers2.Registers_Unsorted
+    Registers2.Registers_Unsorted Registers.Laws_Complement_Classical
+    Kraus_Registers
 begin
 
 unbundle kraus_map_syntax
 
-(* type_synonym ('c,'q) cq_operator = \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
-type_synonym ('c1,'q1,'c2,'q2) cq_map = \<open>('c1,'q1) cq_operator \<Rightarrow> ('c2,'q2) cq_operator\<close>
-type_synonym ('c,'q) cq_map2 = \<open>('c,'q,'c,'q) cq_map\<close> *)
-
-(* TODO move *)
-lift_definition kf_apply_qregister :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2, 'x) kraus_family \<Rightarrow> ('b ell2, 'b ell2, 'x) kraus_family\<close> is
-  \<open>\<lambda>(Q :: ('a,'b) qregister). image (\<lambda>(E,x). (apply_qregister Q E, x))\<close>
-proof (rule CollectI, erule CollectE, rename_tac Q E)
-  fix Q :: \<open>('a,'b) qregister\<close> and E :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2 \<times> 'x) set\<close>
-  assume \<open>kraus_family E\<close>
-  show \<open>kraus_family ((\<lambda>(E, y). (apply_qregister Q E, y)) ` E)\<close>
-  proof -
-    wlog [simp]: \<open>qregister Q\<close> goal \<open>kraus_family ((\<lambda>(E, y). (apply_qregister Q E, y)) ` E)\<close>
-      using negation
-      by (auto intro!: kraus_familyI_0 simp: non_qregister)
-    from \<open>kraus_family E\<close> obtain B where B: \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> B\<close> if \<open>finite F\<close> and \<open>F \<subseteq> E\<close> for F
-      by (auto simp: kraus_family_def bdd_above_def)
-    have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> apply_qregister Q B\<close>
-      if \<open>finite F\<close> and \<open>F \<subseteq> (\<lambda>(E, y). (apply_qregister Q E, y)) ` E\<close> for F
-    proof -
-      from that
-      obtain G where FG: \<open>F = (\<lambda>(E, y). (apply_qregister Q E, y)) ` G\<close> and \<open>finite G\<close> and \<open>G \<subseteq> E\<close>
-        by (meson finite_subset_image)
-      have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) = (\<Sum>(E, x)\<in>(\<lambda>(E, y). (apply_qregister Q E, y)) ` G. E* o\<^sub>C\<^sub>L E)\<close>
-        using FG by force
-      also have \<open>\<dots> = (\<Sum>(E, x)\<in>G. apply_qregister Q (E* o\<^sub>C\<^sub>L E))\<close>
-        apply (subst sum.reindex)
-        by (auto intro!: inj_onI simp: case_prod_unfold qregister_compose apply_qregister_adj apply_qregister_inject')
-      also have \<open>\<dots> = apply_qregister Q (\<Sum>(E, x)\<in>G. E* o\<^sub>C\<^sub>L E)\<close>
-        apply (subst complex_vector.linear_sum[where f=\<open>apply_qregister Q\<close>]) 
-        by (simp_all add: case_prod_beta)
-      also have \<open>\<dots> \<le> apply_qregister Q B\<close>
-        using \<open>qregister Q\<close> apply (rule apply_qregister_mono[THEN iffD2])
-        using \<open>finite G\<close> and \<open>G \<subseteq> E\<close> by (rule B)
-      finally show ?thesis
-        by -
-    qed
-    then show ?thesis
-      by (auto intro!: bdd_aboveI simp: kraus_family_def)
-  qed
-qed
-
-lemma kf_apply_qregister_invalid_weak:
-  assumes \<open>\<not> qregister Q\<close>
-  shows \<open>kf_apply_qregister Q \<EE> =\<^sub>k\<^sub>r 0\<close>
-  unfolding kf_eq_weak_def
-  apply (transfer' fixing: Q)
-  using assms
-  by (auto intro!: ext infsum_0 simp add: non_qregister case_prod_beta)
-
-lemma kf_apply_qregister_invalid:
-  assumes \<open>\<not> qregister Q\<close>
-  shows \<open>kf_apply_qregister Q \<EE> \<equiv>\<^sub>k\<^sub>r 0\<close>
-  by (simp add: assms kf_apply_qregister_invalid_weak kf_eq_weak0_imp_kf_eq0)
-
-lemma bij_iso_qregister:
-  assumes \<open>iso_qregister Q\<close>
-  shows \<open>bij (apply_qregister Q)\<close>
-  using Laws_Quantum.iso_register_bij assms iso_qregister.rep_eq by blast
-
-lemma apply_qregister_tc_plus:
-  \<open>apply_qregister_tc Q (t + u) = apply_qregister_tc Q t + apply_qregister_tc Q u\<close>
-    apply transfer'
-    by (simp add: apply_qregister_plus)
-
-lemma apply_qregister_tc_scale:
-  \<open>apply_qregister_tc Q (c *\<^sub>C t) = c *\<^sub>C apply_qregister_tc Q t\<close>
-    apply transfer'
-    by (simp add: apply_qregister_plus apply_qregister_scaleC)
-
-lemma bounded_clinear_apply_qregister_tc[bounded_clinear]:
-  assumes \<open>iso_qregister Q\<close>
-    \<comment> \<open>This assumption is actually not needed\<close>
-  shows \<open>bounded_clinear (apply_qregister_tc Q)\<close>
-  apply (rule bounded_clinearI[where K=1])
-  by (simp_all add: assms apply_iso_qregister_tc_norm apply_qregister_tc_scale apply_qregister_tc_plus)
-
-lemma clinear_apply_qregister_tc:
-  shows \<open>clinear (apply_qregister_tc Q)\<close>
-  apply (rule clinearI)
-  by (simp_all add: apply_qregister_tc_scale apply_qregister_tc_plus)
-
-lemma bij_iso_qregister_tc:
-  assumes \<open>iso_qregister Q\<close>
-  shows \<open>bij (apply_qregister_tc Q)\<close>
-proof (rule bijI)
-  have \<open>qregister Q\<close>
-    using assms iso_qregister_def' by blast
-  then show \<open>inj (apply_qregister_tc Q)\<close>
-    by (smt (verit) apply_qregister_inject' apply_qregister_tc.rep_eq assms from_trace_class_inverse inj_onI
-        iso_qregister_co_dim)
-  show \<open>surj (apply_qregister_tc Q)\<close>
-    apply (rule surjI[where f=\<open>apply_qregister_tc (qregister_inv Q)\<close>])
-    by (smt (verit, ccfv_SIG) apply_qregister_inv_inverse apply_qregister_tc.rep_eq assms from_trace_class_inverse iso_qregister_co_dim
-        iso_qregister_inv_iso)
-qed
 
 
-lemma separating_set_bounded_clinear_iso_qregister_tc_nested:
-  fixes Q :: \<open>('a,'b) qregister\<close> and S :: \<open>('a ell2, 'a ell2) trace_class set\<close>
-  assumes \<open>iso_qregister Q\<close>
-  assumes \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) S\<close>
-  shows \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) (apply_qregister_tc Q ` S)\<close>
-proof (intro separating_setI)
-  fix f g :: \<open>('b ell2, 'b ell2) trace_class \<Rightarrow> 'c\<close>
-  assume \<open>bounded_clinear f\<close> and \<open>bounded_clinear g\<close>
-  assume fg_QS: \<open>f u = g u\<close> if \<open>u \<in> apply_qregister_tc Q ` S\<close> for u
-  define f' g' where \<open>f' t = f (apply_qregister_tc Q t)\<close> and \<open>g' t = g (apply_qregister_tc Q t)\<close> for t
-  have [iff]: \<open>bounded_clinear f'\<close>  \<open>bounded_clinear g'\<close>
-    by (auto intro!: 
-        comp_bounded_clinear[OF \<open>bounded_clinear f\<close>, unfolded o_def]
-        comp_bounded_clinear[OF \<open>bounded_clinear g\<close>, unfolded o_def] 
-        bounded_clinear_apply_qregister_tc assms
-        simp: f'_def[abs_def] g'_def[abs_def])
-  have \<open>f' t = g' t\<close> if \<open>t \<in> S\<close> for t
-    by (simp add: f'_def fg_QS g'_def that)
-  then have \<open>f' = g'\<close>
-    apply (rule_tac eq_from_separatingI[OF assms(2)])
-    by auto
-  show \<open>f = g\<close>
-  proof (rule ext)
-    fix t :: \<open>('b ell2, 'b ell2) trace_class\<close>
-    from assms have surj_Q: \<open>surj (apply_qregister_tc Q)\<close>
-      by (meson bij_def bij_iso_qregister_tc)
-    then obtain u where u: \<open>t = apply_qregister_tc Q u\<close>
-      by fast
-    with \<open>f' = g'\<close>
-    have \<open>f' u = g' u\<close>
-      by simp
-    then show \<open>f t = g t\<close>
-      by (simp add: f'_def g'_def u)
-  qed
-qed
-
-lemma separating_set_bounded_clinear_apply_qregister_tensor_tc:
-  assumes \<open>iso_qregister Q\<close>
-  shows \<open>separating_set bounded_clinear ((\<lambda>(\<rho>, \<sigma>). apply_qregister_tc Q (tc_tensor \<rho> \<sigma>)) ` (UNIV \<times> UNIV))\<close>
-  using separating_set_bounded_clinear_iso_qregister_tc_nested[OF assms(1) separating_set_bounded_clinear_tc_tensor]
-  by (simp add: image_image case_prod_unfold)
-
-lemma separating_set_bounded_clinear_apply_qregister_tensor_tc_nested:
-  assumes \<open>iso_qregister Q\<close>
-  assumes \<open>separating_set (bounded_clinear :: (_ => 'e::complex_normed_vector) \<Rightarrow> _) A\<close>
-  assumes \<open>separating_set (bounded_clinear :: (_ => 'e::complex_normed_vector) \<Rightarrow> _) B\<close>
-  shows \<open>separating_set (bounded_clinear :: (_ => 'e::complex_normed_vector) \<Rightarrow> _) ((\<lambda>(\<rho>,\<sigma>). apply_qregister_tc Q (tc_tensor \<rho> \<sigma>)) ` (A \<times> B))\<close>
-  using separating_set_bounded_clinear_iso_qregister_tc_nested[OF assms(1) separating_set_bounded_clinear_tc_tensor_nested,
-      OF assms(2) assms(3)]
-  by (simp add: image_image case_prod_unfold)
-
-lemma kf_apply_qregister_apply_on_tensor:
-  assumes \<open>qcomplements Q R\<close>
-  shows \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @X apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)
-      = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor (\<EE> *\<^sub>k\<^sub>r @X t) u)\<close>
-proof -
-  have \<open>iso_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
-    using assms qcomplements_def' by blast
-  then have \<open>qregister Q\<close>
-    using distinct_qvarsL iso_qregister_def' by blast
-
-  have blin: \<open>bounded_linear (\<lambda>x. apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (tc_tensor x u))\<close>
-    apply (rule bounded_clinear.bounded_linear)
-    by (intro bounded_linear_intros \<open>iso_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>)
-  from kf_apply_summable[of _ \<open>kf_filter (\<lambda>x. x\<in>X) \<EE>\<close>]
-  have sum: \<open>(\<lambda>(E, x). sandwich_tc E t) summable_on Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>)\<close>
-    by (simp add: kf_filter.rep_eq)
-
-  define tu QRtu where \<open>tu = tc_tensor t u\<close> and \<open>QRtu = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q tu\<close>
-  have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @X QRtu
-       = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Set.filter (\<lambda>(E, y). y \<in> X) ((\<lambda>(E, y). (apply_qregister Q E, y)) ` Rep_kraus_family \<EE>). sandwich_tc E QRtu)\<close>
-    unfolding kf_apply_on_def
-    apply (transfer' fixing: Q QRtu X)
-    by (simp add: case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>(E, y). (apply_qregister Q E, y)) ` Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>). sandwich_tc E QRtu)\<close>
-    apply (rule arg_cong2[where f=infsum])
-    by force+
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>). sandwich_tc (apply_qregister Q E) QRtu)\<close>
-    apply (subst infsum_reindex)
-    using \<open>qregister Q\<close>
-    by (auto intro!: inj_onI simp: o_def case_prod_unfold apply_qregister_inject')
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>). apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (sandwich_tc (E \<otimes>\<^sub>o id_cblinfun) tu))\<close>
-    apply (rule infsum_cong)
-    apply (simp add: case_prod_unfold QRtu_def)
-    by (metis apply_qregister_extend_pair_right apply_qregister_tc_sandwich assms iso_qregister_def' qcomplements_def')
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>). apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (tc_tensor (sandwich_tc E t) u))\<close>
-    apply (rule infsum_cong)
-    by (simp add: case_prod_unfold tu_def sandwich_tc_tensor)
-  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (tc_tensor (\<Sum>\<^sub>\<infinity>(E,x)\<in>Set.filter (\<lambda>(E, y). y \<in> X) (Rep_kraus_family \<EE>). (sandwich_tc E t)) u)\<close>
-    apply (subst infsum_bounded_linear[where h=\<open>\<lambda>x. apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (tc_tensor x u)\<close>, symmetric])
-    using  blin sum by (simp_all add: case_prod_unfold)
-  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (tc_tensor (\<EE> *\<^sub>k\<^sub>r @X t) u)\<close>
-    unfolding kf_apply_on_def
-    apply (transfer' fixing: Q QRtu x)
-    by (simp add: case_prod_unfold)
-  finally show ?thesis
-    by (simp add: QRtu_def tu_def)
-qed
-
-lemma kf_apply_qregister_apply_tensor:
-  assumes \<open>qcomplements Q R\<close>
-  shows \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)
-      = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor (\<EE> *\<^sub>k\<^sub>r t) u)\<close>
-  using kf_apply_qregister_apply_on_tensor[OF assms, of \<EE> UNIV]
-  by simp
-
-lemma kf_apply_qregister_cong:
-  assumes \<open>\<EE> \<equiv>\<^sub>k\<^sub>r \<FF>\<close>
-  shows \<open>kf_apply_qregister Q \<EE> \<equiv>\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-proof -
-  wlog \<open>qregister Q\<close>
-    by (auto intro!: kf_eqI simp add: kf_apply_on_eq0I kf_apply_qregister_invalid_weak negation)
-  from qcomplement_exists[OF this]
-  have \<open>let 'g::type = qregister_decomposition_basis Q in kf_apply_qregister Q \<EE> \<equiv>\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>G::('g, 'c) qregister. qcomplements Q G\<close>
-    then obtain G :: \<open>('g, 'c) qregister\<close> where \<open>qcomplements Q G\<close>
-      by auto
-    then have iso: \<open>iso_qregister \<lbrakk>Q,G\<rbrakk>\<^sub>q\<close>
-      by (simp add: qcomplements_def')
-    have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x} apply_qregister_tc \<lbrakk>Q, G\<rbrakk>\<^sub>q (tc_tensor t u)
-        = kf_apply_qregister Q \<FF> *\<^sub>k\<^sub>r @{x} apply_qregister_tc \<lbrakk>Q, G\<rbrakk>\<^sub>q (tc_tensor t u)\<close> for x t u
-      apply (simp add: kf_apply_qregister_apply_on_tensor \<open>qcomplements Q G\<close>)
-      using assms kf_apply_on_eqI by fastforce
-    then have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x} \<rho> = kf_apply_qregister Q \<FF> *\<^sub>k\<^sub>r @{x} \<rho>\<close> for x \<rho>
-      apply (rule_tac eq_from_separatingI2x[OF separating_set_bounded_clinear_apply_qregister_tensor_tc, where x=\<rho>])
-         apply (rule iso)
-        apply (rule kf_apply_on_bounded_clinear)
-       apply (rule kf_apply_on_bounded_clinear)
-      by assumption
-    then show \<open>kf_apply_qregister Q \<EE> \<equiv>\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-      by (rule kf_eqI)
-  qed
-  from this[cancel_with_type]
-  show \<open>kf_apply_qregister Q \<EE> \<equiv>\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-    by -
-qed
-
-lemma kf_apply_qregister_cong_weak:
-  assumes \<open>\<EE> =\<^sub>k\<^sub>r \<FF>\<close>
-  shows \<open>kf_apply_qregister Q \<EE> =\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-proof -
-  wlog \<open>qregister Q\<close>
-    by (metis hypothesis kf_apply_qregister_invalid_weak kf_eq_weak_def)
-  from qcomplement_exists[OF this]
-  have \<open>let 'g::type = qregister_decomposition_basis Q in kf_apply_qregister Q \<EE> =\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-  proof (rule with_type_mp)
-    assume \<open>\<exists>G::('g, 'd) qregister. qcomplements Q G\<close>
-    then obtain G :: \<open>('g, 'd) qregister\<close> where \<open>qcomplements Q G\<close>
-      by auto
-    then have iso: \<open>iso_qregister \<lbrakk>Q,G\<rbrakk>\<^sub>q\<close>
-      by (simp add: qcomplements_def')
-    have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>Q, G\<rbrakk>\<^sub>q (tc_tensor t u)
-        = kf_apply_qregister Q \<FF> *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>Q, G\<rbrakk>\<^sub>q (tc_tensor t u)\<close> for t u
-      apply (simp add: kf_apply_qregister_apply_tensor \<open>qcomplements Q G\<close>)
-      using assms kf_eq_weak_def by force
-    then have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r \<rho> = kf_apply_qregister Q \<FF> *\<^sub>k\<^sub>r \<rho>\<close> for x \<rho>
-      apply (rule_tac eq_from_separatingI2x[OF separating_set_bounded_clinear_apply_qregister_tensor_tc, where x=\<rho>])
-         apply (rule iso)
-        apply (rule kf_apply_bounded_clinear)
-       apply (rule kf_apply_bounded_clinear)
-      by assumption
-    then show \<open>kf_apply_qregister Q \<EE> =\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-      by (rule kf_eq_weakI)
-  qed
-  from this[cancel_with_type]
-  show \<open>kf_apply_qregister Q \<EE> =\<^sub>k\<^sub>r kf_apply_qregister Q \<FF>\<close>
-    by -
-qed
-
-
-definition km_some_kraus_family :: \<open>(('a::chilbert_space, 'a) trace_class \<Rightarrow> ('b::chilbert_space, 'b) trace_class) \<Rightarrow> ('a, 'b, unit) kraus_family\<close> where
-  \<open>km_some_kraus_family \<EE> = (SOME \<FF>. \<EE> = kf_apply \<FF>)\<close>
-
-lemma kf_apply_km_some_kraus_family[simp]:
-  assumes \<open>kraus_map \<EE>\<close>
-  shows \<open>kf_apply (km_some_kraus_family \<EE>) = \<EE>\<close>
-  unfolding km_some_kraus_family_def
-  apply (rule someI2_ex)
-  using assms kraus_map_def by auto
-
-definition km_apply_qregister :: \<open>('a,'b) qregister \<Rightarrow> (('a ell2, 'a ell2) trace_class \<Rightarrow> ('a ell2, 'a ell2) trace_class) \<Rightarrow> (('b ell2, 'b ell2) trace_class \<Rightarrow> ('b ell2, 'b ell2) trace_class)\<close> where
-  \<open>km_apply_qregister Q \<EE> = kf_apply (kf_apply_qregister Q (km_some_kraus_family \<EE> :: (_,_,unit) kraus_family))\<close>
-
-lemma km_apply_qregister_kf_apply:
-  assumes \<open>qregister Q\<close>
-  shows \<open>km_apply_qregister Q (kf_apply \<EE>) = kf_apply (kf_apply_qregister Q \<EE>)\<close>
-  by (auto intro!: ext kf_apply_eqI kf_apply_qregister_cong_weak simp: kf_eq_weak_def km_apply_qregister_def)
-
-lemma km_apply_qregister_invalid: \<open>km_apply_qregister Q \<EE> = 0\<close> if \<open>\<not> qregister Q\<close>
-  by (auto intro!: kf_apply_eq0I ext simp add: km_apply_qregister_def that kf_apply_qregister_invalid_weak)
-
-lift_definition kf_annotate :: \<open>('a::chilbert_space, 'b::chilbert_space, 'x) kraus_family \<Rightarrow> ('a, 'b, ('x \<times> 'a\<Rightarrow>\<^sub>C\<^sub>L'b)) kraus_family\<close> is
-  \<open>\<lambda>\<EE> :: ('a\<Rightarrow>\<^sub>C\<^sub>L'b \<times> 'x) set. (\<lambda>(E,x). (E,(x,E))) ` \<EE>\<close>
-proof (rule CollectI)
-  fix \<EE> :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'x) set\<close>
-  assume \<open>\<EE> \<in> Collect kraus_family\<close>
-  then have \<open>(\<lambda>(E, x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on \<EE>\<close>
-    by (simp add: kraus_family_iff_summable')
-  then have \<open>(\<lambda>(E, x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on (\<lambda>(E, x). (E, x, E)) ` \<EE>\<close>
-      apply (subst summable_on_reindex)
-      by (auto intro!: inj_onI simp: o_def case_prod_unfold)
-  then show \<open>kraus_family ((\<lambda>(E, x). (E, x, E)) ` \<EE>)\<close>
-    by (simp add: kraus_family_iff_summable')
-qed
-
-lemma kf_annotate_eq_weak: \<open>kf_annotate \<EE> =\<^sub>k\<^sub>r \<EE>\<close>
-  apply (rule kf_eq_weakI)
-  unfolding kf_apply.rep_eq kf_annotate.rep_eq
-  apply (subst infsum_reindex)
-  by (auto intro!: inj_onI simp: o_def case_prod_unfold)
-
-lemma kf_filter_kf_apply_qregister:
-  \<open>kf_filter P (kf_apply_qregister Q \<EE>) = kf_apply_qregister Q (kf_filter P \<EE>)\<close>
-  apply (transfer' fixing: Q)
-  by force
-
-lemma kf_map_inj_kr_eq_weak:
-  assumes \<open>inj_on f (kf_domain \<EE>)\<close>
-  shows \<open>kf_map_inj f \<EE> =\<^sub>k\<^sub>r \<EE>\<close>
-  by (simp add: assms kf_eq_weakI)
-
-
-lemma kf_apply_qregister_pair_tensor_id_weak:
-  assumes \<open>qcompatible Q R\<close>
-  shows \<open>kf_apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (kf_tensor \<EE> kf_id) =\<^sub>k\<^sub>r kf_apply_qregister Q \<EE>\<close>
-    (is ?goal)
-proof -
-  define QR where \<open>QR = \<lbrakk>Q,R\<rbrakk>\<^sub>q\<close>
-  with assms have \<open>qregister QR\<close>
-    by blast
-  have [simp]: \<open>apply_qregister QR (a \<otimes>\<^sub>o id_cblinfun) = apply_qregister Q a\<close> for a
-    by (metis QR_def apply_qregister_extend_pair_right assms)
-  have \<open>kf_apply_qregister QR (kf_tensor \<EE> kf_id) =\<^sub>k\<^sub>r kf_apply_qregister QR (kf_tensor_raw \<EE> kf_id)\<close>
-    apply (rule kf_apply_qregister_cong_weak)
-    by (simp add: kf_eq_weak_def kf_tensor_def)
-  also have \<open>\<dots> = kf_map_inj (\<lambda>(x,E). (E, id_cblinfun, x, ())) (kf_apply_qregister Q (kf_annotate \<EE>))\<close>
-    apply (rule Rep_kraus_family_inject[THEN iffD1])
-    apply (simp add: kf_apply_qregister.rep_eq kf_tensor_raw.rep_eq kf_of_op.rep_eq
-        image_image kf_map_inj.rep_eq case_prod_beta kf_annotate.rep_eq
-        flip: kf_of_op_id )
-    by force
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_apply_qregister Q (kf_annotate \<EE>)\<close>
-    unfolding kf_eq_weak_def kf_apply_map_inj
-    apply (rule ext)
-    apply (subst kf_apply_map_inj)
-    by (auto simp: inj_on_def case_prod_unfold)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_apply_qregister Q \<EE>\<close>
-    apply (rule kf_apply_qregister_cong_weak)
-    by (rule kf_annotate_eq_weak)
-  finally show ?thesis
-    by (simp add: QR_def)
-qed
-
-lemma kf_apply_qregister_pair_tensor_id:
-  assumes \<open>qcompatible Q R\<close>
-  shows \<open>kf_apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (kf_tensor \<EE> kf_id) \<equiv>\<^sub>k\<^sub>r kf_map_inj (\<lambda>x. (x,())) (kf_apply_qregister Q \<EE>)\<close>
-proof (rule kf_eqI_from_filter_eq_weak)
-  fix xy :: \<open>'d \<times> unit\<close>
-  define x y where \<open>x = fst xy\<close> and \<open>y = snd xy\<close> 
-  then have xy: \<open>xy = (x,y)\<close>
-    using surjective_pairing by blast
-  have \<open>kf_filter ((=) xy) (kf_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (kf_tensor \<EE> kf_id)) =\<^sub>k\<^sub>r
-        kf_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (kf_filter (\<lambda>(x',y'). (x=x') \<and> True) (kf_tensor \<EE> kf_id))\<close>
-    apply (simp add: kf_filter_kf_apply_qregister xy)
-    by (smt (verit, del_insts) kf_eqI_from_filter_eq_weak kf_eq_weak_def kf_filter_cong_weak kf_filter_kf_apply_qregister
-        old.unit.exhaust prod.expand prod.sel(1) split_def)
-  also have \<open>\<dots> = kf_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (kf_tensor (kf_filter ((=) x) \<EE>) kf_id)\<close>
-    apply (subst kf_filter_tensor)
-    by simp
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_apply_qregister Q (kf_filter ((=) x) \<EE>)\<close>
-    by (simp add: assms kf_apply_qregister_pair_tensor_id_weak)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_map_inj (\<lambda>x. (x, ())) (kf_apply_qregister Q (kf_filter ((=) x) \<EE>))\<close>
-    apply (rule kf_eq_weak_sym)
-    apply (rule kf_map_inj_kr_eq_weak)
-    by (auto intro!: inj_onI)
-  also have \<open>\<dots> = kf_filter ((=) xy) (kf_map_inj (\<lambda>x. (x, ())) (kf_apply_qregister Q \<EE>))\<close>
-    by (simp add: kf_filter_map_inj kf_filter_kf_apply_qregister xy)
-  finally show \<open>kf_filter ((=) xy) (kf_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (kf_tensor \<EE> kf_id)) =\<^sub>k\<^sub>r
-        kf_filter ((=) xy) (kf_map_inj (\<lambda>x. (x, ())) (kf_apply_qregister Q \<EE>))\<close>
-    by -
-qed
-
-lemma iso_qregister_chain[iff]:
-  assumes \<open>iso_qregister F\<close> and \<open>iso_qregister G\<close>
-  shows \<open>iso_qregister (qregister_chain F G)\<close>
-proof -
-  have [iff]: \<open>qregister F\<close>
-    using assms(1) iso_qregister_def' by blast
-  have [iff]: \<open>qregister G\<close>
-    using assms(2) iso_qregister_def' by blast
-  have [iff]: \<open>qregister (qregister_inv F)\<close>
-    using assms(1) iso_qregister_def' iso_qregister_inv_iso by blast
-  have [iff]: \<open>qregister (qregister_inv G)\<close>
-    using assms(2) iso_qregister_def' iso_qregister_inv_iso by blast
-  have 1: \<open>qregister_chain (qregister_chain F G) (qregister_chain (qregister_inv G) (qregister_inv F)) = qregister_id\<close>
-    apply (subst qregister_chain_assoc)
-    apply (subst (2) qregister_chain_assoc[symmetric])
-    using assms by (simp add: iso_qregister_chain_inv)
-  have 2: \<open>qregister_chain (qregister_chain (qregister_inv G) (qregister_inv F)) (qregister_chain F G) = qregister_id\<close>
-    using "1" qregister_left_right_inverse by blast
-
-  show ?thesis
-  using assms 1 2
-  by (auto intro!: exI[of _ \<open>qregister_chain (qregister_inv G) (qregister_inv F)\<close>] simp add: iso_qregister_def')
-qed
-
-
-
-lemma qregister_chain_apply_tc:
-  assumes \<open>iso_qregister F\<close> and \<open>iso_qregister G\<close>
-  shows \<open>apply_qregister_tc (qregister_chain F G) = apply_qregister_tc F o apply_qregister_tc G\<close>
-  apply (transfer' fixing: F G)
-  using assms
-  by (simp add: iso_qregister_co_dim)
-
-lemma apply_qregister_tc_id[simp]: \<open>apply_qregister_tc qregister_id = id\<close>
-  apply transfer'
-  by (simp add: iso_qregister_co_dim iso_qregister_def')
-
-
-lemma kf_apply_qregister_iso_qregister_explicit:
-  assumes \<open>iso_qregister Q\<close>
-  shows \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r \<rho> = apply_qregister_tc Q (\<EE> *\<^sub>k\<^sub>r apply_qregister_tc (qregister_inv Q) \<rho>)\<close>
-proof -
-  define q q1 where \<open>q = apply_qregister_tc Q\<close> and \<open>q1 = apply_qregister_tc (qregister_inv Q)\<close>
-  have q1q: \<open>q1 (q t) = t\<close> for t
-    unfolding q1_def q_def 
-    apply (subst qregister_chain_apply_tc[symmetric, unfolded o_def, THEN fun_cong])
-    using assms by (auto simp add: iso_qregister_inv_iso iso_qregister_inv_chain) 
-  have qq1: \<open>q (q1 t) = t\<close> for t
-    by (metis UNIV_I q1q assms bij_betw_iff_bijections bij_iso_qregister_tc q_def)
-
-  have [iff]: \<open>bounded_linear q\<close>
-    by (simp add: q_def assms bounded_clinear.bounded_linear bounded_clinear_apply_qregister_tc)
-  have [iff]: \<open>bounded_linear q1\<close>
-    by (simp add: assms bounded_clinear.bounded_linear bounded_clinear_apply_qregister_tc iso_qregister_inv_iso q1_def)
-
-  have \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r \<rho> = (\<Sum>\<^sub>\<infinity>E\<in>(\<lambda>(E, x). (apply_qregister Q E, x)) ` Rep_kraus_family \<EE>. sandwich_tc (fst E) \<rho>)\<close>
-    by (simp add: kf_apply.rep_eq kf_apply_qregister.rep_eq)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. sandwich_tc (apply_qregister Q E) \<rho>)\<close>
-    apply (subst infsum_reindex)
-     apply (smt (verit) apply_qregister_inv_inverse assms case_prod_unfold inj_onI prod.collapse prod.inject) 
-    by (simp add: o_def case_prod_unfold)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. sandwich_tc (apply_qregister Q E) (q (q1 \<rho>)))\<close>
-    by (simp add: qq1)
-  also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. q (sandwich_tc E (q1 \<rho>)))\<close>
-    by (metis apply_qregister_tc_sandwich q_def)
-  also have \<open>\<dots> = q (\<Sum>\<^sub>\<infinity>(E,x)\<in>Rep_kraus_family \<EE>. sandwich_tc E (q1 \<rho>))\<close>
-    apply (subst infsum_bounded_linear_invertible[where h=q and h'=q1, symmetric])
-    by (auto intro!: simp: case_prod_unfold o_def q1q)
-  also have \<open>\<dots> = q (\<EE> *\<^sub>k\<^sub>r q1 \<rho>)\<close>
-    by (metis (no_types, lifting) infsum_cong kf_apply.rep_eq split_def)
-  finally show ?thesis
-    by (simp add: q1_def q_def)
-qed
 
 definition cq_id :: \<open>('c,'a) qregister \<Rightarrow> (('a ell2, 'a ell2) trace_class \<Rightarrow> ('a ell2, 'a ell2) trace_class)\<close> where
   \<open>cq_id C = km_apply_qregister C (km_complete_measurement (range ket))\<close>
 
 definition classical_on :: \<open>('c,'a) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> bool\<close> where
   \<open>classical_on C \<rho> \<longleftrightarrow> cq_id C \<rho> = \<rho>\<close>
-
-(* lemma \<open>classical_fst \<rho> \<longleftrightarrow> classical_on qFst \<rho>\<close>
-  apply (simp add: classical_on_def classical_fst_def)
-  by x *)
 
 definition cq_operator_reconstruct :: \<open>('c\<times>'q, 'r) qregister \<Rightarrow> ('c \<Rightarrow> ('q ell2, 'q ell2) trace_class) \<Rightarrow> ('r ell2, 'r ell2) trace_class\<close> where
   \<open>cq_operator_reconstruct Q \<rho> = (\<Sum>\<^sub>\<infinity>c. apply_qregister_tc Q (tc_tensor (tc_butterfly (ket c) (ket c)) (\<rho> c)))\<close>
@@ -625,36 +170,48 @@ qed
 definition is_cq_map :: \<open>('c, 'r) qregister \<Rightarrow> (('r ell2, 'r ell2) trace_class \<Rightarrow> ('r ell2, 'r ell2) trace_class) \<Rightarrow> bool\<close> where
   \<open>is_cq_map C \<EE> \<longleftrightarrow> kraus_map \<EE> \<and> cq_id C o \<EE> o cq_id C = \<EE>\<close>
 
-lemma cq_id_invalid: \<open>cq_id C = 0\<close> if \<open>\<not> qregister C\<close>
-  by (simp add: cq_id_def that km_apply_qregister_invalid)
+lemma cq_id_invalid[simp]: \<open>cq_id non_qregister = 0\<close>
+  by (simp add: cq_id_def km_apply_qregister_invalid_Q)
 
-lemma kf_comp_apply_qregister: \<open>kf_comp (kf_apply_qregister Q \<EE>) (kf_apply_qregister Q \<FF>) = kf_apply_qregister Q (kf_comp \<EE> \<FF>)\<close>
-  by x
 
-lemma km_apply_qregister_comp:
-  assumes \<open>kraus_map \<EE>\<close> and \<open>kraus_map \<FF>\<close>
-  shows \<open>km_apply_qregister Q \<EE> (km_apply_qregister Q \<FF> t) = km_apply_qregister Q (\<EE> o \<FF>) t\<close>
+(* (* TODO same for km_ *)
+lemma kf_bound_apply_qregister:
+  \<comment> \<open>I believe this is an equality. But the proof is not obvious.\<close>
+   \<open>kf_bound (kf_apply_qregister Q \<EE>) \<le> apply_qregister Q (kf_bound \<EE>)\<close>
 proof -
-  have \<open>km_apply_qregister Q \<EE> (km_apply_qregister Q \<FF> t)
-     = kf_comp (kf_apply_qregister Q (km_some_kraus_family \<EE>)) (kf_apply_qregister Q (km_some_kraus_family \<FF>)) *\<^sub>k\<^sub>r t\<close>
-    by (simp add: km_apply_qregister_def kf_comp_apply)
-  also have \<open>\<dots> = kf_apply_qregister Q (kf_comp (km_some_kraus_family \<EE>) (km_some_kraus_family \<FF>)) *\<^sub>k\<^sub>r t\<close>
-    by (simp add: kf_comp_apply_qregister)
-  also have \<open>\<dots> = kf_apply_qregister Q (km_some_kraus_family (\<EE> o \<FF>)) *\<^sub>k\<^sub>r t\<close>
-    apply (rule kf_apply_eqI)
-    apply (rule kf_apply_qregister_cong_weak)
-    by (simp add: assms(1,2) kf_comp_apply kf_eq_weak_def kraus_map_comp)
-  also have \<open>\<dots> = km_apply_qregister Q (\<EE> o \<FF>) t\<close>
-    by (simp add: km_apply_qregister_def)
-  finally show ?thesis
-    by -
-qed
+  wlog [iff]: \<open>qregister Q\<close>
+    using negation
+    by (simp add: non_qregister)
+  have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> apply_qregister Q (kf_bound \<EE>)\<close>
+    if \<open>finite F\<close> and \<open>F \<subseteq> Rep_kraus_family (kf_apply_qregister Q \<EE>)\<close> for F
+  proof -
+    from that
+    obtain G where FG: \<open>F = (\<lambda>(E, y). (apply_qregister Q E, y)) ` G\<close> and \<open>finite G\<close> and \<open>G \<subseteq> Rep_kraus_family \<EE>\<close>
+      apply (simp add: kf_apply_qregister.rep_eq)
+      by (meson finite_subset_image)
+    have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) = (\<Sum>(E, x)\<in>(\<lambda>(E, y). (apply_qregister Q E, y)) ` G. E* o\<^sub>C\<^sub>L E)\<close>
+      using FG by force
+    also have \<open>\<dots> = (\<Sum>(E, x)\<in>G. apply_qregister Q (E* o\<^sub>C\<^sub>L E))\<close>
+      apply (subst sum.reindex)
+      by (auto intro!: inj_onI simp: case_prod_unfold qregister_compose apply_qregister_adj apply_qregister_inject')
+    also have \<open>\<dots> = apply_qregister Q (\<Sum>(E, x)\<in>G. E* o\<^sub>C\<^sub>L E)\<close>
+      apply (subst complex_vector.linear_sum[where f=\<open>apply_qregister Q\<close>]) 
+      by (simp_all add: case_prod_beta)
+    also have \<open>\<dots> \<le> apply_qregister Q (kf_bound \<EE>)\<close>
+      using \<open>qregister Q\<close> apply (rule apply_qregister_mono[THEN iffD2])
+      using \<open>G \<subseteq> Rep_kraus_family \<EE>\<close> by (rule kf_bound_geq_sum)
+    finally show ?thesis
+      by -
+  qed
+  then show \<open>kf_bound (kf_apply_qregister Q \<EE>) \<le> apply_qregister Q (kf_bound \<EE>)\<close>
+    using kf_bound_leqI by blast
+qed *)
 
 
 lemma cq_id_idem[simp]: \<open>cq_id C (cq_id C t) = cq_id C t\<close>
 proof -
   wlog \<open>qregister C\<close>
-    by (simp add: cq_id_invalid negation)
+    using negation by (simp add: cq_id_invalid non_qregister)
   have \<open>cq_id C (cq_id C t) = km_apply_qregister C (km_complete_measurement (range ket) \<circ> km_complete_measurement (range ket)) t\<close>
     by (simp add: cq_id_def km_apply_qregister_comp kraus_map_complete_measurement)
   also have \<open>\<dots> = km_apply_qregister C (km_complete_measurement (range ket)) t\<close>
@@ -669,7 +226,7 @@ qed
 lemma kraus_map_cq_id[iff]: \<open>kraus_map (cq_id C)\<close>
   apply (cases \<open>qregister C\<close>)
    apply (simp add: cq_id_def km_apply_qregister_def) 
-  by (simp add: cq_id_invalid)
+  by (simp add: cq_id_invalid non_qregister)
 
 lemma is_cq_map_id[iff]: \<open>is_cq_map C (cq_id C)\<close>
   by (auto simp: is_cq_map_def)
@@ -684,375 +241,889 @@ lemma is_cq_map_0[iff]: \<open>is_cq_map Q 0\<close>
 definition cq_prob :: \<open>('c,'r) qregister \<Rightarrow> ('r ell2, 'r ell2) trace_class \<Rightarrow> 'c \<Rightarrow> real\<close> where
   \<open>cq_prob C \<rho> c = norm (sandwich_tc (apply_qregister C (selfbutter (ket c))) \<rho>)\<close>
 
+lemma km_bound_cq_id[simp]:
+  assumes \<open>qregister C\<close>
+  shows \<open>km_bound (cq_id C) = id_cblinfun\<close>
+  by (simp add: cq_id_def km_bound_apply_qregister assms kraus_map_complete_measurement)
+
 
 lemma km_norm_cq_id[simp]:
   assumes \<open>qregister C\<close>
   shows \<open>km_norm (cq_id C) = 1\<close>
-  by x
+  by (simp add: km_norm_def assms)
+
+no_notation bottom (\<open>\<bottom>\<index>\<close>)
+
+(* lemma one_dim_swap_ell2_id[simp]: \<open>(swap_ell2 :: (('a :: CARD_1) \<times> 'a) ell2 \<Rightarrow>\<^sub>C\<^sub>L _) = id_cblinfun\<close>
+  apply (rule equal_ket)
+  by fastforce *)
 
 
-definition kf_map_with_auxiliary_state ::
-  \<open>('c ell2, 'c ell2) trace_class \<Rightarrow> (('a\<times>'c) ell2, ('b\<times>'d) ell2, 'x) kraus_family \<Rightarrow> ('a ell2, 'b ell2, 'x) kraus_family\<close> where
-  \<open>kf_map_with_auxiliary_state \<rho> \<EE> = kf_map (\<lambda>((_,x),_). x) (kf_comp kf_partial_trace_right (kf_comp \<EE> (kf_tensor_right \<rho>)))\<close>
 
-(* definition km_map_with_auxiliary_state ::
-  \<open>('aux ell2, 'aux ell2) trace_class \<Rightarrow> (('a\<times>'aux, 'a\<times>'aux) trace_class \<Rightarrow> ('b\<times>'c, 'b\<times>'c) trace_class) \<Rightarrow> (('a, 'a) trace_class \<Rightarrow> ('b, 'b) trace_class)\<close> where *)
+thm ACTUAL_QREGISTER_bot
 
-definition kf_local_register :: 
-  \<open>'a QREGISTER \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> ('a ell2, 'a ell2, 'x) kraus_family \<Rightarrow> ('a ell2, 'a ell2, 'x) kraus_family\<close> where
-  \<open>kf_local_register Q \<rho> \<EE> = kf_map_with_auxiliary_state \<rho> (kf_map (\<lambda>((_,(x,_)),_). x)
-        (kf_comp  (kf_of_op (swap_QREGISTER Q))
-         (kf_comp (kf_tensor \<EE> kf_id)
-                  (kf_of_op (swap_QREGISTER Q)))))\<close>
+(* lemma unitary_norm_leq1:
+  assumes \<open>unitary U\<close>
+  shows \<open>norm U \<le> 1\<close>
+  using assms norm_partial_isometry unitary_partial_isometry by fastforce *)
 
+
+
+(* 
 definition km_local_register :: 
   \<open>'a QREGISTER \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> (('a ell2, 'a ell2) trace_class \<Rightarrow> ('a ell2, 'a ell2) trace_class) \<Rightarrow> (('a ell2, 'a ell2) trace_class \<Rightarrow> ('a ell2, 'a ell2) trace_class)\<close> where
-  \<open>km_local_register Q \<rho> \<EE> = kf_apply (kf_local_register Q \<rho> (km_some_kraus_family \<EE>))\<close>
-  
+  \<open>km_local_register Q \<rho> \<EE> = kf_apply (kf_local_register Q \<rho> (km_some_kraus_family \<EE>))\<close> *)
+
+lemma cq_map_id_right:
+  assumes \<open>is_cq_map C \<EE>\<close>
+  shows \<open>\<EE> o cq_id C = \<EE>\<close>
+  apply (subst (2) assms[unfolded is_cq_map_def, THEN conjunct2, symmetric])
+  apply (subst assms[unfolded is_cq_map_def, THEN conjunct2, symmetric])
+  by auto
+
+lemma cq_map_id_left:
+  assumes \<open>is_cq_map C \<EE>\<close>
+  shows \<open>cq_id C o \<EE> = \<EE>\<close>
+  apply (subst (2) assms[unfolded is_cq_map_def, THEN conjunct2, symmetric])
+  apply (subst assms[unfolded is_cq_map_def, THEN conjunct2, symmetric])
+  by auto
+
+lemma km_operators_in_cq_id:
+  shows \<open>km_operators_in (cq_id C) (apply_qregister C ` span (selfbutter ` range ket))\<close>
+  apply (rule_tac km_operators_in_mono[rotated])
+  unfolding cq_id_def
+   apply (rule km_operators_in_km_apply_qregister)
+   apply (rule km_operators_complete_measurement)
+  by simp_all
 
 lemma is_cq_map_km_local_register_quantum:
   assumes \<open>Qqcompatible Q C\<close>
+  assumes \<open>ACTUAL_QREGISTER Q\<close>
+  assumes \<open>\<rho> \<ge> 0\<close>
   assumes \<open>is_cq_map C \<EE>\<close>
   shows \<open>is_cq_map C (km_local_register Q \<rho> \<EE>)\<close>
-  by x
+proof (intro is_cq_map_def[THEN iffD2] conjI)
+  have [iff]: \<open>kraus_map \<EE>\<close>
+    using assms(4) is_cq_map_def by blast
+  then show km: \<open>kraus_map (km_local_register Q \<rho> \<EE>)\<close>
+    using assms(3) by fastforce
 
-lemma explicit_cblinfun_exists_0[simp]: \<open>explicit_cblinfun_exists (\<lambda>_ _. 0)\<close>
-  by (auto intro!: explicit_cblinfun_exists_bounded[where B=0] simp: explicit_cblinfun_def)
+  have lifto: \<open>f o g = h \<Longrightarrow> l o f o g = l o h\<close> for f g h l
+    by auto
 
-lemma explicit_cblinfun_0[simp]: \<open>explicit_cblinfun (\<lambda>_ _. 0) = 0\<close>
-  by (auto intro!: equal_ket Rep_ell2_inject[THEN iffD1] ext simp: Rep_ell2_explicit_cblinfun_ket zero_ell2.rep_eq)
-(* 
-lemma \<open>cblinfun_extension_exists (range ket) (\<lambda>ketm. 
-          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m \<noteq> None. (ket y \<bullet>\<^sub>C a (ket x)) *\<^sub>C ket (the (apply_cregister F [x\<mapsto>y] m)))\<close>
+  have 1: \<open>cq_id C o partial_trace = partial_trace o (km_tensor (cq_id C) id)\<close>
+    by (auto simp: partial_trace_ignores_kraus_map)
+  have comm: \<open>swap_QREGISTER Q o\<^sub>C\<^sub>L apply_qregister C a \<otimes>\<^sub>o id_cblinfun =
+         apply_qregister C a \<otimes>\<^sub>o id_cblinfun o\<^sub>C\<^sub>L swap_QREGISTER Q\<close> for a
+  proof -
+    define QQ CC where \<open>QQ = Rep_QREGISTER Q\<close> and \<open>CC = range (apply_qregister C)\<close>
+    have swap_QQ: \<open>swap_QREGISTER Q \<in> QQ \<otimes>\<^sub>v\<^sub>N QQ\<close>
+      using is_swap_on_qupdate_set_swap_QREGISTER[OF \<open>ACTUAL_QREGISTER Q\<close>]
+      by (simp add: is_swap_on_qupdate_set_def QQ_def)
+    have [iff]: \<open>von_neumann_algebra QQ\<close>
+      using QQ_def Rep_QREGISTER valid_qregister_range_def by auto
+    have \<open>apply_qregister C a \<in> commutant QQ\<close>
+      using \<open>Qqcompatible Q C\<close>
+      by (simp add: QQ_def Qqcompatible.rep_eq commutant_memberI)
+    then have \<open>apply_qregister C a \<otimes>\<^sub>o id_cblinfun \<in> commutant QQ \<otimes>\<^sub>v\<^sub>N commutant QQ\<close>
+      apply (rule tensor_op_in_tensor_vn)
+      using commutant_UNIV by blast
+    also have \<open>commutant QQ \<otimes>\<^sub>v\<^sub>N commutant QQ \<subseteq> commutant (QQ \<otimes>\<^sub>v\<^sub>N QQ)\<close>
+      apply (rule commutant_tensor_vn_subset)
+      by auto
+    finally show ?thesis
+      by (simp add: swap_QQ commutant_def)
+  qed
+  have 2: \<open>km_tensor (cq_id C) id \<circ> sandwich_tc (swap_QREGISTER Q) = sandwich_tc (swap_QREGISTER Q) o km_tensor (cq_id C) id\<close>
+    apply (rule km_commute)
+      apply (rule km_operators_in_sandwich)
+     apply (rule km_operators_in_tensor)
+      apply (rule km_operators_in_cq_id)
+     apply (rule km_operators_in_id)
+    unfolding commutant_span
+    by (auto simp: comm commutant_def)
+  have 3: \<open>km_tensor (cq_id C) (id :: ('x ell2,'x ell2) trace_class \<Rightarrow> _) \<circ> km_tensor \<EE> id = km_tensor \<EE> id\<close>
+    by (simp add: km_tensor_kraus_map_exists cq_map_id_left assms flip: km_tensor_compose_distrib)
+  have 4: \<open>(\<lambda>\<sigma>. tc_tensor \<sigma> \<rho>) \<circ> cq_id C = km_tensor (cq_id C) id o (\<lambda>\<sigma>. tc_tensor \<sigma> \<rho>)\<close>
+    by (auto intro!: ext simp: km_tensor_apply km_tensor_kraus_map_exists)
+  have 5: \<open>km_tensor \<EE> id \<circ> km_tensor (cq_id C) (id :: ('x ell2,'x ell2) trace_class \<Rightarrow> _) = km_tensor \<EE> id\<close>
+    by (simp add: km_tensor_kraus_map_exists cq_map_id_right assms flip: km_tensor_compose_distrib)
+
+  show \<open>cq_id C \<circ> km_local_register Q \<rho> \<EE> \<circ> cq_id C = km_local_register Q \<rho> \<EE>\<close>
+    apply (simp add: km_local_register_def km_map_with_auxiliary_state_def o_assoc flip: id_def)
+    apply (simp add: o_assoc 1 lifto[OF 2] lifto[OF 3] lifto[OF 4])
+    by (simp add: o_assoc lifto[OF 2[symmetric]] lifto[OF 5])
+qed
+
+
+(* TODO move stuff from here *)
+
+
+
+
+definition actual_cregister_range_content :: \<open>'a cupdate set \<Rightarrow> 'a set\<close> where
+  \<open>actual_cregister_range_content \<FF> = (SOME L. \<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) R. 
+    inj f \<and> range f = L \<times> R \<and>
+    \<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L})\<close>
+
+lift_definition ACTUAL_CREGISTER_content :: \<open>'a CREGISTER \<Rightarrow> 'a set\<close> is actual_cregister_range_content.
+
+
+lift_definition permutation_cregister :: \<open>('b \<Rightarrow> 'a) \<Rightarrow> ('a,'b) cregister\<close> is
+  \<open>\<lambda>f. if bij f then Classical_Extra.permutation_register f else non_cregister_raw\<close>
+  by auto
+
+lemma permutation_cregister_iff_permutation[simp]:
+  \<open>cregister (permutation_cregister f) \<longleftrightarrow> bij f\<close>
+  apply (transfer' fixing: f)
+  by (simp add: non_cregister_raw)
+
+lemma getter_permutation_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>getter (permutation_cregister f) = f\<close>
+  apply (transfer' fixing: f)
+  using assms
+  by (auto intro!: simp: getter_permutation_register)
+
+lemma setter_permutation_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>setter (permutation_cregister f) a m = inv f a\<close>
+  apply (transfer' fixing: f)
+  using assms
+  by (auto intro!: simp: setter_permutation_register)
+
+lemma permutation_cregister_iso_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>iso_cregister (permutation_cregister f)\<close>
+  by (metis assms bij_betw_def getter_permutation_cregister iso_cregister_injective_getter
+      permutation_cregister_iff_permutation)
+
+lemma inj_Some_f[simp]: \<open>inj (\<lambda>x. Some (f x)) = inj f\<close>
+  by (simp add: inj_on_def)
+
+
+lemma ran_map_comp: \<open>ran (f \<circ>\<^sub>m g) \<subseteq> ran f\<close>
+  by (smt (verit, ccfv_SIG) map_comp_Some_iff mem_Collect_eq ran_def subsetI)
+
+lemma dom_inv_map: \<open>dom (inv_map f) \<subseteq> ran f\<close>
+  by (smt (verit, ccfv_SIG) domIff imageE inv_map_def mem_Collect_eq ran_def subsetI)
+
+lemma dom_inv_map_inj: \<open>dom (inv_map f) = ran f\<close> if \<open>inj_map f\<close>
+  using that
+  by (smt (verit, ccfv_SIG) Collect_cong domI dom_def dom_inv_map inv_map_def mem_Collect_eq ran_def rangeI subsetD)
+
+lemma ran_inv_map_inj: \<open>ran (inv_map f) = dom f\<close> if \<open>inj_map f\<close>
+  using that
+  apply (auto intro!: ext simp: ran_def dom_def inv_map_def inj_map_def)
+  apply (metis f_inv_into_f rangeI)
+  by (metis f_inv_into_f rangeI)
+
+lemma ran_Some_f: \<open>ran (\<lambda>x. Some (f x)) = range f\<close>
+  by (auto simp: ran_def)
+
+lemma inv_map_twice:
+  assumes \<open>inj_map f\<close>
+  shows \<open>inv_map (inv_map f) = f\<close>
+proof (rule ext)
+  fix x
+  show \<open>inv_map (inv_map f) x = f x\<close>
+  proof (cases \<open>x \<in> dom f\<close>)
+    case True
+    then obtain y where \<open>f x = Some y\<close>
+      by blast
+    then have \<open>inv_map f y = Some x\<close>
+      by (simp add: assms inv_map_f_eq)
+    then show ?thesis
+      by (simp add: \<open>f x = Some y\<close> inv_map_f_eq)
+  next
+    case False
+    then have \<open>x \<notin> ran (inv_map f)\<close>
+      by (simp add: assms ran_inv_map_inj)
+    then have \<open>x \<notin> dom (inv_map (inv_map f))\<close>
+      by (simp add: dom_inv_map_inj)
+    then have \<open>inv_map (inv_map f) x = None\<close>
+      by fastforce
+    moreover from False have \<open>f x = None\<close>
+      by fastforce
+    finally show ?thesis
+      by simp
+  qed
+qed
+
+
+lemma dom_map_comp: \<open>dom (f \<circ>\<^sub>m g) \<subseteq> dom g\<close>
+  using domIff by fastforce
+
+lemma actual_cregister_range_ex_register:
+  fixes \<FF> :: \<open>'a cupdate set\<close>
+  assumes \<open>actual_cregister_range \<FF>\<close>
+  shows \<open>let 'l::type = actual_cregister_range_content \<FF> in
+         \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
 proof -
-  wlog \<open>cregister F\<close>
-    using negation
-    apply (simp add: non_cregister non_cregister.rep_eq non_cregister_raw_def)
-try0
-sledgehammer [dont_slice]
-by -
-  show ?thesis
-    apply (rule cblinfun_extension_existsI)
- *)
+  define L where \<open>L = actual_cregister_range_content \<FF>\<close>
+  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) R. 
+    inj f \<and> range f = L \<times> R \<and>
+    \<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+    unfolding L_def actual_cregister_range_content_def
+    apply (rule someI_ex)
+    using assms unfolding actual_cregister_range_def o_def
+    by blast
+  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and R where [iff]: \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
+    and \<FF>_eq: \<open>\<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+    by auto
+  have \<open>let 'r::type = R in let 'l::type = L in
+        \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+  proof with_type_intro
+    show \<open>R \<noteq> {}\<close>
+      using range_f by force
+    fix rep_r :: \<open>'r \<Rightarrow> 'a\<close> assume \<open>bij_betw rep_r UNIV R\<close>
+    then have [iff]: \<open>inj rep_r\<close>
+      using bij_betw_def by blast
 
-lemma cnj_of_bool[simp]: \<open>cnj (of_bool b) = of_bool b\<close>
-  by simp
+    show \<open>let 'l::type = L in
+        \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+    proof with_type_intro
+      show \<open>L \<noteq> {}\<close>
+        using range_f by force
+      fix rep_l :: \<open>'l \<Rightarrow> 'a\<close> assume \<open>bij_betw rep_l UNIV L\<close>
+      have [iff]: \<open>inj rep_l\<close>
+        using \<open>bij_betw rep_l UNIV L\<close> bij_betw_def by blast
+      define f' where \<open>f' = map_prod (inv rep_l) (inv rep_r) o f\<close>
+      define F where \<open>F = cregister_chain (permutation_cregister f') cFst\<close>
+      have \<open>bij_betw f UNIV (L \<times> R)\<close>
+        using \<open>inj f\<close> bij_betw_def range_f by blast
+      moreover
+      have \<open>bij_betw (map_prod (inv rep_l) (inv rep_r)) (L \<times> R) UNIV\<close>
+        using bij_betw_map_prod[of _ L UNIV _ R UNIV]
+        by (metis UNIV_Times_UNIV \<open>bij_betw rep_l UNIV L\<close> \<open>bij_betw rep_r UNIV R\<close> bij_betw_inv_into)
+      ultimately
+      have [iff]: \<open>bij f'\<close>
+        by (auto intro!: bij_betw_trans[where B=\<open>L \<times> R\<close>] simp: f'_def)
+      then have [iff]: \<open>cregister F\<close>
+        by (simp add: F_def)
+      have Fa_rewrite: \<open>apply_cregister F b = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        if \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close> for b c
+      proof -
+        have Some_o_f': \<open>Some \<circ> f' = tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f)\<close>
+        proof -
+          have 1: \<open>Some (fst (f x)) \<in> range (\<lambda>x. Some (rep_l x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          have 2: \<open>Some (snd (f x)) \<in> range (\<lambda>x. Some (rep_r x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_r UNIV R\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          show ?thesis 
+            by (auto intro!: ext 1 2 simp add: f'_def tensor_update_def[abs_def] map_comp_def map_prod_def case_prod_unfold
+                inv_map_def o_def inv_f_f inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+        qed
+        have \<open>apply_cregister F b = inv_map (Some \<circ> f') \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (Some \<circ> f')\<close>
+          by (auto simp add: cFst.rep_eq Laws_Classical.Fst_def F_def iso_register_from_getter)
+        also have \<open>\<dots> = inv_map (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))
+              \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))\<close>
+          by (simp add: Some_o_f')
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r) \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m
+                            inv_map (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r))) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: inv_map_tensor_update[symmetric] inv_map_twice inv_map_comp inj_map_tensor_update inv_map_twice
+              comp_update_assoc)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m 
+              tensor_map ((Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)) ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: tensor_update_mult inv_map_tensor_update)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: that)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        proof -
+          have \<open>(Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r) = Some |` R\<close>
+            apply (auto intro!: ext simp: inv_map_def restrict_map_def map_comp_def o_def
+                inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+             apply (metis \<open>bij_betw rep_r UNIV R\<close> bij_betw_def rangeI)
+            by (smt (verit, ccfv_threshold) \<open>bij_betw rep_r UNIV R\<close> bij_betw_iff_bijections image_iff)
+          then show ?thesis
+            by simp
+        qed
+        finally show ?thesis
+          by -
+      qed
+      have \<open>range (apply_cregister F) = \<FF>\<close>
+      proof (intro Set.set_eqI iffI)
+        have Some_o_f': \<open>Some \<circ> f' = tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f)\<close>
+        proof -
+          have 1: \<open>Some (fst (f x)) \<in> range (\<lambda>x. Some (rep_l x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          have 2: \<open>Some (snd (f x)) \<in> range (\<lambda>x. Some (rep_r x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_r UNIV R\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          show ?thesis 
+            by (auto intro!: ext 1 2 simp add: f'_def tensor_update_def[abs_def] map_comp_def map_prod_def case_prod_unfold
+                inv_map_def o_def inv_f_f inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+        qed
+        fix a assume \<open>a \<in> range (apply_cregister F)\<close>
+        then obtain b where a_def: \<open>a = apply_cregister F b\<close>
+          by fastforce
+        define c where \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close>
+        have \<open>a = inv_map (Some \<circ> f') \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (Some \<circ> f')\<close>
+          by (auto simp add: cFst.rep_eq Laws_Classical.Fst_def F_def iso_register_from_getter a_def)
+        also have \<open>\<dots> = inv_map (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))
+              \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))\<close>
+          by (simp add: Some_o_f')
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r) \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m
+                            inv_map (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r))) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: inv_map_tensor_update[symmetric] inv_map_twice inv_map_comp inj_map_tensor_update inv_map_twice
+              comp_update_assoc)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m 
+              tensor_map ((Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)) ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: tensor_update_mult inv_map_tensor_update)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        proof -
+          have \<open>(Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r) = Some |` R\<close>
+            apply (auto intro!: ext simp: inv_map_def restrict_map_def map_comp_def o_def
+                inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+             apply (metis \<open>bij_betw rep_r UNIV R\<close> bij_betw_def rangeI)
+            by (smt (verit, ccfv_threshold) \<open>bij_betw rep_r UNIV R\<close> bij_betw_iff_bijections image_iff)
+          then show ?thesis
+            by (simp add: c_def)
+        qed
+        finally have \<open>a = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by -
+        moreover have \<open>dom c \<subseteq> L\<close>
+          unfolding c_def
+          apply (rule order_trans[OF dom_map_comp])
+          apply (rule order_trans[OF dom_inv_map])
+          apply (simp add: ran_Some_f o_def)
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def dual_order.refl)
+        moreover have \<open>ran c \<subseteq> L\<close>
+          unfolding c_def
+          apply (rule order_trans[OF ran_map_comp])+
+          apply (simp add: ran_Some_f o_def)
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def dual_order.refl)
+        ultimately show \<open>a \<in> \<FF>\<close>
+          by (auto intro!: exI[of _ c] simp add: \<FF>_eq)
+      next
+        fix a assume \<open>a \<in> \<FF>\<close>
+        then obtain c where a_def: \<open>a = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ> f\<close> and \<open>ran c \<subseteq> L\<close> and \<open>dom c \<subseteq> L\<close>
+          by (force simp: \<FF>_eq)
+        have 1: \<open>inv_map (Some \<circ> rep_l) k \<noteq> None\<close> if \<open>k \<in> L\<close> for k
+          using that
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def f_inv_into_f inj_map_total inv_map_f_eq o_apply option.simps(3))
+        have 2: \<open>k \<in> L\<close> if \<open>inv_map (Some \<circ> rep_l) k = Some x2\<close> for k x2
+          using that \<open>bij_betw rep_l UNIV L\<close>
+          apply (simp add: inv_map_def o_def split: if_split_asm)
+          by (metis (no_types, lifting) bij_betw_iff_bijections image_iff option.sel)
+        have 3: \<open>rep_l x2 = k\<close> if \<open>inv_map (Some \<circ> rep_l) k = Some x2\<close> for k x2 
+          using that 
+          by (smt (verit, best) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def inj_map_inv_map inj_map_total inv_map_f_eq o_def
+              option.simps(1))
+        have 4: \<open>(Some \<circ> rep_l) \<circ>\<^sub>m inv_map (Some \<circ> rep_l) = Some |` L\<close>
+          by (auto intro!: ext simp: map_comp_def restrict_map_def 1 2 3 split: option.split)
+        have 5: \<open>c = Some |` L \<circ>\<^sub>m c \<circ>\<^sub>m Some |` L\<close>
+          using \<open>ran c \<subseteq> L\<close> \<open>dom c \<subseteq> L\<close>
+          by (force intro!: ext simp: ran_def dom_def restrict_map_def map_comp_def split!: option.split)
+        define b where \<open>b = inv_map (Some \<circ> rep_l) \<circ>\<^sub>m c \<circ>\<^sub>m (Some \<circ> rep_l)\<close>
+        have c_def: \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close>
+          apply (simp add: b_def 4 comp_update_assoc)
+          by (simp add: 4 flip: comp_update_assoc 5)
+        have \<open>a = apply_cregister F b\<close>
+          by (auto simp add: Fa_rewrite a_def c_def map_comp_def o_def split: option.split)
+        then show \<open>a \<in> range (apply_cregister F)\<close>
+          by fastforce
+      qed
+      then show \<open>\<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+        by auto
+    qed
+  qed
+  from this[cancel_with_type]
+  show \<open>let 'l::type = L in \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+    by -
+qed
+
+lemma ACTUAL_CREGISTER_ex_register:
+  fixes G :: \<open>'a CREGISTER\<close>
+  assumes \<open>ACTUAL_CREGISTER G\<close>
+  shows \<open>let 'l::type = ACTUAL_CREGISTER_content G in
+         \<exists>F :: ('l, 'a) cregister. cregister F \<and> CREGISTER_of F = G\<close>
+proof -
+  have \<open>cregister F \<and> CREGISTER_of F = G \<longleftrightarrow> cregister F \<and> range (apply_cregister F) = Rep_CREGISTER G\<close> for F :: \<open>('l,'a) cregister\<close>
+    apply (auto intro!: simp add: CREGISTER_of.rep_eq)
+    by (simp add: CREGISTER_of.abs_eq Rep_CREGISTER_inverse)
+  then show ?thesis
+    using assms actual_cregister_range_ex_register[of \<open>Rep_CREGISTER G\<close>]
+    by (simp add: ACTUAL_CREGISTER.rep_eq ACTUAL_CREGISTER_content.rep_eq)
+qed
 
 
-lemma has_sum_single: 
-  fixes f :: \<open>_ \<Rightarrow> _::{comm_monoid_add,t2_space}\<close>
-  assumes "\<And>j. j \<noteq> i \<Longrightarrow> j\<in>A \<Longrightarrow> f j = 0"
-  assumes \<open>s = (if i\<in>A then f i else 0)\<close>
-  shows "HAS_SUM f A s"
-  apply (subst has_sum_cong_neutral[where T=\<open>A \<inter> {i}\<close> and g=f])
+
+
+(* TODO move *)
+lemma separating_bounded_clinear_clinear:
+  fixes S :: \<open>('a::chilbert_space,'a) trace_class set\<close>
+  assumes \<open>separating_set (clinear :: (_ \<Rightarrow> ('b::chilbert_space,'b) trace_class) \<Rightarrow> _) S\<close>
+  shows \<open>separating_set (bounded_clinear :: (_ \<Rightarrow> ('b::chilbert_space,'b) trace_class) \<Rightarrow> _) S\<close>
+  by (metis (mono_tags, lifting) assms bounded_clinear.clinear separating_set_def)
+
+
+lemma classical_on_cq_id_idem_general:
+  fixes \<EE> :: \<open>('a::chilbert_space,'a) trace_class \<Rightarrow> ('b ell2, 'b ell2) trace_class\<close>
+  assumes \<open>separating_set (kraus_map :: (_ \<Rightarrow> ('b ell2,'b ell2) trace_class) \<Rightarrow> _) S\<close>
+  assumes \<open>kraus_map \<EE>\<close>
+  assumes \<open>\<And>\<rho>. \<rho> \<in> S \<Longrightarrow> classical_on C (\<EE> \<rho>)\<close>
+  shows \<open>cq_id C o \<EE> = \<EE>\<close>
+proof -
+  have \<open>cq_id C (\<EE> \<rho>) = \<EE> \<rho>\<close> if \<open>\<rho> \<in> S\<close> for \<rho>
+    using assms(3) classical_on_def that by blast
+  then show ?thesis
+    by (smt (verit, del_insts) assms(1,2) eq_from_separatingI kraus_map_comp kraus_map_cq_id o_def)
+qed
+
+lemma classical_on_cq_id_idem:
+  assumes \<open>kraus_map \<EE>\<close>
+  assumes \<open>\<And>\<rho>. \<rho> \<ge> 0 \<Longrightarrow> norm \<rho> \<le> 1 \<Longrightarrow> classical_on C (\<EE> \<rho>)\<close>
+  shows \<open>cq_id C o \<EE> = \<EE>\<close>
+  apply (intro classical_on_cq_id_idem_general separating_kraus_map_bounded_clinear separating_bounded_clinear_clinear)
+  apply (rule separating_density_ops[where B=1])
   using assms by auto
 
-
-lemma qregister_of_cregister_alt_def_has_sum:
-  assumes \<open>cregister F\<close>
-  shows \<open>((\<lambda>(x,y). ket y \<bullet>\<^sub>C a (ket x)) has_sum
-      of_bool (same_outside_cregister F n m) *\<^sub>C ket (Classical_Registers.getter F n) \<bullet>\<^sub>C a (ket (Classical_Registers.getter F m)))
-          {(x,y). apply_cregister F [x\<mapsto>y] m = Some n}\<close>
-proof (rule has_sum_single[where i=\<open>(getter F m, getter F n)\<close>])
-  show \<open>j \<in> {(x, y). apply_cregister F [x \<mapsto> y] m = Some n} \<Longrightarrow> (case j of (x, y) \<Rightarrow> ket y \<bullet>\<^sub>C a (ket x)) = 0\<close>
-    if \<open>j \<noteq> (Classical_Registers.getter F m, Classical_Registers.getter F n)\<close> for j
-    apply (simp add: case_prod_unfold)
-    using that
-    by (metis (no_types, lifting) \<open>cregister F\<close> apply_cregister_getter_setter apply_cregister_of_0 array_rules(2) getter_setter_same option.case(2) option.simps(2)
-        surjective_pairing )
-  have *: \<open>apply_cregister F [Classical_Registers.getter F m \<mapsto> Classical_Registers.getter F n] m = Some n \<longleftrightarrow> same_outside_cregister F n m\<close>
-    by (auto simp: same_outside_cregister_def \<open>cregister F\<close> apply_cregister_getter_setter)
-  show \<open>of_bool (same_outside_cregister F n m) *\<^sub>C ket (Classical_Registers.getter F n) \<bullet>\<^sub>C a (ket (Classical_Registers.getter F m)) =
-    (if (Classical_Registers.getter F m, Classical_Registers.getter F n) \<in> {(x, y). apply_cregister F [x \<mapsto> y] m = Some n}
-     then case (Classical_Registers.getter F m, Classical_Registers.getter F n) of (x, y) \<Rightarrow> ket y \<bullet>\<^sub>C a (ket x) else 0)\<close>
-    by (simp add: * )
-qed
-
-
-lemma qregister_of_cregister_alt_def_exists: \<open>explicit_cblinfun_exists (\<lambda>n m. 
-          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
-proof -
-  wlog \<open>cregister F\<close>
-    using negation
-    by (simp add: non_cregister non_cregister.rep_eq non_cregister_raw_def case_prod_unfold)
-  have \<open>explicit_cblinfun_exists (\<lambda>n m. 
-          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))
-              = permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close>
-    unfolding permute_and_tensor1_cblinfun_exists_def
-    apply (intro arg_cong[where f=explicit_cblinfun_exists] ext)
-    unfolding infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>]]
-    by (simp add: cinner_ket_left)
-  moreover have \<open>permute_and_tensor1_cblinfun_exists (getter F) (same_outside_cregister F) a\<close>
-    by (simp add: \<open>cregister F\<close> permute_and_tensor1_cblinfun_exists_register)
-  ultimately show ?thesis
-    by simp
-qed
-
-lemma qregister_of_cregister_alt_def:
-  shows \<open>apply_qregister (qregister_of_cregister F) a = explicit_cblinfun (\<lambda>n m. 
-          \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
-proof -
-  wlog [iff]: \<open>cregister F\<close>
-    using negation
-    by (simp add: non_cregister non_cregister.rep_eq non_cregister_raw_def)
-  have \<open>apply_qregister (qregister_of_cregister F) a = permute_and_tensor1_cblinfun (Classical_Registers.getter F) (same_outside_cregister F) a\<close>
-    by (simp add: apply_qregister_of_cregister)
-  also have \<open>\<dots> = explicit_cblinfun (\<lambda>n m. of_bool (same_outside_cregister F n m) * Rep_ell2 (a *\<^sub>V ket (Classical_Registers.getter F m)) (Classical_Registers.getter F n))\<close>
-    by (simp add: permute_and_tensor1_cblinfun_def)
-  also have \<open>\<dots> = explicit_cblinfun (\<lambda>n m. \<Sum>\<^sub>\<infinity>(x,y) | apply_cregister F [x\<mapsto>y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
-    apply (intro arg_cong[where f=explicit_cblinfun] ext)
-    unfolding infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>], symmetric]
-    using infsumI[OF qregister_of_cregister_alt_def_has_sum[OF \<open>cregister F\<close>], symmetric]
-    by (simp add: cinner_ket_left)
-  finally show ?thesis
-    by -
-qed
-
-lemma classical_operator_None[simp]: \<open>classical_operator (\<lambda>_. None) = 0\<close>
-  by (auto intro!: equal_ket simp: classical_operator_ket inj_map_def classical_operator_exists_inj)
-
-lift_definition QREGISTER_of_CREGISTER :: \<open>'a CREGISTER \<Rightarrow> 'a QREGISTER\<close> is
-  \<open>\<lambda>C :: ('a \<rightharpoonup> 'a) set. commutant (commutant (let ops = {classical_operator f | f. f \<in> C \<and> inj_map f} in ops \<union> adj ` ops))\<close>
-proof (intro CollectI valid_qregister_range_def[THEN iffD2] von_neumann_algebra_def[THEN iffD2] conjI ballI)
-  fix C :: \<open>('a \<rightharpoonup> 'a) set\<close> and a :: \<open>'a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2\<close>
-  assume \<open>C \<in> Collect valid_cregister_range\<close>
-  then have \<open>valid_cregister_range C\<close>
-    by simp
-  define ops where \<open>ops = {classical_operator f | f. f \<in> C \<and> inj_map f}\<close>
-  show \<open>commutant (commutant (commutant (commutant (let ops = ops in ops \<union> adj ` ops)))) = commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
-    by simp
-  fix a
-  assume \<open>a \<in> commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
-  then have \<open>a* \<in> adj ` \<dots>\<close>
-    by blast
-  also have \<open>\<dots> = commutant (commutant (adj ` ops \<union> ops))\<close>
-    by (simp add: commutant_adj image_Un image_image)
-  also have \<open>\<dots> = commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
-    by (simp add: Un_commute)
-  finally show \<open>a* \<in> commutant (commutant (let ops = ops in ops \<union> adj ` ops))\<close>
-    by simp
-qed
-
-lemma QREGISTER_of_CREGISTER_bot[simp]: \<open>QREGISTER_of_CREGISTER \<bottom> = \<bottom>\<close>
-proof transfer'
-  define ops where \<open>ops = {classical_operator f | f::'a\<rightharpoonup>'a. f \<in> empty_cregister_range \<and> inj_map f}\<close>
-
-  have \<open>ops \<subseteq> one_algebra\<close>
-    apply (simp add: ops_def empty_cregister_range_def one_algebra_def)
-    by force
-  moreover then have \<open>adj ` ops \<subseteq> one_algebra\<close>
-    by (metis (mono_tags, lifting) commutant_UNIV commutant_adj commutant_one_algebra image_mono image_subset_iff subset_UNIV von_neumann_algebra_adj_image
-        von_neumann_algebra_def)
-  ultimately have \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) \<subseteq> commutant (commutant one_algebra)\<close>
-    by (auto intro!: commutant_antimono Un_least simp: Let_def)
-  also have \<open>\<dots> = one_algebra\<close>
-    by (simp add: commutant_UNIV commutant_one_algebra)
-  finally have \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) \<subseteq> one_algebra\<close>
-    by -
-  then show \<open>commutant (commutant (let ops = ops in ops \<union> adj ` ops)) = one_algebra\<close>
-    by (metis (no_types, lifting) \<open>adj ` ops \<subseteq> one_algebra\<close> \<open>ops \<subseteq> one_algebra\<close> commutant_UNIV commutant_empty commutant_one_algebra double_commutant_Un_right
-        subset_Un_eq sup_bot.comm_neutral)
-qed
-
-lemma apply_cregister_inj_map_iff: 
-  fixes X :: \<open>('a,'b) cregister\<close>
-  assumes [iff]: \<open>cregister X\<close>
-  shows \<open>inj_map (apply_cregister X f) \<longleftrightarrow> inj_map f\<close>
-proof (intro iffI inj_map_def[THEN iffD2] allI impI conjI; rename_tac m n)
-  fix a b :: 'a and m :: 'b
-  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
-  assume inj_Xf: \<open>inj_map (apply_cregister X f)\<close> and \<open>f a = f b \<and> f a \<noteq> None\<close>
-  then obtain c where fa: \<open>f a = Some c\<close> and fb: \<open>f b = Some c\<close>
+lemma kf_apply_qregister_partial_trace:
+  shows \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right \<equiv>\<^sub>k\<^sub>r kf_map prod.swap (kf_comp (kf_partial_trace_right) (kf_apply_qregister (qregister_chain qFst Q) \<EE>))\<close>
+proof (rule kf_eqI)
+  wlog [simp]: \<open>qregister Q\<close>
+    goal \<open>\<And>x \<rho>. kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho> = kf_map prod.swap (kf_comp kf_partial_trace_right (kf_apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q Q) \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    using hypothesis non_qregister by force
+  fix \<rho> :: \<open>(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) trace_class\<close> and x :: \<open>'b \<times> 'c\<close>
+  obtain x1 x2 where x: \<open>x = (x1,x2)\<close>
     by fastforce
-  have gXsX[simp]: \<open>gX (sX a m) = a\<close> for a m
-    using assms gX_def sX_def by auto
-  have sXsX[simp]: \<open>sX a (sX b m) = sX a m\<close> for a b m
-    by (simp add: sX_def)
-  have Xfsam_Some: \<open>apply_cregister X f (sX a m) \<noteq> None\<close>
-    by (simp add: inj_map_def apply_cregister_getter_setter[OF assms] fa
-        flip: sX_def gX_def)
-  have Xfsbm_Some:\<open>apply_cregister X f (sX b m) \<noteq> None\<close>
-    by (simp add: inj_map_def apply_cregister_getter_setter[OF assms] fb
-        flip: sX_def gX_def)
-  have Xfsbm_Xfsam: \<open>apply_cregister X f (sX a m) = apply_cregister X f (sX b m)\<close>
-    by (simp add: apply_cregister_getter_setter fa fb flip: gX_def sX_def)
-  from Xfsbm_Xfsam Xfsam_Some Xfsbm_Some inj_Xf have \<open>sX a m = sX b m\<close>
-    by (simp add: inj_map_def)  
-  then have \<open>gX (sX a m) = gX (sX b m)\<close>
-    by simp
-  then show \<open>a = b\<close>
-    by simp
-next
-  fix m n :: 'b
-  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
-  assume \<open>inj_map f\<close>
-  assume \<open>apply_cregister X f m = apply_cregister X f n \<and> apply_cregister X f m \<noteq> None\<close>
-  then obtain k where Xfm_k: \<open>apply_cregister X f m = Some k\<close> and Xfn_k: \<open>apply_cregister X f n = Some k\<close>
-    by fastforce
-  from Xfm_k obtain c where fgm_c: \<open>f (gX m) = Some c\<close>
-    apply (simp add: apply_cregister_getter_setter flip: gX_def sX_def)
-    by fastforce
-  from Xfn_k obtain d where fgn_d: \<open>f (gX n) = Some d\<close>
-    apply (simp add: apply_cregister_getter_setter flip: gX_def sX_def)
-    by fastforce
-  from Xfm_k have \<open>sX c m = k\<close>
-    by (simp add: apply_cregister_getter_setter fgm_c flip: gX_def sX_def)
-  moreover from Xfn_k have \<open>sX d n = k\<close>
-    by (simp add: apply_cregister_getter_setter fgn_d flip: gX_def sX_def)
-  ultimately have \<open>c = d\<close>
-    by (metis assms getter_setter_same sX_def)
-  with fgm_c fgn_d \<open>inj_map f\<close>
-  show \<open>m = n\<close>
-    by (metis \<open>sX c m = k\<close> \<open>sX d n = k\<close> gX_def inj_map_def option.simps(2) sX_def setter_getter_same setter_setter_same)
-qed
-
-
-
-lemma QREGISTER_of_qregister_of_cregister: \<open>QREGISTER_of (qregister_of_cregister X) = QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
-proof -
-  have 1: \<open>QREGISTER_of (qregister_of_cregister X) = QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
-    if \<open>\<not> cregister X\<close>
-    using that by (simp add: non_cregister)
-  define ops where \<open>ops = {classical_operator f |f. f \<in> range (apply_cregister X) \<and> inj_map f}\<close>
-  define ccops where \<open>ccops = commutant (commutant (ops \<union> adj ` ops))\<close>
-  define apply_qX where \<open>apply_qX = apply_qregister (qregister_of_cregister X)\<close>
-  define gX sX where \<open>gX = getter X\<close> and \<open>sX = setter X\<close>
-  have 2: \<open>QREGISTER_of (qregister_of_cregister X) \<le> QREGISTER_of_CREGISTER (CREGISTER_of X)\<close>
-    if [iff]: \<open>cregister X\<close>
+  have swap_x: \<open>prod.swap -` {x} = {(x2,x1)}\<close>
+    by (auto simp: x)
+  define \<EE>x and Q1 :: \<open>(_,_\<times>'b) qregister\<close> where \<open>\<EE>x = kf_filter (\<lambda>x. x = x2) \<EE>\<close> and \<open>Q1 = qregister_chain qFst Q\<close>
+  have [iff]: \<open>qregister Q1\<close>
+    by (simp add: Q1_def)
+  have \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho>
+      = kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x2} (kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} \<rho>)\<close>
+    by (simp add: kf_comp_apply_on_singleton x)
+  also have \<open>\<dots> = kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x2} (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)\<close>
+    by (simp add: kf_partial_trace_right_apply_singleton)
+  also have \<open>\<dots> = kf_apply_qregister Q \<EE>x *\<^sub>k\<^sub>r (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)\<close>
+    by (simp add: kf_filter_kf_apply_qregister kf_apply_on_def \<EE>x_def)
+  also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)*) (kf_apply_qregister Q1 \<EE>x *\<^sub>k\<^sub>r \<rho>)\<close>
   proof -
-    have \<open>range apply_qX \<subseteq> ccops\<close>
-    proof (intro image_subsetI)
-(* TODO clean out unused lemmas *)
-      fix x :: \<open>'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
-      have \<open>csubspace ccops\<close>
-        by (simp add: ccops_def)
-      have \<open>closedin weak_star_topology ccops\<close>
-        using ccops_def by auto
-      have \<open>closedin cstrong_operator_topology ccops\<close>
-        using ccops_def commutant_sot_closed by blast
-      have \<open>apply_qX (butterfly (ket a) (ket b)) \<in> ops\<close> for a b
-      proof (unfold ops_def, intro CollectI exI conjI)
-        show \<open>apply_cregister X [b \<mapsto> a] \<in> range (apply_cregister X)\<close>
-          by fast
-        have \<open>inj_map [b\<mapsto>a]\<close>
-          by (simp add: inj_map_def)
-        then show inj: \<open>inj_map (apply_cregister X [b\<mapsto>a])\<close>
-          by (simp add: apply_cregister_inj_map_iff \<open>cregister X\<close>)
-        show \<open>apply_qX (butterfly (ket a) (ket b)) = classical_operator (apply_cregister X [b \<mapsto> a])\<close>
-        proof (intro equal_ket cinner_ket_eqI, rename_tac m n)
-          fix m n :: 'a
-          have \<open>ket n \<bullet>\<^sub>C (apply_qX (butterfly (ket a) (ket b)) *\<^sub>V ket m)
-                 = of_bool (same_outside_cregister X n m) *\<^sub>C ket (gX n) \<bullet>\<^sub>C (butterfly (ket a) (ket b) *\<^sub>V ket (gX m))\<close>
-            unfolding qregister_of_cregister_alt_def apply_qX_def
-            apply (subst Rep_ell2_explicit_cblinfun_ket[folded cinner_ket_left])
-             apply (rule qregister_of_cregister_alt_def_exists)
-            apply (subst qregister_of_cregister_alt_def_has_sum[THEN infsumI, OF \<open>cregister X\<close>])
-            by (simp add: gX_def)
-          also 
-          have \<open>\<dots> = of_bool (same_outside_cregister X n m \<and> gX n = a \<and> gX m = b)\<close>
-            by (auto simp: cinner_ket)
-          also
-          have \<open>\<dots> = of_bool (apply_cregister X [b \<mapsto> a] m = Some n)\<close>
-            by x
-          also
-          have \<open>\<dots> = ket n \<bullet>\<^sub>C (classical_operator (apply_cregister X [b \<mapsto> a]) *\<^sub>V ket m)\<close>
-            apply (cases \<open>apply_cregister X [b \<mapsto> a] m\<close>)
-            using inj
-            by (auto simp add: classical_operator_ket classical_operator_exists_inj apply_cregister_inj_map_iff
-                cinner_ket)
-          finally
-          show \<open>ket n \<bullet>\<^sub>C (apply_qX (butterfly (ket a) (ket b)) *\<^sub>V ket m) = ket n \<bullet>\<^sub>C (classical_operator (apply_cregister X [b \<mapsto> a]) *\<^sub>V ket m)\<close>
-            by -
+    define EEx where \<open>EEx = Rep_kraus_family \<EE>x\<close>
+    have \<open>(\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>(E,x). (apply_qregister Q E, x)) ` EEx. sandwich_tc E (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)) =
+          sandwich_tc (tensor_ell2_right (ket x1)*) (\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>(E,x). (apply_qregister Q1 E, x)) ` EEx. sandwich_tc E \<rho>)\<close>
+      (is \<open>?lhs = ?rhs\<close>)
+    proof -
+      have inj1: \<open>inj_on (\<lambda>(E, y). (apply_qregister Q E, y)) X\<close> for X
+        by (smt (verit, del_insts) \<open>qregister Q\<close> apply_qregister_inject' case_prod_unfold inj_onI prod.collapse prod.inject)
+      have inj2: \<open>inj_on (\<lambda>(E, y). (apply_qregister Q1 E, y)) X\<close> for X
+        by (smt (verit, ccfv_threshold) \<open>qregister Q\<close> apply_qregister_inject' inj_onI prod.collapse prod.inject qFst_register
+            qregister_chain_is_qregister split_def Q1_def)
+      have sum: \<open>(\<lambda>(E, x). sandwich_tc (apply_qregister Q1 E) \<rho>) summable_on EEx\<close>
+        using kf_apply_summable[where \<EE>=\<open>kf_apply_qregister Q1 \<EE>x\<close> and \<rho>=\<rho>]
+        apply (simp add: kf_apply_qregister.rep_eq summable_on_reindex inj2)
+        by (simp add: o_def case_prod_unfold EEx_def)
+      have \<open>?lhs = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>))\<close>
+        apply (subst infsum_reindex)
+         apply (simp add: inj1)
+        by (simp add: inj1 o_def case_prod_unfold)
+      also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>))\<close>
+      proof (rule infsum_cong, unfold case_prod_beta)
+        fix Ex assume \<open>Ex \<in> EEx\<close>
+        define E x where \<open>E = fst Ex\<close> and \<open>x = snd Ex\<close>
+        have \<open>sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)
+            = sandwich_tc (apply_qregister Q E o\<^sub>C\<^sub>L tensor_ell2_right (ket x1)*) \<rho>\<close>
+          by (simp add: sandwich_tc_compose)
+        also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)* o\<^sub>C\<^sub>L (apply_qregister Q E \<otimes>\<^sub>o id_cblinfun)) \<rho>\<close>
+          apply (rule arg_cong2[where f=sandwich_tc, OF _ refl])
+          apply (rule tensor_ell2_extensionality)
+          by (simp add: cblinfun.scaleC_right tensor_op_ell2)
+        also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)* o\<^sub>C\<^sub>L apply_qregister Q1 E) \<rho>\<close>
+          by (simp add: Q1_def qregister_chain_apply apply_qregister_fst)
+        also have \<open>\<dots>= sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+          by (simp add: sandwich_tc_compose)
+        finally show \<open>sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)
+             = sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+          by -
       qed
-      then have \<open>apply_qX (butterfly (ket a) (ket b)) \<in> ccops\<close> for a b
-        by (simp add: ccops_def double_commutant_grows')
-
-
-      show \<open>apply_qregister (qregister_of_cregister X) x \<in> ccops\<close>
-        by x
-
-    
-    
-    
-    
-    
-    
-    qed
-    then show ?thesis
-      by (simp add: less_eq_QREGISTER_def QREGISTER_of.rep_eq that QREGISTER_of_CREGISTER.rep_eq CREGISTER_of.rep_eq ccops_def
-          flip: ops_def)
-  qed
-  have 3: \<open>QREGISTER_of_CREGISTER (CREGISTER_of X) \<le> QREGISTER_of (qregister_of_cregister X)\<close>
-    if \<open>cregister X\<close>
-  proof -
-    have ops1: \<open>ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
-    proof (intro subsetI)
-      fix x assume \<open>x \<in> ops\<close>
-      then obtain f where x_def: \<open>x = classical_operator f\<close> and [iff]: \<open>inj_map f\<close> and \<open>f \<in> range (apply_cregister X)\<close>
-        by (auto simp: ops_def)
-      then obtain g where fg: \<open>f = apply_cregister X g\<close>
-        by auto
-      then have f_get_set: \<open>f m = (case g (gX m) of None \<Rightarrow> None | Some b \<Rightarrow> Some (sX b m))\<close> for m
-        by (metis apply_cregister_getter_setter gX_def sX_def that)
-      from fg \<open>inj_map f\<close> have [iff]: \<open>inj_map g\<close>
-        by (simp add: fg apply_cregister_inj_map_iff \<open>cregister X\<close>)
-      have aux1: \<open>same_outside_cregister X m n \<Longrightarrow> ket m \<bullet>\<^sub>C ket (sX a n) = ket (gX m) \<bullet>\<^sub>C ket a\<close> for a n m
-        by (metis cinner_ket_same gX_def getter_setter_same orthogonal_ket sX_def same_outside_cregister_def that)
-      have aux2: \<open>g (gX n) = Some a \<Longrightarrow> \<not> same_outside_cregister X (sX a n) n \<Longrightarrow> m = sX a n \<Longrightarrow> False\<close> for a n m
-        by (simp add: sX_def same_outside_cregister_def that)
-
-      define a where \<open>a = classical_operator g\<close>
-      have *: \<open>ket m \<bullet>\<^sub>C (x *\<^sub>V ket n) =
-           of_bool (same_outside_cregister X m n) *\<^sub>C ket (gX m) \<bullet>\<^sub>C (a *\<^sub>V ket (gX n))\<close> for m n
-        apply (cases \<open>g (gX n)\<close>)
-         apply (simp_all add: a_def x_def classical_operator_ket classical_operator_exists_inj f_get_set
-            flip: sX_def gX_def)
-        using aux1 aux2           
-        by blast
-      have \<open>x = explicit_cblinfun (\<lambda>n m. \<Sum>\<^sub>\<infinity>(x, y) | apply_cregister X [x \<mapsto> y] m = Some n. ket y \<bullet>\<^sub>C (a *\<^sub>V ket x))\<close>
-        apply (intro equal_ket cinner_ket_eqI)
-        apply (subst Rep_ell2_explicit_cblinfun_ket[folded cinner_ket_left])
-         apply (rule qregister_of_cregister_alt_def_exists)
-        apply (subst qregister_of_cregister_alt_def_has_sum[THEN infsumI, OF \<open>cregister X\<close>])
-        using *
-        by (simp flip: gX_def)
-      also have \<open>\<dots> \<in> range (apply_qregister (qregister_of_cregister X))\<close>
-        by (simp add: qregister_of_cregister_alt_def[abs_def])
-      finally show \<open>x \<in> \<dots>\<close>
+      also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)*) (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+        apply (subst infsum_bounded_linear[where h=\<open>sandwich_tc _\<close>, symmetric])
+        using sum by (simp_all add: bounded_clinear.bounded_linear bounded_clinear_sandwich_tc case_prod_unfold) 
+      also have \<open>\<dots> = ?rhs\<close>
+        apply (subst infsum_reindex)
+         apply (simp add: inj2)
+        by (simp add: o_def case_prod_unfold)
+      finally show \<open>?lhs = ?rhs\<close>
         by -
     qed
-    then have ops2: \<open>adj ` ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
-      apply (subst von_neumann_algebra_adj_image[where X=\<open>range _\<close>, symmetric])
-      using qregister_qregister_of_cregister that valid_qregister_range valid_qregister_range_def apply blast 
-      by fast
-    from ops1 ops2 have \<open>ops \<union> adj ` ops \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
-      by fast
-    then have \<open>commutant (commutant (ops \<union> adj ` ops)) \<subseteq> range (apply_qregister (qregister_of_cregister X))\<close>
-      apply (rule double_commutant_in_vn_algI[rotated])
-      using qregister_qregister_of_cregister that valid_qregister_range valid_qregister_range_def by blast 
     then show ?thesis
-      by (simp add: less_eq_QREGISTER_def QREGISTER_of.rep_eq that QREGISTER_of_CREGISTER.rep_eq CREGISTER_of.rep_eq 
-        flip: ops_def)
+      by (simp add: kf_apply.rep_eq kf_apply_qregister.rep_eq case_prod_unfold
+          flip: EEx_def)
   qed
-  from 1 2 3 show ?thesis
-    apply (cases \<open>cregister X\<close>)
-    by (auto intro!: order.antisym simp: )
+  also have \<open>\<dots> = kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} (kf_apply_qregister Q1 \<EE>x *\<^sub>k\<^sub>r \<rho>)\<close>
+    by (simp add: kf_partial_trace_right_apply_singleton)
+  also have \<open>\<dots> = kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} (kf_apply_qregister Q1 \<EE> *\<^sub>k\<^sub>r @{x2} \<rho>)\<close>
+    by (simp add: kf_filter_kf_apply_qregister kf_apply_on_def \<EE>x_def)
+  also have \<open>\<dots> = kf_comp (kf_partial_trace_right) (kf_apply_qregister Q1 \<EE>) *\<^sub>k\<^sub>r @{(x2,x1)} \<rho>\<close>
+    by (simp add: kf_comp_apply_on_singleton)
+  also have \<open>\<dots> = kf_map prod.swap (kf_comp (kf_partial_trace_right) (kf_apply_qregister Q1 \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    by (simp add: kf_apply_on_map swap_x)
+  finally show \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho> = kf_map prod.swap (kf_comp kf_partial_trace_right (kf_apply_qregister Q1 \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    by -
 qed
 
+lemma partial_trace_0[simp]: \<open>partial_trace 0 = 0\<close>
+  by (smt (verit, best) partial_trace_norm_reducing zero_less_norm_iff)
 
+lemma km_apply_qregister_partial_trace:
+  shows \<open>km_apply_qregister Q \<EE> (partial_trace \<rho>) = partial_trace (km_apply_qregister (qregister_chain qFst Q) \<EE> \<rho>)\<close>
+proof -
+  wlog km: \<open>kraus_map \<EE>\<close>
+    using negation
+    by (simp add: km_apply_qregister_invalid_\<EE>)
+  wlog \<open>qregister Q\<close> keeping km
+    using negation 
+    by (simp add: km_apply_qregister_def kf_apply_qregister_non_qregister non_qregister)
+  from km obtain \<FF> :: \<open>(_,_,unit) kraus_family\<close> where \<EE>_def: \<open>\<EE> = kf_apply \<FF>\<close>
+    using kraus_map_def_raw by blast
+  from kf_apply_qregister_partial_trace[of Q \<FF>, THEN kf_eq_imp_eq_weak, THEN kf_apply_eqI, of \<rho>]
+  show ?thesis
+    by (simp add: \<EE>_def km_apply_qregister_kf_apply \<open>qregister Q\<close> partial_trace_is_kf_partial_trace kf_comp_apply)
+qed
 
+lemma classical_on_partial_trace:
+  assumes \<open>classical_on (qregister_chain qFst C) \<rho>\<close>
+  shows \<open>classical_on C (partial_trace \<rho>)\<close>
+  using assms
+  by (simp add: classical_on_def cq_id_def km_apply_qregister_partial_trace)
+
+lemma is_cq_map_non_qregister[simp]: \<open>is_cq_map non_qregister \<EE> \<longleftrightarrow> \<EE> = 0\<close>
+  by (auto simp: is_cq_map_def zero_fun_def)
+
+(*
 lemma is_cq_map_km_local_register_classical:
   assumes \<open>is_cq_map C \<EE>\<close>
-  assumes \<open>classical_on C \<rho>\<close>
-  shows \<open>is_cq_map C (km_local_register (QREGISTER_chain C (QREGISTER_of_ X)) \<rho> \<EE>)\<close>
-  by x
+  (* assumes \<open>classical_on C \<rho>\<close> *)
+  assumes \<open>\<rho> \<ge> 0\<close>
+  assumes \<open>ACTUAL_CREGISTER X\<close>
+  shows \<open>is_cq_map C (km_local_register (QREGISTER_chain C (QREGISTER_of_CREGISTER X)) \<rho> \<EE> o cq_id C)\<close> (is ?goal)
+proof -
+  wlog [iff]: \<open>qregister C\<close>
+  proof -
+    have \<open>\<EE> 0 = 0\<close>
+      by (metis assms(1) cq_id_invalid cq_map_id_left func_zero non_qregister o_def that)
+    moreover have \<open>kraus_map \<EE>\<close>
+      using assms(1) is_cq_map_def by blast
+    ultimately show ?thesis
+      using negation
+      by (simp add: non_qregister o_def km_local_register_bot flip: zero_fun_def)
+  qed
+  show ?thesis
+  proof (intro is_cq_map_def[THEN iffD2] conjI)
+    define CX where \<open>CX = QREGISTER_chain C (QREGISTER_of_CREGISTER X)\<close>
+    have [iff]: \<open>kraus_map \<EE>\<close>
+      using assms(1) is_cq_map_def by blast
+    then show km: \<open>kraus_map (km_local_register CX \<rho> \<EE> o cq_id C)\<close>
+      apply (rule_tac kraus_map_comp)
+       apply (rule kraus_map_km_local_register)
+      using assms by auto
 
-term qregister_of_cregister
+    have \<open>cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) \<circ> cq_id C = cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C)\<close>
+      by fastforce
+    also
+    from ACTUAL_CREGISTER_ex_register[OF \<open>ACTUAL_CREGISTER X\<close>]
+    have \<open>let 'l::type = ACTUAL_CREGISTER_content X in
+        cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+    proof (rule with_type_mp)
+      assume \<open>\<exists>X' :: ('l, 'a) cregister. cregister X' \<and> CREGISTER_of X' = X\<close>
+      then obtain X' :: \<open>('l, 'a) cregister\<close> where \<open>cregister X'\<close> and \<open>CREGISTER_of X' = X\<close>
+        by auto
 
+      from ccomplement_exists[OF \<open>cregister X'\<close>]
+      have \<open>let 'm::type = ccomplement_domain X' in
+          cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+      proof (rule with_type_mp)
+        assume \<open>\<exists>Y :: ('m, 'a) cregister. ccomplements X' Y\<close>
+        then obtain Y :: \<open>('m, 'a) cregister\<close> where \<open>ccomplements X' Y\<close>
+          by auto
 
+        show \<open>cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+        proof (rule classical_on_cq_id_idem)
+          show \<open>kraus_map (km_local_register CX \<rho> \<EE> \<circ> cq_id C)\<close>
+            using km by force
 
+          fix \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
+          assume \<open>\<sigma> \<ge> 0\<close>
+          define C1 :: \<open>(_, 'b\<times>'b) qregister\<close> where \<open>C1 = qregister_chain qFst C\<close>
+          define CX' where \<open>CX' = qregister_chain C (qregister_of_cregister X')\<close>
+          define CY where \<open>CY = qregister_chain C (qregister_of_cregister Y)\<close>
+          define CX1 :: \<open>(_, 'b\<times>'b) qregister\<close> where \<open>CX1 = qregister_chain qFst CX'\<close>
+          define CX2 :: \<open>(_, 'b\<times>'b) qregister\<close> where \<open>CX2 = qregister_chain qSnd CX'\<close>
+          define CY1 :: \<open>(_, 'b\<times>'b) qregister\<close> where \<open>CY1 = qregister_chain qFst CY\<close>
+          define CXY1 where \<open>CXY1 = qregister_pair CX1 CY1\<close>
 
+          from \<open>ccomplements X' Y\<close>
+          have [iff]: \<open>cregister \<lbrakk>X', Y\<rbrakk>\<^sub>c\<close>
+            by -
+          have [iff]: \<open>qregister \<lbrakk>CX1, CY1\<rbrakk>\<^sub>q\<close>
+            by (auto intro!: qcompatible_chain simp: CX1_def CY1_def CX'_def CY_def)
 
+          have \<open>classical_on C (cq_id C \<sigma>)\<close> (is \<open>classical_on _ ?\<sigma>\<^sub>2\<close>)
+            by x
+          then have \<open>classical_on C1 (tc_tensor ?\<sigma>\<^sub>2 \<rho>)\<close> (is \<open>classical_on _ ?\<sigma>\<^sub>3\<close>)
+            by x
+          have 3: \<open>classical_on CX1 ?\<sigma>\<^sub>3\<close>
+            by x
+          have 4: \<open>classical_on CY1 ?\<sigma>\<^sub>3\<close> (* Not used? *)
+            by x
+          have 5: \<open>classical_on CX2 (sandwich_tc (swap_QREGISTER CX) ?\<sigma>\<^sub>3)\<close>  (is \<open>classical_on _ ?\<sigma>\<^sub>4\<close>)
+            by x
+          have 6: \<open>classical_on CY1 ?\<sigma>\<^sub>4\<close> (* Not used? *)
+            by x
+          have 7: \<open>classical_on CXY1 (km_tensor \<EE> (( *\<^sub>V) id_cblinfun) ?\<sigma>\<^sub>4)\<close>  (is \<open>classical_on _ ?\<sigma>\<^sub>5\<close>)
+            by x
+          have  \<open>classical_on CX2 ?\<sigma>\<^sub>5\<close>
+            by x
+          have \<open>classical_on CX1 ?\<sigma>\<^sub>5\<close> (* Not used? *)
+            by x
+          have \<open>classical_on CY1 ?\<sigma>\<^sub>5\<close>
+            by x
+          have \<sigma>\<^sub>6_CX1: \<open>classical_on CX1 (sandwich_tc (swap_QREGISTER CX) ?\<sigma>\<^sub>5)\<close>  (is \<open>classical_on _ ?\<sigma>\<^sub>6\<close>)
+            by x
+          have \<sigma>\<^sub>6_CY1: \<open>classical_on CY1 ?\<sigma>\<^sub>6\<close>
+            by x
+          have \<open>classical_on CXY1 ?\<sigma>\<^sub>6\<close>
+            using \<sigma>\<^sub>6_CX1 \<sigma>\<^sub>6_CY1
+            by (auto intro!: simp: CXY1_def classical_on_pair)
+          have \<open>classical_on C1 ?\<sigma>\<^sub>6\<close>
+            by x
+          then have \<open>classical_on C (partial_trace ?\<sigma>\<^sub>6)\<close>
+            by (simp add: C1_def classical_on_partial_trace)
+          then show \<open>classical_on C ((km_local_register CX \<rho> \<EE> \<circ> cq_id C) \<sigma>)\<close>
+            by (simp add: km_local_register_def km_map_with_auxiliary_state_def id_def)
+        qed
+      qed
+      from this[cancel_with_type]
+      show \<open>cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+        by -
+    qed
+    from this[cancel_with_type]
+    have \<open>cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+      by -
+    finally show \<open>cq_id C \<circ> (km_local_register CX \<rho> \<EE> \<circ> cq_id C) \<circ> cq_id C = km_local_register CX \<rho> \<EE> \<circ> cq_id C\<close>
+      by -
+  qed
+qed *)
+
+definition cq_map_from_kraus_family :: \<open>('cl,'m) qregister \<Rightarrow> ('qu,'m) qregister \<Rightarrow> ('cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family) \<Rightarrow> (('m ell2, 'm ell2) trace_class \<Rightarrow> ('m ell2, 'm ell2) trace_class)\<close> where
+  \<open>cq_map_from_kraus_family C Q \<EE> = 
+      kf_apply
+      (kf_comp_dependent (\<lambda>(_,c::'cl). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+      (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) 
+      (kf_apply_qregister C (kf_complete_measurement_ket))))\<close>
+
+lemma cq_map_from_kraus_family_invalid1[simp]: \<open>cq_map_from_kraus_family non_qregister Q \<EE> = 0\<close>
+  by (simp add: cq_map_from_kraus_family_def[abs_def])
+
+lemma cq_map_from_kraus_family_invalid2[simp]: \<open>cq_map_from_kraus_family C non_qregister \<EE> = 0\<close>
+  by (simp add: cq_map_from_kraus_family_def[abs_def])
+
+(* Inspiration from lift_definition denotation_cases :: \<open>(cl \<Rightarrow> denotation) \<Rightarrow> denotation\<close> ? *)
+lemma cq_map_from_kraus_family_is_cq_map: \<open>is_cq_map C (cq_map_from_kraus_family C Q \<EE>)\<close>
+proof -
+  wlog qregC: \<open>qregister C\<close>
+    using negation
+    by (simp add: non_qregister)
+  wlog qregQ: \<open>qregister Q\<close> keeping qregC
+    using negation
+    by (simp add: non_qregister)
+  wlog bdd0: \<open>bdd_above (range (\<lambda>x. kf_norm (\<EE> x)))\<close> keeping qregC qregQ
+  proof -
+    from negation
+    have \<open>\<not> bdd_above
+        ((kf_norm \<circ> (\<lambda>c. kf_apply_qregister Q (\<EE> c))) `
+         kf_domain (kf_apply_qregister C kf_complete_measurement_ket))\<close>
+      by (simp add: o_def kf_norm_apply_qregister qregQ kf_domain_apply_qregister qregC)
+    then have \<open>cq_map_from_kraus_family C Q \<EE> = 0\<close>
+      by (simp add: cq_map_from_kraus_family_def kf_comp_dependent_invalid)
+    then show ?thesis
+      unfolding is_cq_map_def
+      by (simp add: cq_map_id_left cq_map_id_right)
+  qed
+  note [simp] = qregC qregQ
+  from bdd0 have bdd: \<open>bdd_above ((\<lambda>x. kf_norm (\<EE> (f x))) ` X)\<close> for X f
+    apply (rule bdd_above_mono)
+    by auto
+  have km: \<open>kraus_map (cq_map_from_kraus_family C Q \<EE>)\<close>
+    by (simp add: cq_map_from_kraus_family_def)
+  define kf_cq_id where \<open>kf_cq_id = kf_apply_qregister C kf_complete_measurement_ket\<close>
+  define kf_cq_map where \<open>kf_cq_map = kf_comp_dependent 
+      (\<lambda>(_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+      (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) 
+      (kf_apply_qregister C kf_complete_measurement_ket))\<close>
+  have kf_apply_id: \<open>kf_apply kf_cq_id = cq_id C\<close>
+    by (simp add: kf_cq_id_def kf_eq_weak_def cq_id_def cq_map_from_kraus_family_def
+        flip: km_apply_qregister_kf_apply km_complete_measurement_ket_kf_complete_measurement_ket)
+  have kf_apply_map: \<open>kf_apply kf_cq_map = cq_map_from_kraus_family C Q \<EE>\<close>
+    by (simp add: kf_cq_map_def kf_eq_weak_def kf_comp_apply kf_apply_id cq_map_from_kraus_family_def
+        flip: km_apply_qregister_kf_apply km_complete_measurement_ket_kf_complete_measurement_ket)
+  have 1: \<open>kf_comp kf_cq_id kf_cq_map =\<^sub>k\<^sub>r kf_cq_map\<close>
+  proof -
+    have \<open>kf_comp kf_cq_id kf_cq_map =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_, c). (kf_comp kf_cq_id (kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket))\<close>
+      apply (simp add: kf_cq_id_def kf_cq_map_def)
+      apply (rule kf_comp_dependent_comp_assoc_weak[THEN kf_eq_weak_sym, THEN kf_eq_weak_trans])
+       apply (simp add: case_prod_unfold kf_norm_apply_qregister kf_norm_constant norm_tc_butterfly qregC)
+      by (simp add: case_prod_unfold)
+    also have \<open>\<dots> =
+     kf_comp_dependent (\<lambda>(_, c). (kf_apply_qregister C (kf_comp kf_complete_measurement_ket (kf_constant (tc_butterfly (ket c) (ket c))))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket))\<close>
+      by (simp add: kf_apply_qregister kf_cq_id_def)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_, c). (kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c)))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket))\<close>
+    proof -
+      have bdd1: \<open>bdd_above
+       ((kf_norm \<circ> (\<lambda>(_, c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))) `
+        kf_domain (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket)))\<close>
+        by (force simp add: case_prod_unfold kf_norm_constant norm_tc_butterfly)
+      have \<open>tc_butterfly (ket c) (ket c) = kf_complete_measurement_ket *\<^sub>k\<^sub>r tc_butterfly (ket c) (ket c)\<close> for c::'a
+        by (simp add: kf_complete_measurement_ket_apply_butterfly)
+      then have \<open>kf_constant (tc_butterfly (ket c) (ket c)) =\<^sub>k\<^sub>r kf_constant (kf_complete_measurement_ket *\<^sub>k\<^sub>r tc_butterfly (ket c) (ket c))\<close> for c :: 'a
+        by fastforce
+      also have \<open>\<dots>c =\<^sub>k\<^sub>r kf_comp kf_complete_measurement_ket (kf_constant (tc_butterfly (ket c) (ket c)))\<close> for c :: 'a
+        apply (rule kf_eq_weak_sym)
+        apply (rule kf_comp_constant_right_weak)
+        by simp
+      finally show ?thesis
+        apply (rule_tac kf_eq_weak_sym)
+        by (auto intro!: kf_comp_dependent_cong_weak bdd1 kf_apply_qregister_cong_weak)
+    qed
+    also have \<open>\<dots> = kf_cq_map\<close>
+      using kf_cq_map_def by fastforce
+    finally show ?thesis
+      by -
+  qed
+  have 2: \<open>kf_comp kf_cq_map kf_cq_id =\<^sub>k\<^sub>r kf_cq_map\<close>
+  proof -
+    have \<open>kf_comp kf_cq_map kf_cq_id =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_comp (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id) kf_cq_id)\<close>
+      apply (simp add: kf_cq_map_def kf_cq_id_def)
+      apply (rule kf_comp_comp_dependent_assoc_weak)
+      by (simp add: case_prod_unfold kf_norm_constant norm_tc_butterfly qregC)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_map (\<lambda>((a,b),c). (a,b,c)) (kf_comp_dependent (\<lambda>(_,c). kf_apply_qregister Q (\<EE> c)) (kf_comp kf_cq_id kf_cq_id)))\<close>
+      apply (rule kf_comp_dependent_cong_weak)
+        apply (force simp add: case_prod_unfold kf_norm_constant norm_tc_butterfly qregC)
+       apply simp
+      apply (simp add: kf_comp_def)
+      apply (rule kf_comp_dependent_assoc[THEN kf_eq_trans])
+        apply (simp add: kf_norm_apply_qregister qregQ bdd)
+       apply simp
+      by simp
+    also have \<open>\<dots> =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_map (\<lambda>((a,b),c). (a,b,c)) (kf_comp_dependent (\<lambda>(_,c). kf_apply_qregister Q (\<EE> c)) (kf_map (\<lambda>c. (c,c)) kf_cq_id)))\<close>
+    proof -
+      have *: \<open>kf_comp kf_cq_id kf_cq_id \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>c. (c, c)) kf_cq_id\<close>
+        by (auto intro!: kf_apply_qregister_cong kf_complete_measurement_ket_idem
+            simp: kf_cq_id_def
+            simp flip: kf_apply_qregister kf_apply_qregister_kf_map)
+      show ?thesis
+        apply (rule kf_comp_dependent_cong_weak)
+          apply (auto intro: bdd_aboveI simp add: case_prod_unfold kf_norm_apply_qregister
+            \<open>qregister C\<close> kf_norm_constant norm_tc_butterfly)[1]
+         apply (rule kf_eq_weak_reflI)
+        apply (rule kf_map_cong, rule refl)
+        apply (rule kf_comp_dependent_cong)
+          apply (auto intro: bdd_aboveI bdd simp add: case_prod_unfold kf_norm_apply_qregister 
+            \<open>qregister C\<close> kf_norm_constant norm_tc_butterfly image_image)[1]
+         apply simp
+        by (fact *)
+    qed
+    also have \<open>\<dots> =\<^sub>k\<^sub>r 
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_map (\<lambda>((a,b),c). (a,b,c)) (kf_comp_dependent (\<lambda>(_,c). kf_apply_qregister Q (\<EE> c)) (kf_map_inj (\<lambda>c. (c,c)) kf_cq_id)))\<close>
+    proof -
+      have *: \<open>kf_map (\<lambda>c. (c, c)) kf_cq_id \<equiv>\<^sub>k\<^sub>r kf_map_inj (\<lambda>c. (c, c)) kf_cq_id\<close>
+        apply (rule kf_eq_sym)
+        apply (rule kf_map_inj_eq_kf_map)
+        by (auto intro!: inj_onI)
+      show ?thesis
+        apply (rule kf_comp_dependent_cong_weak)
+          apply (auto intro: bdd_aboveI simp add: case_prod_unfold kf_norm_apply_qregister
+            \<open>qregister C\<close> kf_norm_constant norm_tc_butterfly)[1]
+         apply (rule kf_eq_weak_reflI)
+        apply (rule kf_map_cong, rule refl)
+        apply (rule kf_comp_dependent_cong)
+          apply (auto intro: bdd_aboveI bdd simp add: case_prod_unfold kf_norm_apply_qregister 
+            \<open>qregister C\<close> kf_norm_constant norm_tc_butterfly image_image)[1]
+         apply simp
+        by (fact *)
+    qed
+    also have \<open>\<dots> =
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_map (\<lambda>((a,b),c). (a,b,c)) (kf_map_inj (\<lambda>(c,x). ((c,c),x)) (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id)))\<close>
+      apply (subst kf_comp_dependent_map_inj_right)
+      by (auto intro!: injI)
+    also have \<open>\<dots> =
+     kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+     (kf_map (\<lambda>(a,c). (a,a,c)) (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id))\<close>
+      apply (subst kf_map_kf_map_inj_comp)
+      by (auto intro!: injI simp: o_def case_prod_unfold)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r kf_comp_dependent (\<lambda>(_, c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+                                       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id)\<close>
+      apply (rule kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans])
+      by (simp add: case_prod_unfold)
+    also have \<open>\<dots> =\<^sub>k\<^sub>r kf_cq_map\<close>
+      by (simp add: kf_cq_map_def flip: kf_cq_id_def)
+    finally show ?thesis
+      by -
+  qed
+  from 1 2
+  have cq: \<open>cq_id C \<circ> cq_map_from_kraus_family C Q \<EE> \<circ> cq_id C = cq_map_from_kraus_family C Q \<EE>\<close>
+    by (simp add: kf_eq_weak_def kf_comp_apply kf_apply_id kf_apply_map)
+  from km cq show ?thesis
+    using is_cq_map_def by blast
+qed
+
+lemma cq_map_from_kraus_family_norm:
+  assumes \<open>\<And>x. kf_norm (\<EE> x) \<le> B\<close>
+  shows \<open>km_norm (cq_map_from_kraus_family C Q \<EE>) \<le> B\<close>
+proof -
+  have Bpos: \<open>B \<ge> 0\<close>
+    apply (rule order_trans)
+     apply (rule kf_norm_geq0)
+    by (rule assms)
+  wlog qregQ: \<open>qregister Q\<close> keeping Bpos
+    using negation
+    by (simp add: non_qregister Bpos)
+  wlog qregC: \<open>qregister C\<close> keeping qregQ Bpos
+    using negation
+    by (simp add: non_qregister Bpos)
+  have 1: \<open>kf_norm (kf_apply_qregister Q (\<EE> c)) \<le> B\<close> for c
+    by (simp add: assms qregQ)
+  have 2: \<open>kf_norm (kf_apply_qregister C kf_complete_measurement_ket) \<le> 1\<close>
+    by (simp add: qregC)
+  from 1 2
+  have 3: \<open>kf_norm (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket)) \<le> B\<close>
+    apply (rule_tac order_trans[of _ \<open>B * _\<close>])
+     apply (rule kf_comp_dependent_norm_leq)
+    by (auto simp: Bpos qregC)
+  have 4: \<open>kf_norm (kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c)))) \<le> 1\<close> for c
+    by (simp add: kf_norm_constant norm_tc_butterfly qregC)
+  from 3 4
+  have 5: \<open>kf_norm
+     (kf_comp_dependent (\<lambda>(_, c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket)))
+    \<le> B\<close>
+    by (smt (verit, ccfv_threshold) kf_comp_dependent_norm_leq mult_cancel_right1 split_def)
+  from 5 show ?thesis
+    by (simp add: cq_map_from_kraus_family_def km_norm_kf_norm)
+qed
+
+(* ****************************************** *)
+
+(* 
 
 definition cq_map_from_measurement :: \<open>(('c1\<times>'q1) ell2, 'q2 ell2, 'c2) kraus_family \<Rightarrow> (('c1\<times>'q1) ell2, ('c2\<times>'q2) ell2, unit) kraus_family\<close> where
   \<open>cq_map_from_measurement E = kf_flatten
@@ -1303,6 +1374,7 @@ lemma kf_norm_cq_map_to_pointwise:
   \<open>kf_norm (cq_map_to_pointwise E x) \<le> kf_norm E\<close>
   by -
 
+ *)
 
 end
 

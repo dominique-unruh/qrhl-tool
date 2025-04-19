@@ -950,5 +950,15 @@ lemma sandwich_tc_Abs_trace_class: \<open>sandwich_tc a (Abs_trace_class t) = Ab
 lemma sgn_ket[simp]: \<open>sgn (ket x) = ket x\<close>
   by (simp add: sgn_div_norm)
 
+lemma swap_ell2_eq1[simp]: \<open>swap_ell2 = 1\<close>
+  apply (rule equal_ket)
+  apply (auto split: prod.split)
+  by (simp add: ket_CARD_1_is_1)
+
+lemma unitary_norm_01:
+  assumes \<open>unitary U\<close>
+  shows \<open>norm U \<in> {0,1}\<close>
+  using assms norm_partial_isometry unitary_partial_isometry by fastforce
+
 
 end

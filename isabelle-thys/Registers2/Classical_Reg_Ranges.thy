@@ -7,14 +7,160 @@ begin
 definition valid_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
   \<open>valid_cregister_range \<FF> \<longleftrightarrow> map_commutant (map_commutant \<FF>) = \<FF>\<close>
 
-definition actual_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
-  \<open>actual_cregister_range \<FF> \<longleftrightarrow> valid_cregister_range \<FF> \<and> (\<forall>m m'. \<exists>a\<in>\<FF>. \<exists>b\<in>map_commutant \<FF>. (a \<circ>\<^sub>m b) m = Some m')\<close>
+(* definition actual_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
+  \<open>actual_cregister_range \<FF> \<longleftrightarrow> valid_cregister_range \<FF> \<and> (\<forall>m m'. \<exists>a\<in>\<FF>. \<exists>b\<in>map_commutant \<FF>. (a \<circ>\<^sub>m b) m = Some m')\<close> *)
 
-(* TODO move *)
-lemma map_comp_Some_map_option: \<open>map_comp (\<lambda>x. Some (f x)) g = map_option f o g\<close>
-  by (auto intro!: ext simp: map_comp_def map_option_case)
+definition actual_cregister_range :: \<open>'a cupdate set \<Rightarrow> bool\<close> where
+  \<open>actual_cregister_range \<FF> \<longleftrightarrow> (\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) L R. 
+    inj f \<and> range f = L \<times> R \<and>
+    \<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L})\<close>
 
 lemma actual_register_range: 
+  fixes F :: \<open>('b,'a) cregister\<close>
+  assumes \<open>cregister F\<close>
+  shows \<open>actual_cregister_range (range (apply_cregister F))\<close>
+proof -
+  let ?goal = ?thesis
+  from ccomplement_exists[OF assms]
+  have \<open>let 'c::type = ccomplement_domain F in ?goal\<close>
+  proof with_type_mp
+    case with_type_mp
+    then obtain G :: \<open>('c, 'a) cregister\<close> where \<open>ccomplements F G\<close>
+      by fastforce
+    then have [iff]: \<open>iso_cregister (cregister_pair F G)\<close>
+      by (simp add: ccomplements.rep_eq complements_def cregister_pair.rep_eq iso_cregister_rep_eq)
+    then have [iff]: \<open>cregister (cregister_pair F G)\<close>
+      using iso_cregister_def by blast
+    then have [iff]: \<open>cregister G\<close>
+      using ccompatible_register2 by blast
+
+    define g where \<open>g = getter (cregister_pair F G)\<close>
+    have \<open>bij g\<close>
+      unfolding g_def
+      apply (intro bij_def[THEN iffD2] conjI surj_getter iso_cregister_injective_getter[THEN iffD1])
+      by auto
+    have g_FG: \<open>g m = (getter F m, getter G m)\<close> for m
+      by (simp add: g_def getter_pair)
+    define iBA :: \<open>'b \<Rightarrow> 'a\<close> where \<open>iBA b = setter F b undefined\<close> for b
+    have \<open>inj iBA\<close>
+      apply (simp add: inj_on_def iBA_def getter_setter_same)
+      by (metis assms getter_setter_same)
+    define iCA :: \<open>'c \<Rightarrow> 'a\<close> where \<open>iCA c = setter G c undefined\<close> for c
+    have \<open>inj iCA\<close>
+      apply (simp add: inj_on_def iCA_def getter_setter_same)
+      by (metis \<open>cregister G\<close> getter_setter_same)
+    define L R f where \<open>L = range iBA\<close> and \<open>R = range iCA\<close> and \<open>f m = (iBA (getter F m), iCA (getter G m))\<close> for m
+    have 1: \<open>inj f\<close>
+      unfolding f_def 
+      by (smt (verit, del_insts) g_FG \<open>bij g\<close> \<open>inj iBA\<close> \<open>inj iCA\<close> bij_betw_iff_bijections injD inj_on_def prod.simps(1))
+    have 2: \<open>range f = L \<times> R\<close>
+    proof -
+      have \<open>range f = range (map_prod iBA iCA o g)\<close>
+        by (simp add: f_def g_def map_prod_def getter_pair)
+      also have \<open>\<dots> = map_prod iBA iCA ` range g\<close>
+        by (simp add: image_image)
+      also have \<open>\<dots> = range (map_prod iBA iCA)\<close>
+        by (metis \<open>bij g\<close> bij_betw_imp_surj_on)
+      also have \<open>\<dots> = L \<times> R\<close>
+        by (auto simp add: L_def R_def)
+      finally show ?thesis
+        by -
+    qed
+    have Fa_rewrite: \<open>(inv_map (Some o f) \<circ>\<^sub>m tensor_map a' (Some |` R) \<circ> f) = apply_cregister F a\<close>
+      if \<open>inv_map (Some o iBA) \<circ>\<^sub>m a' \<circ>\<^sub>m (Some o iBA) = a\<close>
+      for a a'
+    proof -
+      have \<open>(inv_map (Some o f) \<circ>\<^sub>m tensor_map a' (Some |` R) \<circ> f)
+            = inv_map (Some o f) \<circ>\<^sub>m (tensor_map a' (Some |` R)) \<circ>\<^sub>m (tensor_map (Some o iBA) (Some o iCA))
+                    \<circ>\<^sub>m (Some o g)\<close>
+        by (auto intro!: ext simp: f_def tensor_update_def g_FG)
+      also have \<open>\<dots> = inv_map (tensor_map (Some o iBA) (Some o iCA) \<circ>\<^sub>m (Some o g)) \<circ>\<^sub>m
+                   (tensor_map a' (Some |` R)) \<circ>\<^sub>m (tensor_map (Some o iBA) (Some o iCA))
+                    \<circ>\<^sub>m (Some o g)\<close>
+        by (simp add: f_def[abs_def] tensor_update_def[abs_def] o_def map_comp_def g_FG)
+      also have \<open>\<dots> = inv_map (Some o g) \<circ>\<^sub>m inv_map (tensor_map (Some o iBA) (Some o iCA)) \<circ>\<^sub>m
+                   (tensor_map a' (Some |` R)) \<circ>\<^sub>m (tensor_map (Some o iBA) (Some o iCA))
+                    \<circ>\<^sub>m (Some o g)\<close>
+        apply (subst inv_map_comp)
+        using \<open>bij g\<close> by (simp_all add: \<open>inj iBA\<close> \<open>inj iCA\<close> inj_map_tensor_update bij_betw_def)
+      also have \<open>\<dots> = inv_map (Some o g) \<circ>\<^sub>m tensor_map (inv_map (Some o iBA)) (inv_map (Some o iCA)) \<circ>\<^sub>m
+                   (tensor_map a' (Some |` R)) \<circ>\<^sub>m (tensor_map (Some o iBA) (Some o iCA)) \<circ>\<^sub>m (Some o g)\<close>
+        apply (subst inv_map_tensor_update)
+        using \<open>inj iBA\<close>  \<open>inj iCA\<close> 
+        by (auto intro!: simp: )
+      also have \<open>\<dots> = inv_map (Some o g) \<circ>\<^sub>m tensor_map (inv_map (Some o iBA) \<circ>\<^sub>m a' \<circ>\<^sub>m (Some o iBA)) (inv_map (Some o iCA) \<circ>\<^sub>m (Some |` R) \<circ>\<^sub>m (Some o iCA))
+                          \<circ>\<^sub>m (Some o g)\<close>
+        by (simp add: tensor_update_mult[symmetric] comp_update_assoc)
+      also have \<open>\<dots> = inv_map (Some o g) \<circ>\<^sub>m tensor_map a (inv_map (Some o iCA) \<circ>\<^sub>m (Some |` R) \<circ>\<^sub>m (Some o iCA)) \<circ>\<^sub>m (Some o g)\<close>
+        using that
+        by (simp add: comp_update_assoc flip: map_comp_Some_map_option o_def[of Some iBA])
+      also have \<open>\<dots> = inv_map (Some o g) \<circ>\<^sub>m tensor_map a Some \<circ>\<^sub>m (Some o g)\<close>
+      proof -
+        have \<open>inv_map (Some \<circ> iCA) \<circ>\<^sub>m Some |` R \<circ>\<^sub>m (Some \<circ> iCA) = Some\<close>
+          apply (auto intro!: ext simp: map_comp_def restrict_map_def inv_map_def R_def o_def)
+          apply (subst inv_f_f)
+           apply (meson \<open>inj iCA\<close> inj_on_def option.inject)
+          by simp
+        then show ?thesis
+          by simp
+      qed
+      also have \<open>\<dots> = apply_cregister (cregister_pair F G) (tensor_map a Some)\<close>
+        by (simp add: iso_register_from_getter o_def g_def)
+      also have \<open>\<dots> = apply_cregister F a\<close>
+        by (simp add: apply_cregister_pair apply_cregister_of_id)
+      finally show ?thesis
+        by -
+    qed
+    have 3: \<open>range (apply_cregister F) = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+    proof (intro Set.set_eqI iffI)
+      fix b assume \<open>b \<in> range (apply_cregister F)\<close>
+      then obtain a where b_a: \<open>b = apply_cregister F a\<close>
+        by fastforce
+      define a' where \<open>a' = map_option iBA o a \<circ>\<^sub>m inv_map (Some o iBA)\<close>
+      have dom: \<open>dom a' \<subseteq> L\<close>
+        by (auto simp add: inv_map_def dom_def L_def a'_def map_comp_def split: option.split)
+      have ran: \<open>ran a' \<subseteq> L\<close>
+        by (auto simp add: ran_def L_def a'_def map_comp_def split: option.split)
+      have ba': \<open>b = inv_map (Some o f) \<circ>\<^sub>m tensor_map a' (Some |` R) \<circ> f\<close>
+      proof -
+        have \<open>inj (Some o iBA)\<close>
+          by (simp add: \<open>inj iBA\<close> comp_inj_on)
+        then have inv_map: \<open>inv_map (Some \<circ> iBA) \<circ>\<^sub>m (Some \<circ> iBA) = Some\<close>
+          apply (simp add: map_comp_def inv_map_def o_def)
+          apply (subst inv_f_f)
+          by simp_all
+        then have \<open>inv_map (Some o iBA) \<circ>\<^sub>m a' \<circ>\<^sub>m (Some o iBA) = a\<close>
+          apply (simp add: a'_def comp_update_assoc inv_map flip: map_comp_Some_map_option o_def[of Some iBA])
+          by (simp add: inv_map flip: comp_update_assoc)
+        then show ?thesis
+          by (simp add: Fa_rewrite a'_def b_a)
+      qed
+      from ran dom ba'
+      show \<open>b \<in> { inv_map (Some o f) \<circ>\<^sub>m tensor_map a (Some |` R) \<circ> f |a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+        by fastforce
+    next
+      fix b assume \<open>b \<in> { inv_map (Some o f) \<circ>\<^sub>m tensor_map a (Some |` R) \<circ> f |a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+      then obtain a where b_a: \<open>b = inv_map (Some o f) \<circ>\<^sub>m tensor_map a (Some |` R) \<circ> f\<close> and \<open>dom a \<subseteq> L\<close> and \<open>ran a \<subseteq> L\<close>
+        by auto
+      define a' :: \<open>'b \<Rightarrow> 'b option\<close> where \<open>a' = inv_map (Some o iBA) \<circ>\<^sub>m a \<circ>\<^sub>m (Some o iBA)\<close>
+      have \<open>apply_cregister F a' = b\<close>
+        apply (subst Fa_rewrite[symmetric])
+        by (simp_all add: a'_def b_a)
+      then show \<open>b \<in> range (apply_cregister F)\<close>
+        by fast
+    qed
+    from 1 2 3
+    show ?goal
+      by (auto intro!: simp: actual_cregister_range_def)
+  qed
+  from this[cancel_with_type]
+  show ?goal
+    by -
+qed
+
+(* TODO Part of this is for lemma valid_cregister_range below! *)
+
+(* lemma actual_register_range: 
   fixes F :: \<open>('b,'a) cregister\<close>
   assumes \<open>cregister F\<close>
   shows \<open>actual_cregister_range (range (apply_cregister F))\<close>
@@ -68,13 +214,13 @@ proof (insert assms, transfer)
       also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) ((a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m0))) m)\<close>
         by (simp add: a'_def option.map_comp o_def)
       also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (((\<lambda>m. Some (s (g m) m0)) \<circ>\<^sub>m a) m)\<close>
-        by (simp add: *)
+        by (simp add: * )
       also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (a m)\<close>
         by (simp add: map_comp_Some_map_option option.map_comp o_def)
       also have \<open>\<dots> = ((\<lambda>x. Some (s (g x) m)) \<circ>\<^sub>m a) m\<close>
         by (simp add: map_comp_Some_map_option)
       also have \<open>\<dots> = a m\<close>
-        by (simp flip: *)
+        by (simp flip: * )
       finally show \<open>F a' m = a m\<close>
         by -
     qed
@@ -98,13 +244,80 @@ proof (insert assms, transfer)
   qed
   from range_F_comm_X trans show \<open>actual_cregister_range (range F)\<close>
     by (simp add: actual_cregister_range_def valid_cregister_range_def)
-qed
+qed *)
 
 lemma valid_cregister_range: 
   fixes F :: \<open>('b,'a) cregister\<close>
   assumes \<open>cregister F\<close>
   shows \<open>valid_cregister_range (range (apply_cregister F))\<close>
-  using actual_cregister_range_def actual_register_range assms by blast
+proof (insert assms, transfer)
+  fix F :: \<open>'b cupdate \<Rightarrow> 'a cupdate\<close>
+  assume [simp]: \<open>cregister_raw F\<close>
+  define g s where \<open>g = Axioms_Classical.getter F\<close> and \<open>s = Axioms_Classical.setter F\<close>
+  define c where \<open>c m = s undefined m\<close> for m
+  have [simp]: \<open>g (s a m) = a\<close> for a m
+    by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>s a (s b m) = s a m\<close> for a b m
+    by (metis \<open>cregister_raw F\<close> s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>s (g m) m = m\<close> for m
+    by (metis \<open>cregister_raw F\<close> g_def s_def valid_getter_setter_def valid_getter_setter_getter_setter)
+  have [simp]: \<open>c (s a m) = c m\<close> for a m
+    by (simp add: c_def)
+  have F_gs: \<open>F = register_from_getter_setter g s\<close>
+    by (simp add: g_def s_def)
+
+  define Xf X where \<open>Xf f m = (case f (c m) of Some m' \<Rightarrow> Some (s (g m) m') | None \<Rightarrow> None)\<close> and \<open>X = range Xf\<close> for f m
+  have 1: \<open>a \<in> map_commutant X\<close> if \<open>a \<in> range F\<close> for a
+  proof (unfold map_commutant_def, intro CollectI ballI ext)
+    fix x y
+    assume \<open>x \<in> X\<close>
+    then obtain x' where x_def: \<open>x = Xf x'\<close>
+      using X_def Xf_def by blast
+    from \<open>a \<in> range F\<close> obtain a' where \<open>a = F a'\<close>
+      by fast
+    then have a_def: \<open>a = register_from_getter_setter g s a'\<close>
+      by (simp add: g_def s_def)
+    show \<open>(a \<circ>\<^sub>m x) y = (x \<circ>\<^sub>m a) y\<close>
+      apply (cases \<open>x' (c y)\<close>; cases \<open>a' (g y)\<close>)
+      by (auto simp: map_comp_def x_def Xf_def a_def register_from_getter_setter_def)
+  qed
+  have 2: \<open>a \<in> range F\<close> if \<open>a \<in> map_commutant X\<close> for a
+  proof -
+    fix m0
+    define a' where \<open>a' x = map_option g (a (s x m0))\<close> for x
+    have \<open>F a' = a\<close>
+    proof (rule ext)
+      fix m
+      have \<open>(\<lambda>m. Some (s (g m) m')) \<in> X\<close>for m'
+        by (auto simp: X_def Xf_def intro!: range_eqI[where x=\<open>\<lambda>x. Some m'\<close>])
+      then have *: \<open>a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m')) = (\<lambda>m. Some (s (g m) m')) \<circ>\<^sub>m a\<close> for m'
+        using map_commutant_def that by blast
+
+      have \<open>F a' m = map_option (\<lambda>x. s x m) (a' (g m))\<close>
+        using register_from_getter_setter_of_getter_setter[OF \<open>cregister_raw F\<close>]
+          register_from_getter_setter_def[of g s a' m]
+        by (metis g_def map_option_case s_def)
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) ((a \<circ>\<^sub>m (\<lambda>m. Some (s (g m) m0))) m)\<close>
+        by (simp add: a'_def option.map_comp o_def)
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (((\<lambda>m. Some (s (g m) m0)) \<circ>\<^sub>m a) m)\<close>
+        by (simp add: * )
+      also have \<open>\<dots> = map_option (\<lambda>x. s (g x) m) (a m)\<close>
+        by (simp add: map_comp_Some_map_option option.map_comp o_def)
+      also have \<open>\<dots> = ((\<lambda>x. Some (s (g x) m)) \<circ>\<^sub>m a) m\<close>
+        by (simp add: map_comp_Some_map_option)
+      also have \<open>\<dots> = a m\<close>
+        by (simp flip: * )
+      finally show \<open>F a' m = a m\<close>
+        by -
+    qed
+    then show ?thesis
+      by auto
+  qed
+  from 1 2 have range_F_comm_X: \<open>range F = map_commutant X\<close>
+    by auto
+  from range_F_comm_X show \<open>valid_cregister_range (range F)\<close>
+    by (simp add: actual_cregister_range_def valid_cregister_range_def)
+qed
 
 
 definition \<open>empty_cregister_range = {Map.empty, Some}\<close>
@@ -709,17 +922,45 @@ proof -
     by auto
 qed
 
-lemma actual_cregister_range_empty[iff]: \<open>actual_cregister_range empty_cregister_range\<close>
-proof (intro actual_cregister_range_def[THEN iffD2] conjI allI)
-  show \<open>valid_cregister_range empty_cregister_range\<close>
-  using valid_empty_cregister_range by blast
-  fix m m' :: 'a
-  show \<open>\<exists>a\<in>empty_cregister_range. \<exists>b\<in>map_commutant empty_cregister_range. (a \<circ>\<^sub>m b) m = Some m'\<close>
-    apply (rule bexI[of _ Some, rotated])
-     apply (simp add: empty_cregister_range_def)
-    apply (rule bexI[of _ \<open>\<lambda>_. Some m'\<close>])
-    by simp_all
+lemma range_empty_cregister: \<open>range (apply_cregister empty_cregister) = empty_cregister_range\<close>
+proof (intro Set.set_eqI iffI)
+  fix f :: \<open>'a \<Rightarrow> 'a option\<close> assume \<open>f \<in> range (apply_cregister empty_cregister :: ('b cupdate \<Rightarrow> _))\<close>
+  then obtain g :: \<open>'b \<Rightarrow> 'b option\<close> where g: \<open>f = apply_cregister empty_cregister g\<close>
+    by auto
+  have \<open>g = Some \<or> g = (\<lambda>_. None)\<close>
+  proof (cases \<open>g undefined\<close>)
+    case None
+    then have \<open>g x = None\<close> for x
+      apply (subst everything_the_same[of _ undefined])
+      by simp
+    then show ?thesis 
+      by auto
+  next
+    case (Some a)
+    then have \<open>g x = Some a\<close> for x
+      apply (subst everything_the_same[of _ undefined])
+      by simp
+    then show ?thesis
+      by auto
+  qed
+  then have \<open>f = Some \<or> f = (\<lambda>_. None)\<close>
+    by (auto simp: g)
+  then show \<open>f \<in> empty_cregister_range\<close>
+    using empty_cregister_range_def by blast
+next
+  fix f :: \<open>'a \<Rightarrow> 'a option\<close> assume \<open>f \<in> empty_cregister_range\<close>
+  then consider \<open>f = Some\<close> | \<open>f = (\<lambda>_. None)\<close>
+    by (auto simp: empty_cregister_range_def)
+  then show  \<open>f \<in> range (apply_cregister empty_cregister :: ('b cupdate \<Rightarrow> _))\<close>
+    apply cases
+     apply (auto intro!: range_eqI[of _ _ Some])[1]
+    by (auto intro!: range_eqI[of _ _ \<open>\<lambda>_. None\<close>])
 qed
+
+lemma actual_cregister_range_empty[iff]: \<open>actual_cregister_range empty_cregister_range\<close>
+  apply (subst range_empty_cregister[symmetric])
+  apply (rule actual_register_range)
+  by simp
 
 lemma ACTUAL_CREGISTER_CREGISTER_of[iff]: \<open>ACTUAL_CREGISTER (CREGISTER_of F)\<close>
   apply (cases \<open>cregister F\<close>)

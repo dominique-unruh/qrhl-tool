@@ -1080,14 +1080,14 @@ lemma ACTUAL_QREGISTER_QREGISTER_of[iff]: \<open>ACTUAL_QREGISTER (QREGISTER_of 
    apply (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq qregister_has_actual_qregister_range)
   by (simp add: ACTUAL_QREGISTER.rep_eq QREGISTER_of.rep_eq)
 
-definition \<open>ACTUAL_QREGISTER_content \<FF> = actual_qregister_range_content (Rep_QREGISTER \<FF>)\<close>
+lift_definition ACTUAL_QREGISTER_content :: \<open>'a QREGISTER \<Rightarrow> 'a set\<close> is actual_qregister_range_content.
 
 lemma ACTUAL_QREGISTER_ex_register:
   fixes \<FF> :: \<open>'a QREGISTER\<close>
   assumes \<open>ACTUAL_QREGISTER \<FF>\<close>
   shows \<open>let 'l::type = ACTUAL_QREGISTER_content \<FF> in
          \<exists>F :: ('l, 'a) qregister. qregister F \<and> QREGISTER_of F = \<FF>\<close>
-  by (smt (verit, ccfv_threshold) ACTUAL_QREGISTER.rep_eq ACTUAL_QREGISTER_content_def QREGISTER_of.rep_eq Rep_QREGISTER_inject actual_qregister_range_ex_register assms with_type_mp)
+  by (smt (verit, ccfv_threshold) ACTUAL_QREGISTER.rep_eq ACTUAL_QREGISTER_content.rep_eq QREGISTER_of.rep_eq Rep_QREGISTER_inject actual_qregister_range_ex_register assms with_type_mp)
 
 lemma ACTUAL_QREGISTER_chain:
   assumes \<open>qregister F\<close>

@@ -361,6 +361,11 @@ lemma iso_qregister_def': \<open>iso_qregister I \<longleftrightarrow> qregister
   apply transfer'
   by (auto simp: iso_register_def)
 
+lemma bij_iso_qregister:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>bij (apply_qregister Q)\<close>
+  using Laws_Quantum.iso_register_bij assms iso_qregister.rep_eq by blast
+
 lift_definition qregister_inv :: \<open>('a,'b) qregister \<Rightarrow> ('b,'a) qregister\<close> is
   \<open>\<lambda>F. if iso_register F then inv F else non_qregister_raw\<close>
   using [[simproc del: Laws_Quantum.compatibility_warn]]
@@ -874,7 +879,6 @@ next
     by (simp add: polar_decomposition_0 non_qregister)
 qed
 
-(* lift_definition ccomplements :: \<open>('a,'c) cregister \<Rightarrow> ('b,'c) cregister \<Rightarrow> bool\<close> is complements. *)
 lift_definition qcomplements :: \<open>('a,'c) qregister \<Rightarrow> ('b,'c) qregister \<Rightarrow> bool\<close> is complements.
 
 lemma qcomplements_def': \<open>qcomplements F G \<longleftrightarrow> iso_qregister (qregister_pair F G)\<close>
@@ -1092,6 +1096,30 @@ proof -
   apply transfer
     apply auto
   by (metis inj_iff isomorphism_expand pointfree_idE qregister_raw_inj)
+qed
+
+lemma iso_qregister_chain[iff]:
+  assumes \<open>iso_qregister F\<close> and \<open>iso_qregister G\<close>
+  shows \<open>iso_qregister (qregister_chain F G)\<close>
+proof -
+  have [iff]: \<open>qregister F\<close>
+    using assms(1) iso_qregister_def' by blast
+  have [iff]: \<open>qregister G\<close>
+    using assms(2) iso_qregister_def' by blast
+  have [iff]: \<open>qregister (qregister_inv F)\<close>
+    using assms(1) iso_qregister_def' iso_qregister_inv_iso by blast
+  have [iff]: \<open>qregister (qregister_inv G)\<close>
+    using assms(2) iso_qregister_def' iso_qregister_inv_iso by blast
+  have 1: \<open>qregister_chain (qregister_chain F G) (qregister_chain (qregister_inv G) (qregister_inv F)) = qregister_id\<close>
+    apply (subst qregister_chain_assoc)
+    apply (subst (2) qregister_chain_assoc[symmetric])
+    using assms by (simp add: iso_qregister_chain_inv)
+  have 2: \<open>qregister_chain (qregister_chain (qregister_inv G) (qregister_inv F)) (qregister_chain F G) = qregister_id\<close>
+    using "1" qregister_left_right_inverse by blast
+
+  show ?thesis
+  using assms 1 2
+  by (auto intro!: exI[of _ \<open>qregister_chain (qregister_inv G) (qregister_inv F)\<close>] simp add: iso_qregister_def')
 qed
 
 lemma apply_qregister_extend_pair_right:
