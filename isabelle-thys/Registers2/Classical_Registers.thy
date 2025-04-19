@@ -1018,6 +1018,33 @@ next
     by (metis \<open>sX c m = k\<close> \<open>sX d n = k\<close> gX_def inj_map_def option.simps(2) sX_def setter_getter_same setter_setter_same)
 qed
 
+lift_definition permutation_cregister :: \<open>('b \<Rightarrow> 'a) \<Rightarrow> ('a,'b) cregister\<close> is
+  \<open>\<lambda>f. if bij f then Classical_Extra.permutation_register f else non_cregister_raw\<close>
+  by auto
 
+lemma permutation_cregister_iff_permutation[simp]:
+  \<open>cregister (permutation_cregister f) \<longleftrightarrow> bij f\<close>
+  apply (transfer' fixing: f)
+  by (simp add: non_cregister_raw)
+
+lemma getter_permutation_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>getter (permutation_cregister f) = f\<close>
+  apply (transfer' fixing: f)
+  using assms
+  by (auto intro!: simp: getter_permutation_register)
+
+lemma setter_permutation_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>setter (permutation_cregister f) a m = inv f a\<close>
+  apply (transfer' fixing: f)
+  using assms
+  by (auto intro!: simp: setter_permutation_register)
+
+lemma permutation_cregister_iso_cregister[simp]:
+  assumes \<open>bij f\<close>
+  shows \<open>iso_cregister (permutation_cregister f)\<close>
+  by (metis assms bij_betw_def getter_permutation_cregister iso_cregister_injective_getter
+      permutation_cregister_iff_permutation)
 
 end

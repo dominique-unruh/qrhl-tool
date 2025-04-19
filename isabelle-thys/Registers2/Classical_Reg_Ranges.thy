@@ -968,5 +968,211 @@ lemma ACTUAL_CREGISTER_CREGISTER_of[iff]: \<open>ACTUAL_CREGISTER (CREGISTER_of 
   by (simp add: non_cregister ACTUAL_CREGISTER.rep_eq bot_CREGISTER.rep_eq)
 
 
+definition actual_cregister_range_content :: \<open>'a cupdate set \<Rightarrow> 'a set\<close> where
+  \<open>actual_cregister_range_content \<FF> = (SOME L. \<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) R. 
+    inj f \<and> range f = L \<times> R \<and>
+    \<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L})\<close>
+
+lift_definition ACTUAL_CREGISTER_content :: \<open>'a CREGISTER \<Rightarrow> 'a set\<close> is
+  \<comment> \<open>Carrier for \<^const>\<open>with_type\<close> in lemma \<open>ACTUAL_CREGISTER_ex_register\<close>\<close>
+ actual_cregister_range_content.
+
+lemma actual_cregister_range_ex_register:
+  fixes \<FF> :: \<open>'a cupdate set\<close>
+  assumes \<open>actual_cregister_range \<FF>\<close>
+  shows \<open>let 'l::type = actual_cregister_range_content \<FF> in
+         \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+proof -
+  define L where \<open>L = actual_cregister_range_content \<FF>\<close>
+  have \<open>\<exists>(f :: 'a \<Rightarrow> 'a\<times>'a) R. 
+    inj f \<and> range f = L \<times> R \<and>
+    \<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+    unfolding L_def actual_cregister_range_content_def
+    apply (rule someI_ex)
+    using assms unfolding actual_cregister_range_def o_def
+    by blast
+  then obtain f :: \<open>'a \<Rightarrow> 'a\<times>'a\<close> and R where [iff]: \<open>inj f\<close> and range_f: \<open>range f = L \<times> R\<close>
+    and \<FF>_eq: \<open>\<FF> = { inv_map (Some o f) \<circ>\<^sub>m (tensor_map a (Some|`R)) o f | a. dom a \<subseteq> L \<and> ran a \<subseteq> L }\<close>
+    by auto
+  have \<open>let 'r::type = R in let 'l::type = L in
+        \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+  proof with_type_intro
+    show \<open>R \<noteq> {}\<close>
+      using range_f by force
+    fix rep_r :: \<open>'r \<Rightarrow> 'a\<close> assume \<open>bij_betw rep_r UNIV R\<close>
+    then have [iff]: \<open>inj rep_r\<close>
+      using bij_betw_def by blast
+
+    show \<open>let 'l::type = L in
+        \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+    proof with_type_intro
+      show \<open>L \<noteq> {}\<close>
+        using range_f by force
+      fix rep_l :: \<open>'l \<Rightarrow> 'a\<close> assume \<open>bij_betw rep_l UNIV L\<close>
+      have [iff]: \<open>inj rep_l\<close>
+        using \<open>bij_betw rep_l UNIV L\<close> bij_betw_def by blast
+      define f' where \<open>f' = map_prod (inv rep_l) (inv rep_r) o f\<close>
+      define F where \<open>F = cregister_chain (permutation_cregister f') cFst\<close>
+      have \<open>bij_betw f UNIV (L \<times> R)\<close>
+        using \<open>inj f\<close> bij_betw_def range_f by blast
+      moreover
+      have \<open>bij_betw (map_prod (inv rep_l) (inv rep_r)) (L \<times> R) UNIV\<close>
+        using bij_betw_map_prod[of _ L UNIV _ R UNIV]
+        by (metis UNIV_Times_UNIV \<open>bij_betw rep_l UNIV L\<close> \<open>bij_betw rep_r UNIV R\<close> bij_betw_inv_into)
+      ultimately
+      have [iff]: \<open>bij f'\<close>
+        by (auto intro!: bij_betw_trans[where B=\<open>L \<times> R\<close>] simp: f'_def)
+      then have [iff]: \<open>cregister F\<close>
+        by (simp add: F_def)
+      have Fa_rewrite: \<open>apply_cregister F b = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        if \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close> for b c
+      proof -
+        have Some_o_f': \<open>Some \<circ> f' = tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f)\<close>
+        proof -
+          have 1: \<open>Some (fst (f x)) \<in> range (\<lambda>x. Some (rep_l x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          have 2: \<open>Some (snd (f x)) \<in> range (\<lambda>x. Some (rep_r x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_r UNIV R\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          show ?thesis 
+            by (auto intro!: ext 1 2 simp add: f'_def tensor_update_def[abs_def] map_comp_def map_prod_def case_prod_unfold
+                inv_map_def o_def inv_f_f inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+        qed
+        have \<open>apply_cregister F b = inv_map (Some \<circ> f') \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (Some \<circ> f')\<close>
+          by (auto simp add: cFst.rep_eq Laws_Classical.Fst_def F_def iso_register_from_getter)
+        also have \<open>\<dots> = inv_map (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))
+              \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))\<close>
+          by (simp add: Some_o_f')
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r) \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m
+                            inv_map (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r))) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: inv_map_tensor_update[symmetric] inv_map_twice inv_map_comp inj_map_tensor_update inv_map_twice
+              comp_update_assoc)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m 
+              tensor_map ((Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)) ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: tensor_update_mult inv_map_tensor_update)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: that)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        proof -
+          have \<open>(Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r) = Some |` R\<close>
+            apply (auto intro!: ext simp: inv_map_def restrict_map_def map_comp_def o_def
+                inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+             apply (metis \<open>bij_betw rep_r UNIV R\<close> bij_betw_def rangeI)
+            by (smt (verit, ccfv_threshold) \<open>bij_betw rep_r UNIV R\<close> bij_betw_iff_bijections image_iff)
+          then show ?thesis
+            by simp
+        qed
+        finally show ?thesis
+          by -
+      qed
+      have \<open>range (apply_cregister F) = \<FF>\<close>
+      proof (intro Set.set_eqI iffI)
+        have Some_o_f': \<open>Some \<circ> f' = tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f)\<close>
+        proof -
+          have 1: \<open>Some (fst (f x)) \<in> range (\<lambda>x. Some (rep_l x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          have 2: \<open>Some (snd (f x)) \<in> range (\<lambda>x. Some (rep_r x))\<close> for x
+            by (metis (no_types, lifting) \<open>bij_betw rep_r UNIV R\<close> bij_betw_def image_iff mem_Sigma_iff prod.collapse rangeI range_f)
+          show ?thesis 
+            by (auto intro!: ext 1 2 simp add: f'_def tensor_update_def[abs_def] map_comp_def map_prod_def case_prod_unfold
+                inv_map_def o_def inv_f_f inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+        qed
+        fix a assume \<open>a \<in> range (apply_cregister F)\<close>
+        then obtain b where a_def: \<open>a = apply_cregister F b\<close>
+          by fastforce
+        define c where \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close>
+        have \<open>a = inv_map (Some \<circ> f') \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (Some \<circ> f')\<close>
+          by (auto simp add: cFst.rep_eq Laws_Classical.Fst_def F_def iso_register_from_getter a_def)
+        also have \<open>\<dots> = inv_map (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))
+              \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m (tensor_update (inv_map (Some o rep_l)) (inv_map (Some o rep_r)) \<circ>\<^sub>m (Some o f))\<close>
+          by (simp add: Some_o_f')
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r) \<circ>\<^sub>m tensor_map b Some \<circ>\<^sub>m
+                            inv_map (tensor_map (Some \<circ> rep_l) (Some \<circ> rep_r))) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: inv_map_tensor_update[symmetric] inv_map_twice inv_map_comp inj_map_tensor_update inv_map_twice
+              comp_update_assoc)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m 
+              tensor_map ((Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)) ((Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r)) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by (simp add: tensor_update_mult inv_map_tensor_update)
+        also have \<open>\<dots> = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+        proof -
+          have \<open>(Some \<circ> rep_r) \<circ>\<^sub>m inv_map (Some \<circ> rep_r) = Some |` R\<close>
+            apply (auto intro!: ext simp: inv_map_def restrict_map_def map_comp_def o_def
+                inv_f_f[OF inj_Some_f[THEN iffD2]]
+                split: option.split)
+             apply (metis \<open>bij_betw rep_r UNIV R\<close> bij_betw_def rangeI)
+            by (smt (verit, ccfv_threshold) \<open>bij_betw rep_r UNIV R\<close> bij_betw_iff_bijections image_iff)
+          then show ?thesis
+            by (simp add: c_def)
+        qed
+        finally have \<open>a = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ>\<^sub>m (Some \<circ> f)\<close>
+          by -
+        moreover have \<open>dom c \<subseteq> L\<close>
+          unfolding c_def
+          apply (rule order_trans[OF dom_map_comp])
+          apply (rule order_trans[OF dom_inv_map])
+          apply (simp add: ran_Some_f o_def)
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def dual_order.refl)
+        moreover have \<open>ran c \<subseteq> L\<close>
+          unfolding c_def
+          apply (rule order_trans[OF ran_map_comp])+
+          apply (simp add: ran_Some_f o_def)
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def dual_order.refl)
+        ultimately show \<open>a \<in> \<FF>\<close>
+          by (auto intro!: exI[of _ c] simp add: \<FF>_eq)
+      next
+        fix a assume \<open>a \<in> \<FF>\<close>
+        then obtain c where a_def: \<open>a = inv_map (Some \<circ> f) \<circ>\<^sub>m tensor_map c (Some |` R) \<circ> f\<close> and \<open>ran c \<subseteq> L\<close> and \<open>dom c \<subseteq> L\<close>
+          by (force simp: \<FF>_eq)
+        have 1: \<open>inv_map (Some \<circ> rep_l) k \<noteq> None\<close> if \<open>k \<in> L\<close> for k
+          using that
+          by (metis \<open>bij_betw rep_l UNIV L\<close> bij_betw_def f_inv_into_f inj_map_total inv_map_f_eq o_apply option.simps(3))
+        have 2: \<open>k \<in> L\<close> if \<open>inv_map (Some \<circ> rep_l) k = Some x2\<close> for k x2
+          using that \<open>bij_betw rep_l UNIV L\<close>
+          apply (simp add: inv_map_def o_def split: if_split_asm)
+          by (metis (no_types, lifting) bij_betw_iff_bijections image_iff option.sel)
+        have 3: \<open>rep_l x2 = k\<close> if \<open>inv_map (Some \<circ> rep_l) k = Some x2\<close> for k x2 
+          using that 
+          by (smt (verit, best) \<open>bij_betw rep_l UNIV L\<close> bij_betw_def inj_map_inv_map inj_map_total inv_map_f_eq o_def
+              option.simps(1))
+        have 4: \<open>(Some \<circ> rep_l) \<circ>\<^sub>m inv_map (Some \<circ> rep_l) = Some |` L\<close>
+          by (auto intro!: ext simp: map_comp_def restrict_map_def 1 2 3 split: option.split)
+        have 5: \<open>c = Some |` L \<circ>\<^sub>m c \<circ>\<^sub>m Some |` L\<close>
+          using \<open>ran c \<subseteq> L\<close> \<open>dom c \<subseteq> L\<close>
+          by (force intro!: ext simp: ran_def dom_def restrict_map_def map_comp_def split!: option.split)
+        define b where \<open>b = inv_map (Some \<circ> rep_l) \<circ>\<^sub>m c \<circ>\<^sub>m (Some \<circ> rep_l)\<close>
+        have c_def: \<open>c = (Some \<circ> rep_l) \<circ>\<^sub>m b \<circ>\<^sub>m inv_map (Some \<circ> rep_l)\<close>
+          apply (simp add: b_def 4 comp_update_assoc)
+          by (simp add: 4 flip: comp_update_assoc 5)
+        have \<open>a = apply_cregister F b\<close>
+          by (auto simp add: Fa_rewrite a_def c_def map_comp_def o_def split: option.split)
+        then show \<open>a \<in> range (apply_cregister F)\<close>
+          by fastforce
+      qed
+      then show \<open>\<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+        by auto
+    qed
+  qed
+  from this[cancel_with_type]
+  show \<open>let 'l::type = L in \<exists>F :: ('l, 'a) cregister. cregister F \<and> range (apply_cregister F) = \<FF>\<close>
+    by -
+qed
+
+lemma ACTUAL_CREGISTER_ex_register:
+  fixes G :: \<open>'a CREGISTER\<close>
+  assumes \<open>ACTUAL_CREGISTER G\<close>
+  shows \<open>let 'l::type = ACTUAL_CREGISTER_content G in
+         \<exists>F :: ('l, 'a) cregister. cregister F \<and> CREGISTER_of F = G\<close>
+proof -
+  have \<open>cregister F \<and> CREGISTER_of F = G \<longleftrightarrow> cregister F \<and> range (apply_cregister F) = Rep_CREGISTER G\<close> for F :: \<open>('l,'a) cregister\<close>
+    apply (auto intro!: simp add: CREGISTER_of.rep_eq)
+    by (simp add: CREGISTER_of.abs_eq Rep_CREGISTER_inverse)
+  then show ?thesis
+    using assms actual_cregister_range_ex_register[of \<open>Rep_CREGISTER G\<close>]
+    by (simp add: ACTUAL_CREGISTER.rep_eq ACTUAL_CREGISTER_content.rep_eq)
+qed
+
+
 
 end

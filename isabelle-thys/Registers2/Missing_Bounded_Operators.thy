@@ -960,5 +960,13 @@ lemma unitary_norm_01:
   shows \<open>norm U \<in> {0,1}\<close>
   using assms norm_partial_isometry unitary_partial_isometry by fastforce
 
+lemma separating_bounded_clinear_clinear:
+  fixes S :: \<open>('a::chilbert_space,'a) trace_class set\<close>
+  assumes \<open>separating_set (clinear :: (_ \<Rightarrow> ('b::chilbert_space,'b) trace_class) \<Rightarrow> _) S\<close>
+  shows \<open>separating_set (bounded_clinear :: (_ \<Rightarrow> ('b::chilbert_space,'b) trace_class) \<Rightarrow> _) S\<close>
+  by (metis (mono_tags, lifting) assms bounded_clinear.clinear separating_set_def)
+
+lemma partial_trace_0[simp]: \<open>partial_trace 0 = 0\<close>
+  by (smt (verit, best) partial_trace_norm_reducing zero_less_norm_iff)
 
 end

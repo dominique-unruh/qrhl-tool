@@ -1067,4 +1067,61 @@ lemma the_default_default:
   by (meson assms the_default_def)
 
 
+lemma inj_Some_f[simp]: \<open>inj (\<lambda>x. Some (f x)) = inj f\<close>
+  by (simp add: inj_on_def)
+
+lemma dom_inv_map: \<open>dom (inv_map f) \<subseteq> ran f\<close>
+  by (smt (verit, ccfv_SIG) domIff imageE inv_map_def mem_Collect_eq ran_def subsetI)
+
+
+lemma ran_inv_map_inj: \<open>ran (inv_map f) = dom f\<close> if \<open>inj_map f\<close>
+  using that
+  apply (auto intro!: ext simp: ran_def dom_def inv_map_def inj_map_def)
+  apply (metis f_inv_into_f rangeI)
+  by (metis f_inv_into_f rangeI)
+
+lemma dom_inv_map_inj: \<open>dom (inv_map f) = ran f\<close> if \<open>inj_map f\<close>
+  using that
+  by (smt (verit, ccfv_SIG) Collect_cong domI dom_def dom_inv_map inv_map_def mem_Collect_eq ran_def rangeI subsetD)
+
+
+
+lemma inv_map_twice:
+  assumes \<open>inj_map f\<close>
+  shows \<open>inv_map (inv_map f) = f\<close>
+proof (rule ext)
+  fix x
+  show \<open>inv_map (inv_map f) x = f x\<close>
+  proof (cases \<open>x \<in> dom f\<close>)
+    case True
+    then obtain y where \<open>f x = Some y\<close>
+      by blast
+    then have \<open>inv_map f y = Some x\<close>
+      by (simp add: assms inv_map_f_eq)
+    then show ?thesis
+      by (simp add: \<open>f x = Some y\<close> inv_map_f_eq)
+  next
+    case False
+    then have \<open>x \<notin> ran (inv_map f)\<close>
+      by (simp add: assms ran_inv_map_inj)
+    then have \<open>x \<notin> dom (inv_map (inv_map f))\<close>
+      by (simp add: dom_inv_map_inj)
+    then have \<open>inv_map (inv_map f) x = None\<close>
+      by fastforce
+    moreover from False have \<open>f x = None\<close>
+      by fastforce
+    finally show ?thesis
+      by simp
+  qed
+qed
+
+lemma dom_map_comp: \<open>dom (f \<circ>\<^sub>m g) \<subseteq> dom g\<close>
+  using domIff by fastforce
+
+lemma ran_Some_f: \<open>ran (\<lambda>x. Some (f x)) = range f\<close>
+  by (auto simp: ran_def)
+
+lemma ran_map_comp: \<open>ran (f \<circ>\<^sub>m g) \<subseteq> ran f\<close>
+  by (smt (verit, ccfv_SIG) map_comp_Some_iff mem_Collect_eq ran_def subsetI)
+
 end

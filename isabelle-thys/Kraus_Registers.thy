@@ -784,6 +784,108 @@ proof -
     by (simp add: \<EE>_def km_apply_qregister_kf_apply km_operators_in_kf_apply_flattened kf_operators_kf_apply_qregister)
 qed
 
+lemma kf_apply_qregister_partial_trace:
+  shows \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right \<equiv>\<^sub>k\<^sub>r kf_map prod.swap (kf_comp (kf_partial_trace_right) (kf_apply_qregister (qregister_chain qFst Q) \<EE>))\<close>
+proof (rule kf_eqI)
+  wlog [simp]: \<open>qregister Q\<close>
+    goal \<open>\<And>x \<rho>. kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho> = kf_map prod.swap (kf_comp kf_partial_trace_right (kf_apply_qregister (qregister_chain \<lbrakk>#1\<rbrakk>\<^sub>q Q) \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    using hypothesis non_qregister by force
+  fix \<rho> :: \<open>(('a \<times> 'b) ell2, ('a \<times> 'b) ell2) trace_class\<close> and x :: \<open>'b \<times> 'c\<close>
+  obtain x1 x2 where x: \<open>x = (x1,x2)\<close>
+    by fastforce
+  have swap_x: \<open>prod.swap -` {x} = {(x2,x1)}\<close>
+    by (auto simp: x)
+  define \<EE>x and Q1 :: \<open>(_,_\<times>'b) qregister\<close> where \<open>\<EE>x = kf_filter (\<lambda>x. x = x2) \<EE>\<close> and \<open>Q1 = qregister_chain qFst Q\<close>
+  have [iff]: \<open>qregister Q1\<close>
+    by (simp add: Q1_def)
+  have \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho>
+      = kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x2} (kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} \<rho>)\<close>
+    by (simp add: kf_comp_apply_on_singleton x)
+  also have \<open>\<dots> = kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r @{x2} (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)\<close>
+    by (simp add: kf_partial_trace_right_apply_singleton)
+  also have \<open>\<dots> = kf_apply_qregister Q \<EE>x *\<^sub>k\<^sub>r (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)\<close>
+    by (simp add: kf_filter_kf_apply_qregister kf_apply_on_def \<EE>x_def)
+  also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)*) (kf_apply_qregister Q1 \<EE>x *\<^sub>k\<^sub>r \<rho>)\<close>
+  proof -
+    define EEx where \<open>EEx = Rep_kraus_family \<EE>x\<close>
+    have \<open>(\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>(E,x). (apply_qregister Q E, x)) ` EEx. sandwich_tc E (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)) =
+          sandwich_tc (tensor_ell2_right (ket x1)*) (\<Sum>\<^sub>\<infinity>(E,x)\<in>(\<lambda>(E,x). (apply_qregister Q1 E, x)) ` EEx. sandwich_tc E \<rho>)\<close>
+      (is \<open>?lhs = ?rhs\<close>)
+    proof -
+      have inj1: \<open>inj_on (\<lambda>(E, y). (apply_qregister Q E, y)) X\<close> for X
+        by (smt (verit, del_insts) \<open>qregister Q\<close> apply_qregister_inject' case_prod_unfold inj_onI prod.collapse prod.inject)
+      have inj2: \<open>inj_on (\<lambda>(E, y). (apply_qregister Q1 E, y)) X\<close> for X
+        by (smt (verit, ccfv_threshold) \<open>qregister Q\<close> apply_qregister_inject' inj_onI prod.collapse prod.inject qFst_register
+            qregister_chain_is_qregister split_def Q1_def)
+      have sum: \<open>(\<lambda>(E, x). sandwich_tc (apply_qregister Q1 E) \<rho>) summable_on EEx\<close>
+        using kf_apply_summable[where \<EE>=\<open>kf_apply_qregister Q1 \<EE>x\<close> and \<rho>=\<rho>]
+        apply (simp add: kf_apply_qregister.rep_eq summable_on_reindex inj2)
+        by (simp add: o_def case_prod_unfold EEx_def)
+      have \<open>?lhs = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>))\<close>
+        apply (subst infsum_reindex)
+         apply (simp add: inj1)
+        by (simp add: inj1 o_def case_prod_unfold)
+      also have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>))\<close>
+      proof (rule infsum_cong, unfold case_prod_beta)
+        fix Ex assume \<open>Ex \<in> EEx\<close>
+        define E x where \<open>E = fst Ex\<close> and \<open>x = snd Ex\<close>
+        have \<open>sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)
+            = sandwich_tc (apply_qregister Q E o\<^sub>C\<^sub>L tensor_ell2_right (ket x1)*) \<rho>\<close>
+          by (simp add: sandwich_tc_compose)
+        also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)* o\<^sub>C\<^sub>L (apply_qregister Q E \<otimes>\<^sub>o id_cblinfun)) \<rho>\<close>
+          apply (rule arg_cong2[where f=sandwich_tc, OF _ refl])
+          apply (rule tensor_ell2_extensionality)
+          by (simp add: cblinfun.scaleC_right tensor_op_ell2)
+        also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)* o\<^sub>C\<^sub>L apply_qregister Q1 E) \<rho>\<close>
+          by (simp add: Q1_def qregister_chain_apply apply_qregister_fst)
+        also have \<open>\<dots>= sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+          by (simp add: sandwich_tc_compose)
+        finally show \<open>sandwich_tc (apply_qregister Q E) (sandwich_tc (tensor_ell2_right (ket x1)*) \<rho>)
+             = sandwich_tc (tensor_ell2_right (ket x1)*) (sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+          by -
+      qed
+      also have \<open>\<dots> = sandwich_tc (tensor_ell2_right (ket x1)*) (\<Sum>\<^sub>\<infinity>(E,x)\<in>EEx. sandwich_tc (apply_qregister Q1 E) \<rho>)\<close>
+        apply (subst infsum_bounded_linear[where h=\<open>sandwich_tc _\<close>, symmetric])
+        using sum by (simp_all add: bounded_clinear.bounded_linear bounded_clinear_sandwich_tc case_prod_unfold) 
+      also have \<open>\<dots> = ?rhs\<close>
+        apply (subst infsum_reindex)
+         apply (simp add: inj2)
+        by (simp add: o_def case_prod_unfold)
+      finally show \<open>?lhs = ?rhs\<close>
+        by -
+    qed
+    then show ?thesis
+      by (simp add: kf_apply.rep_eq kf_apply_qregister.rep_eq case_prod_unfold
+          flip: EEx_def)
+  qed
+  also have \<open>\<dots> = kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} (kf_apply_qregister Q1 \<EE>x *\<^sub>k\<^sub>r \<rho>)\<close>
+    by (simp add: kf_partial_trace_right_apply_singleton)
+  also have \<open>\<dots> = kf_partial_trace_right *\<^sub>k\<^sub>r @{x1} (kf_apply_qregister Q1 \<EE> *\<^sub>k\<^sub>r @{x2} \<rho>)\<close>
+    by (simp add: kf_filter_kf_apply_qregister kf_apply_on_def \<EE>x_def)
+  also have \<open>\<dots> = kf_comp (kf_partial_trace_right) (kf_apply_qregister Q1 \<EE>) *\<^sub>k\<^sub>r @{(x2,x1)} \<rho>\<close>
+    by (simp add: kf_comp_apply_on_singleton)
+  also have \<open>\<dots> = kf_map prod.swap (kf_comp (kf_partial_trace_right) (kf_apply_qregister Q1 \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    by (simp add: kf_apply_on_map swap_x)
+  finally show \<open>kf_comp (kf_apply_qregister Q \<EE>) kf_partial_trace_right *\<^sub>k\<^sub>r @{x} \<rho> = kf_map prod.swap (kf_comp kf_partial_trace_right (kf_apply_qregister Q1 \<EE>)) *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+    by -
+qed
+
+lemma km_apply_qregister_partial_trace:
+  shows \<open>km_apply_qregister Q \<EE> (partial_trace \<rho>) = partial_trace (km_apply_qregister (qregister_chain qFst Q) \<EE> \<rho>)\<close>
+proof -
+  wlog km: \<open>kraus_map \<EE>\<close>
+    using negation
+    by (simp add: km_apply_qregister_invalid_\<EE>)
+  wlog \<open>qregister Q\<close> keeping km
+    using negation 
+    by (simp add: km_apply_qregister_def kf_apply_qregister_non_qregister non_qregister)
+  from km obtain \<FF> :: \<open>(_,_,unit) kraus_family\<close> where \<EE>_def: \<open>\<EE> = kf_apply \<FF>\<close>
+    using kraus_map_def_raw by blast
+  from kf_apply_qregister_partial_trace[of Q \<FF>, THEN kf_eq_imp_eq_weak, THEN kf_apply_eqI, of \<rho>]
+  show ?thesis
+    by (simp add: \<EE>_def km_apply_qregister_kf_apply \<open>qregister Q\<close> partial_trace_is_kf_partial_trace kf_comp_apply)
+qed
+
 
 
 
