@@ -614,14 +614,14 @@ lemma kf_comp_dependent_apply_qregister:
   assumes \<open>qregister Q\<close>
   shows \<open>kf_comp_dependent (\<lambda>x. kf_apply_qregister Q (\<EE> x)) (kf_apply_qregister Q \<FF>) = kf_apply_qregister Q (kf_comp_dependent \<EE> \<FF>)\<close>
 proof -
-  have [simp]: \<open>inj (\<lambda>(E, F, x, y). (apply_qregister Q E, apply_qregister Q F, x, y))\<close>
-    using inj_qregister[OF assms] by (simp add: inj_on_def)
+  have [simp]: \<open>inj_on (\<lambda>(E, F, x, y). (apply_qregister Q E, apply_qregister Q F, x, y)) X\<close> for X
+    using inj_qregister[OF assms] by (auto simp add: inj_on_def)
   have [simp]: \<open>(\<lambda>x. snd (snd x)) = (\<lambda>(F, E, x). x)\<close>
     by auto
   show ?thesis
     by (simp add: kf_comp_dependent_def assms kf_comp_dependent_raw_apply_qregister
         kf_map_kf_map_inj_comp o_def id_def kf_apply_qregister_kf_map
-    case_prod_beta)
+        case_prod_beta)
 qed
 
 lemma kf_comp_apply_qregister:
@@ -739,8 +739,8 @@ proof -
   wlog [iff]: \<open>qregister Q\<close>
     using negation
     by (simp add: non_qregister)
-  have [iff]: \<open>inj (\<lambda>(A, B, x, y). (apply_qregister Q A, apply_qregister Q B, x, y))\<close>
-    by (auto intro!: injI simp: apply_qregister_inject')
+  have [iff]: \<open>inj_on (\<lambda>(A, B, x, y). (apply_qregister Q A, apply_qregister Q B, x, y)) X\<close> for X
+    by (auto intro!: inj_onI simp: apply_qregister_inject')
   show ?thesis
     apply (simp add: kf_comp_dependent_def kf_apply_qregister_kf_map
         kf_apply_qregister_comp_dependent_raw kf_map_kf_map_inj_comp)

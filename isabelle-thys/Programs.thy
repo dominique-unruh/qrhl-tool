@@ -12,9 +12,17 @@ no_notation Order.bottom ("\<bottom>\<index>")
 
 type_synonym program_state = \<open>((cl\<times>qu) ell2, (cl\<times>qu) ell2) trace_class\<close>
 
-typedef denotation = \<open>{\<EE> :: program_state \<Rightarrow> program_state. is_cq_map qFst \<EE> \<and> km_norm \<EE> \<le> 1}\<close>
+typedef denotation = \<open>{\<EE> :: program_state \<Rightarrow> program_state. is_cq_map qFst \<EE>}\<close>
+  morphisms apply_denotation Abs_denotation
   by (auto intro!: exI[of _ 0])
+
 setup_lifting type_definition_denotation
+
+lift_definition denotation_norm :: \<open>denotation \<Rightarrow> real\<close> is km_norm.
+(* lift_definition denotation_bounded :: \<open>denotation \<Rightarrow> bool\<close> is \<open>\<lambda>D. km_norm D \<le> 1\<close>. *)
+
+lemma denotation_norm_pos[iff]: \<open>denotation_norm D \<ge> 0\<close>
+  apply transfer' by simp
 
 definition cq_operator_distrib :: "program_state \<Rightarrow> cl distr" where
   \<open>cq_operator_distrib \<rho> = (if is_distribution (cq_prob qFst \<rho>) then Abs_distr (cq_prob qFst \<rho>) else 0)\<close>
@@ -566,7 +574,11 @@ lemma kf_norm_cq_map_local_c:
 lift_definition denotation_local_c :: \<open>cl CREGISTER \<Rightarrow> cl \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
   cq_map_local_c
   apply (auto intro!: is_cq_map_cq_map_local_c)
-   apply (meson is_cq_map_def) 
+  by (meson is_cq_map_def) 
+
+lemma denotation_local_c_bounded[iff]: 
+  shows \<open>denotation_norm (denotation_local_c C x D) \<le> denotation_norm D\<close>
+  apply transfer
   by (smt (z3) is_cq_map_def kf_norm_cq_map_local_c)
 
 (* lift_definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map \<Rightarrow> ('cl, 'qu1, 'cl, 'qu2) cq_map\<close> is
@@ -605,16 +617,15 @@ lemma Qqcompatible_comp_left[simp, intro]: "qcompatible F H \<Longrightarrow> Qq
 
 lift_definition denotation_local_q :: 
   \<open>qu QREGISTER \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> denotation \<Rightarrow> denotation\<close>
-  is \<open>\<lambda>Q \<rho> \<EE>. if ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then cq_map_local_q Q \<rho> \<EE> else 0\<close>
+  is \<open>\<lambda>Q \<rho> \<EE>. if ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 then cq_map_local_q Q \<rho> \<EE> else 0\<close>
 proof (rename_tac Q \<rho> \<EE>)
   fix Q :: \<open>'qu QREGISTER\<close> and \<rho> :: \<open>('qu ell2, 'qu ell2) trace_class\<close> and \<EE> :: \<open>((('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class \<Rightarrow> (('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class)\<close>
-  assume [iff]: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE> \<and> km_norm \<EE> \<le> 1\<close>
+  assume [iff]: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>\<close>
   then have [iff]: \<open>kraus_map \<EE>\<close>
     using is_cq_map_def by blast
-  show \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (if ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then cq_map_local_q Q \<rho> \<EE> else 0) \<and>
-       km_norm (if ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1 then cq_map_local_q Q \<rho> \<EE> else 0) \<le> 1\<close>
+  show \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (if ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 then cq_map_local_q Q \<rho> \<EE> else 0)\<close>
   proof -
-    wlog [iff]: \<open>ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0 \<and> norm \<rho> \<le> 1\<close>
+    wlog [iff]: \<open>ACTUAL_QREGISTER Q \<and> \<rho> \<ge> 0\<close>
       using negation by simp
     have [iff]: \<open>Qqcompatible (QREGISTER_chain \<lbrakk>#2.\<rbrakk>\<^sub>q Q) \<lbrakk>#1\<rbrakk>\<^sub>q\<close>
       by auto
@@ -622,14 +633,27 @@ proof (rename_tac Q \<rho> \<EE>)
       by (simp add: ACTUAL_QREGISTER_chain)
     have 1: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (cq_map_local_q Q \<rho> \<EE>)\<close>
       by (auto intro!: is_cq_map_km_local_register_quantum tc_tensor_pos simp: cq_map_local_q_def)
-    have 2: \<open>km_norm (cq_map_local_q Q \<rho> \<EE>) \<le> 1\<close>
-      unfolding cq_map_local_q_def
-      apply (rule km_norm_local_register[THEN order.trans])
-      by (auto intro!: tc_tensor_pos mult_le_one simp: cq_map_local_q_def norm_tc_tensor norm_tc_butterfly)
-    from 1 2 show ?thesis
+     then show ?thesis
       by auto
   qed
 qed
+
+lemma denotation_local_q_bounded[iff]:
+  shows \<open>denotation_norm (denotation_local_q Q \<rho> D) \<le> norm \<rho> * denotation_norm D\<close>
+proof (transfer fixing: Q \<rho>)
+  fix Q :: \<open>qu QREGISTER\<close> and D :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+  assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q D\<close>
+  then have km: \<open>kraus_map D\<close>
+    using is_cq_map_def by blast
+  have \<open>km_norm (cq_map_local_q Q \<rho> D) \<le> norm \<rho> * km_norm D\<close> if \<open>ACTUAL_QREGISTER Q \<and> 0 \<le> \<rho>\<close>
+    unfolding cq_map_local_q_def
+    apply (rule km_norm_local_register[THEN order.trans])
+    using that km
+    by (auto intro!: tc_tensor_pos mult_le_one simp: cq_map_local_q_def norm_tc_tensor norm_tc_butterfly)
+  then show \<open>km_norm (if ACTUAL_QREGISTER Q \<and> 0 \<le> \<rho> then cq_map_local_q Q \<rho> D else 0) \<le> norm \<rho> * km_norm D\<close>
+    by auto
+qed
+
 
 
 (* definition cq_map_local_q :: 
@@ -662,26 +686,360 @@ proof -
 (* lemma kf_from_measurement_0: \<open>kraus_equivalent' (kf_from_measurement 0) 0\<close> *)
 
 
-lift_definition denotation_from_kraus_family :: \<open>(cl \<Rightarrow> (cl, qu) measurement) \<Rightarrow> denotation\<close> is
+lift_definition denotation_measurement :: \<open>(cl \<Rightarrow> (cl, qu) measurement) \<Rightarrow> denotation\<close> is
   \<open>\<lambda>M::cl \<Rightarrow> (cl, qu) measurement. cq_map_from_kraus_family qFst qSnd (\<lambda>c. kf_from_measurement (M c))\<close>
-  by (auto intro!: cq_map_from_kraus_family_norm cq_map_from_kraus_family_is_cq_map kf_from_measurement_norm_leq1)
+  by (auto intro!: cq_map_from_kraus_family_is_cq_map)
+
+lemma denotation_measurement_bounded[iff]: \<open>denotation_norm (denotation_measurement M) \<le> 1\<close>
+  apply (transfer fixing: M)
+  by (auto intro!: cq_map_from_kraus_family_norm kf_from_measurement_norm_leq1)
 
 (* lift_definition cq_map_measurement :: \<open>('cl1 \<Rightarrow> ('cl2, 'qu) measurement) \<Rightarrow> ('cl1,'qu,'cl2,'qu) cq_map\<close> is
   \<open>\<lambda>m c. kf_from_measurement (m c)\<close>
   by (auto intro!: kf_from_measurement_norm_leq1 simp: bdd_above_def) *)
 
-lift_definition denotation_id :: denotation is \<open>cq_id qFst\<close>
+instantiation denotation :: \<open>{zero,one,times,plus}\<close> begin
+lift_definition zero_denotation :: denotation is 0
+  by simp
+lift_definition one_denotation :: denotation is \<open>cq_id qFst\<close>
+  by simp
+lift_definition times_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>D E. D o E\<close>
+  by (smt (verit, best) cq_map_id_left fun.map_comp is_cq_map_def kraus_map_comp)
+lift_definition plus_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>D E \<rho>. D \<rho> + E \<rho>\<close>
+  by (auto intro!: is_cq_map_plus)
+instance..
+end
+
+lemma zero_denotation_bounded[iff]: \<open>denotation_norm 0 = 0\<close>
+  apply transfer
   by simp
 
-lift_definition denotation_seq :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
-  \<open>\<lambda>D E. E o D\<close>
-  apply auto
-   apply (smt (verit, best) cq_map_id_left fun.map_comp is_cq_map_def kraus_map_comp)
-  by (smt (z3) is_cq_map_def km_comp_norm_leq km_norm_geq0 mult_left_le_one_le)
+lemma one_denotation_bounded[iff]: \<open>denotation_norm 1 = 1\<close>
+  apply transfer
+  by simp
+
+lemma times_denotation_bounded: \<open>denotation_norm (D * E) \<le> denotation_norm D * denotation_norm E\<close>
+  apply transfer
+  by (metis Groups.mult_ac(2) is_cq_map_def km_comp_norm_leq)
+
+instantiation denotation :: monoid_mult begin
+instance
+proof intro_classes
+  fix a b c :: denotation
+  show \<open>a * b * c = a * (b * c)\<close>
+    apply transfer'
+    by fastforce
+  show \<open>1 * a = a\<close>
+    apply transfer
+    using cq_map_id_left by blast
+  show \<open>a * 1 = a\<close>
+    apply transfer
+    using cq_map_id_right by blast
+qed
+end
+
+instantiation denotation :: topological_space begin
+lift_definition open_denotation :: \<open>denotation set \<Rightarrow> bool\<close> is \<open>openin (top_of_set (range apply_denotation))\<close>.
+instance
+proof intro_classes
+  show \<open>open (UNIV :: denotation set)\<close>
+    by (simp add: open_denotation_def)
+  show \<open>open (S \<inter> T)\<close> if \<open>open S\<close> and \<open>open T\<close> for S T :: \<open>denotation set\<close>
+    using that
+    apply transfer
+    by blast
+  show \<open>open (\<Union> K)\<close> if \<open>\<forall>S\<in>K. open S\<close> for K :: \<open>denotation set set\<close>
+    using that
+    apply transfer
+    by blast
+qed
+end
+
+(* TODO move *)
+lemma rel_topology_subtopology_pullback_topology:
+  assumes inj: \<open>inj_on f X\<close>
+  assumes r_def: \<open>\<And>x y. r x y \<longleftrightarrow> x = f y \<and> y \<in> X\<close>
+  shows \<open>rel_topology r (subtopology T (f ` X)) (pullback_topology X f T)\<close>
+proof (intro rel_topology_def[THEN iffD2] conjI allI impI)
+  show \<open>rel_fun (rel_set r) (=)
+        (openin (subtopology T (f ` X))) (openin (pullback_topology X f T))\<close>
+  proof (rule rel_funI)
+    fix U V assume \<open>rel_set r U V\<close>
+    then have UV: \<open>U = f ` V\<close> and \<open>V \<subseteq> X\<close>
+      by (auto simp: rel_set_def r_def)
+    have 1: \<open>openin (pullback_topology X f T) V\<close> if \<open>openin (subtopology T (f ` X)) U\<close>
+    proof -
+      define g where \<open>g = inv_into X f\<close>
+      from that obtain W where openW: \<open>openin T W\<close> and U_def: \<open>U = W \<inter> f ` X\<close>
+        by (auto intro!: simp: openin_subtopology)
+      have \<open>V = (f -` U) \<inter> X\<close>
+        using \<open>V \<subseteq> X\<close> \<open>inj_on f X\<close>  UV g_def
+        by (smt (verit, best) Int_left_commute image_Int_subset image_subset_iff_subset_vimage
+            inf.absorb_iff2 inf.orderE inf_le2 inj_on_image_eq_iff)
+      also have \<open>\<dots> = f -` (W \<inter> f ` X) \<inter> X\<close>
+        by (simp add: U_def)
+      also have \<open>\<dots> = f -` W \<inter> f -` f ` X \<inter> X\<close>
+        by force
+      also have \<open>\<dots> = f -` W \<inter> X\<close>
+        by blast
+      finally show ?thesis
+        using openW
+        by (auto simp add: openin_pullback_topology)
+    qed
+    have 2: \<open>openin (pullback_topology X f T) V \<Longrightarrow> openin (subtopology T (f ` X)) U\<close>
+      by (auto simp: openin_pullback_topology openin_subtopology UV)
+    from 1 2 show \<open>openin (subtopology T (f ` X)) U = openin (pullback_topology X f T) V\<close>
+      by fastforce
+  qed
+  show \<open>Domainp (rel_set r) U\<close> if \<open>openin (subtopology T (f ` X)) U\<close> for U
+  proof -
+    from that have \<open>U \<subseteq> range f\<close>
+      using openin_imp_subset by blast
+    then show ?thesis
+      apply (rule_tac DomainPI[of _ _ \<open>(f -` U) \<inter> X\<close>])
+      using openin_imp_subset that     
+      by (fastforce intro!: rel_setI simp: r_def)
+  qed
+  show \<open>Rangep (rel_set r) U\<close> if \<open>openin (pullback_topology X f T) U\<close> for U
+  proof -
+    from that have \<open>U \<subseteq> X\<close>
+      by (metis Int_iff openin_pullback_topology unfold_simps(2))
+    then show ?thesis
+      apply (rule_tac RangePI[of _ \<open>f ` U\<close>])
+      by (force intro!: rel_setI simp: r_def)
+  qed
+qed
+
+
+lemma rel_topology_bounded_linear_sot: \<open>rel_topology cr_cblinfun (top_of_set (Collect (bounded_clinear :: ('a::complex_normed_vector \<Rightarrow> 'b::complex_normed_vector) \<Rightarrow> _)))
+           (cstrong_operator_topology :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) topology)\<close>
+proof -
+    have *: \<open>Collect bounded_clinear = range cblinfun_apply\<close>
+      using type_definition.Rep_range type_definition_cblinfun by fastforce
+  show ?thesis
+    unfolding cstrong_operator_topology_def *
+    apply (rule rel_topology_subtopology_pullback_topology)
+     apply (simp add: cblinfun_apply_inject inj_def)
+    by (simp add: cr_cblinfun_def)
+qed
+
+
+instantiation denotation :: t2_space begin
+instance
+proof -
+  define S :: \<open>(((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class) set\<close>
+    where \<open>S = range (apply_denotation)\<close>
+  have hausdorff_S: \<open>Hausdorff_space (top_of_set S)\<close>
+  proof -
+    define cb :: \<open>_ \<Rightarrow> (((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class)\<close> where \<open>cb = cblinfun_apply\<close>
+    note [transfer_rule] = rel_topology_bounded_linear_sot
+    have [transfer_rule]: \<open>bi_unique cr_cblinfun\<close>
+      by (metis bi_total_eq bi_unique_eq cblinfun.bi_unique cblinfun.pcr_cr_eq)
+    
+    have hausdorff_range_cb: \<open>Hausdorff_space (top_of_set (Collect (bounded_clinear :: (((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class) \<Rightarrow> _)))\<close>
+      using hausdorff_sot[where 'a=\<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close> and 'b=\<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>]
+      by (transfer, blast)
+
+    have \<open>S \<subseteq> Collect bounded_clinear\<close>
+      using apply_denotation
+      by (auto intro!: kraus_map_bounded_clinear simp add: S_def is_cq_map_def cb_def)
+    then have top_S: \<open>top_of_set S = subtopology (top_of_set (Collect bounded_clinear)) S\<close>
+      by (metis (no_types, lifting) subtopology_subtopology topspace_euclidean_subtopology
+          topspace_subtopology_subset)
+    show \<open>Hausdorff_space (top_of_set S)\<close>
+      using Hausdorff_space_subtopology top_S hausdorff_range_cb by metis
+  qed
+  show \<open>OFCLASS(denotation, t2_space_class)\<close>
+  proof (intro_classes, transfer, fold S_def)
+    fix x y :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+    assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q x\<close>
+    then have \<open>x \<in> S\<close>
+      by (metis (no_types, lifting) Abs_denotation_inverse S_def mem_Collect_eq rangeI)
+    assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q y\<close>
+    then have \<open>y \<in> S\<close>
+      by (metis (no_types, lifting) Abs_denotation_inverse S_def UNIV_I image_iff mem_Collect_eq)
+    assume \<open>x \<noteq> y\<close>
+    with hausdorff_S \<open>x \<in> S\<close> \<open>y \<in> S\<close>
+    obtain U V where sepUV: \<open>openin (top_of_set S) U \<and> openin (top_of_set S) V \<and> x \<in> U \<and> y \<in> V \<and> U \<inter> V = {}\<close>
+      apply atomize_elim
+      by (simp add: Hausdorff_space_def disjnt_def)
+    then have \<open>U\<in>{A. \<forall>\<EE>\<in>A. is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>}\<close> and \<open>V\<in>{A. \<forall>\<EE>\<in>A. is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>}\<close>
+      using apply_denotation by (auto simp: S_def dest!: openin_imp_subset)
+    with sepUV
+    show \<open>\<exists>U\<in>{A. \<forall>\<EE>\<in>A. is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>}. \<exists>V\<in>{A. \<forall>\<EE>\<in>A. is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>}.
+         openin (top_of_set S) U \<and> openin (top_of_set S) V \<and> x \<in> U \<and> y \<in> V \<and> U \<inter> V = {}\<close>
+      by blast
+  qed
+qed
+end
+
+
+instantiation denotation :: comm_monoid_add begin
+instance
+proof intro_classes
+  fix a b c :: denotation
+  show \<open>a + b + c = a + (b + c)\<close>
+    apply transfer' by auto
+  show \<open>a + b = b + a\<close>
+    apply transfer' by auto
+  show \<open>0 + a = a\<close>
+    apply transfer' by auto
+qed
+end
+
+instance denotation :: semiring_1
+proof intro_classes
+  fix D E F :: denotation
+  show \<open>0 * D = 0\<close>
+    apply transfer' by auto
+  show \<open>D * 0 = 0\<close>
+    apply transfer
+    by (auto intro!: ext simp: complex_vector.linear_0 is_cq_map_def complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear)
+  show \<open>(D + E) * F = D * F + E * F\<close>    
+    apply transfer
+    by (auto intro!: ext simp: complex_vector.linear_add is_cq_map_def complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear)
+  show \<open>D * (E + F) = D * E + D * F\<close>
+    apply transfer
+    by (auto intro!: ext simp: complex_vector.linear_add is_cq_map_def complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear)
+  show \<open>0 \<noteq> (1 :: denotation)\<close>
+    apply transfer
+    using one_denotation.abs_eq one_denotation_bounded zero_denotation_def by force
+qed
+
+instantiation denotation :: order begin
+lift_definition less_eq_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> bool\<close> is
+  \<open>\<lambda>D E. \<forall>\<rho>\<ge>0. D \<rho> \<ge> E \<rho>\<close>.
+definition \<open>x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x\<close> for x y :: denotation
+instance
+proof intro_classes
+  fix x y z :: denotation
+  show \<open>x \<le> x\<close>
+    apply transfer' by simp
+  show \<open>x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z\<close>
+    apply transfer' by fastforce
+  show \<open>x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y\<close>
+  proof transfer
+    fix D E :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+    assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q D\<close> and \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q E\<close>
+    then have \<open>kraus_map D\<close> and \<open>kraus_map E\<close>
+      using is_cq_map_def by auto
+    then have [intro!]: \<open>clinear D\<close> \<open>clinear E\<close>
+      by (simp_all add: bounded_clinear.axioms(1) kraus_map_bounded_clinear)
+    assume \<open>\<forall>\<rho>\<ge>0. E \<rho> \<le> D \<rho>\<close> and \<open>\<forall>\<rho>\<ge>0. D \<rho> \<le> E \<rho>\<close>
+    then have \<open>\<forall>\<rho>\<ge>0. D \<rho> = E \<rho>\<close>
+      by fastforce
+    then show \<open>D = E\<close>
+      apply (rule_tac eq_from_separatingI[OF separating_density_ops[of 1]])
+      by auto
+  qed
+  show \<open>(x < y) = (x \<le> y \<and> \<not> y \<le> x)\<close>
+    by (simp add: less_denotation_def)
+qed
+end
+
+instantiation denotation :: minus begin
+lift_definition minus_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>D E. if kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>) then (\<lambda>\<rho>. D \<rho> - E \<rho>) else 0\<close>
+proof (rename_tac D E)
+  fix D E :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+  assume cqmap: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q D\<close>   \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q E\<close>
+  show \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (if kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>) then \<lambda>\<rho>. D \<rho> - E \<rho> else 0)\<close>
+  proof (cases \<open>kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>)\<close>)
+    case True
+    have cqD: \<open>cq_id \<lbrakk>#1\<rbrakk>\<^sub>q (D (cq_id \<lbrakk>#1\<rbrakk>\<^sub>q \<rho>)) = D \<rho>\<close> for \<rho>
+      by (metis comp_apply cqmap is_cq_map_def)
+    have cqE: \<open>cq_id \<lbrakk>#1\<rbrakk>\<^sub>q (E (cq_id \<lbrakk>#1\<rbrakk>\<^sub>q \<rho>)) = E \<rho>\<close> for \<rho>
+      by (metis comp_apply cqmap is_cq_map_def)
+    have \<open>cq_id \<lbrakk>#1\<rbrakk>\<^sub>q \<circ> (\<lambda>\<rho>. D \<rho> - E \<rho>) \<circ> cq_id \<lbrakk>#1\<rbrakk>\<^sub>q = (\<lambda>\<rho>. D \<rho> - E \<rho>)\<close>
+      by (auto intro!: ext simp: complex_vector.linear_diff bounded_clinear_cq_id bounded_clinear.clinear cqD cqE)
+    then show ?thesis
+      apply (simp add: True)
+      by (intro is_cq_map_def[THEN iffD2] conjI True)
+  next
+    case False
+    then show ?thesis
+      by auto
+  qed
+qed
+instance..
+end
+
+instance denotation :: semiring_1_cancel
+proof intro_classes
+  fix D E F :: denotation
+  show \<open>D + E - D = E\<close>
+  proof transfer
+    fix D E :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+    assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q E\<close>
+    then have [simp]: \<open>kraus_map E\<close>
+      using is_cq_map_def by blast
+    have [simp]: \<open>(\<lambda>\<rho>. D \<rho> + E \<rho> - D \<rho>) = E\<close>
+      by fastforce
+    show \<open>(if kraus_map (\<lambda>\<rho>. D \<rho> + E \<rho> - D \<rho>) then \<lambda>\<rho>. D \<rho> + E \<rho> - D \<rho> else 0) = E\<close>
+      by simp
+  qed
+  show \<open>D - E - F = D - (E + F)\<close>
+  proof transfer
+    fix D E F :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+    assume \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q F\<close>
+    then have [iff]: \<open>kraus_map F\<close>
+      using is_cq_map_def by blast
+    consider (km_DEF) \<open>kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho> - F \<rho>)\<close> | (km_DE) \<open>\<not> kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho> - F \<rho>)\<close> \<open>kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>)\<close>
+      | (km_D) \<open>\<not> kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho> - F \<rho>)\<close> \<open>\<not> kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>)\<close>
+      by metis
+    then show \<open>(if kraus_map (\<lambda>\<rho>. (if kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>) then \<lambda>\<rho>. D \<rho> - E \<rho> else 0) \<rho> - F \<rho>)
+        then \<lambda>\<rho>. (if kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>) then \<lambda>\<rho>. D \<rho> - E \<rho> else 0) \<rho> - F \<rho> else 0) =
+       (if kraus_map (\<lambda>\<rho>. D \<rho> - (E \<rho> + F \<rho>)) then \<lambda>\<rho>. D \<rho> - (E \<rho> + F \<rho>) else 0)\<close>
+    proof cases
+      case km_DEF
+      then have km_DE: \<open>kraus_map (\<lambda>\<rho>. D \<rho> - E \<rho>)\<close>
+        apply (rewrite at \<open>kraus_map (\<lambda>\<rho>. \<hole>)\<close> to \<open>(D \<rho> - E \<rho> - F \<rho>) + F \<rho>\<close> DEADID.rel_mono_strong)
+        apply simp
+        apply (rule kraus_map_add)
+        by (auto intro!: simp: )
+      show ?thesis
+        by (simp add: km_DEF km_DE diff_diff_eq)
+    next
+      case km_DE
+      show ?thesis
+        by (simp add: km_DE diff_diff_eq)
+    next
+      case km_D
+      have \<open>F = 0\<close> if \<open>kraus_map (\<lambda>\<rho>. - F \<rho>)\<close>
+      proof (rule eq_from_separatingI[OF separating_density_ops])
+        show \<open>0 < (1::real)\<close>
+          by simp
+        show \<open>clinear F\<close>
+          by (simp add: bounded_clinear.axioms(1) kraus_map_bounded_clinear)
+        show \<open>clinear 0\<close>
+          by (simp add: complex_vector.linear_zero func_zero)
+        fix \<rho> :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close> assume \<open>\<rho> \<in> {t. 0 \<le> t \<and> norm t \<le> 1}\<close>
+        then have \<open>\<rho> \<ge> 0\<close>
+          by simp
+        from \<open>kraus_map F\<close> have \<open>F \<rho> \<ge> 0\<close>
+          using \<open>0 \<le> \<rho>\<close> kraus_map_pos by blast
+        moreover from that have \<open>- F \<rho> \<ge> 0\<close>
+          using \<open>0 \<le> \<rho>\<close> kraus_map_pos by blast
+        ultimately show \<open>F \<rho> = 0 \<rho>\<close>
+          by fastforce
+      qed
+      then show ?thesis
+        by (auto simp: km_D simp flip: diff_diff_eq)
+    qed
+  qed
+qed
+
 
 lift_definition denotation_sample :: \<open>(cl \<Rightarrow> cl distr) \<Rightarrow> denotation\<close> is
   \<open>\<lambda>e. cq_map_from_kraus_family qFst qSnd (\<lambda>c. kf_sample (prob (e c)))\<close>
-  by (auto intro!: cq_map_from_kraus_family_is_cq_map cq_map_from_kraus_family_norm simp: kf_sample_norm prob_summable)
+  by (rule cq_map_from_kraus_family_is_cq_map)
+
+lemma denotation_sample_bounded[iff]: \<open>denotation_norm (denotation_sample d) \<le> 1\<close>
+  apply (transfer fixing: d)
+  by (auto intro!: cq_map_from_kraus_family_norm simp: kf_sample_norm prob_summable)
+
 
 (* TODO move *)
 lemma km_apply_qregister_qFst: 
@@ -707,67 +1065,75 @@ lemma cq_id_qFst: \<open>cq_id qFst = km_tensor km_complete_measurement_ket id\<
   by (simp add: cq_id_def km_apply_qregister_qFst kraus_map_complete_measurement)
 
 (* TODO move *)
-lemma kf_apply_complete_measurement_ket_km: \<open>kf_apply kf_complete_measurement_ket = km_complete_measurement_ket\<close>
-  by (metis Complex_L2.is_ortho_set_ket kf_apply_map kf_complete_measurement_ket_kf_map kf_eq_imp_eq_weak kf_eq_weak_def
-      km_complete_measurement_kf_complete_measurement)
+lemma kf_domain_tensor: \<open>kf_domain (kf_tensor \<EE> \<FF>) = kf_domain \<EE> \<times> kf_domain \<FF>\<close>
+proof (intro Set.set_eqI iffI)
+  fix xy assume xy_dom: \<open>xy \<in> kf_domain (kf_tensor \<EE> \<FF>)\<close>
+  obtain x y where xy: \<open>xy = (x,y)\<close>
+    by (auto simp: prod_eq_iff)
+  from xy_dom obtain E F where \<open>(E,F,x,y) \<in> kf_domain (kf_tensor_raw \<EE> \<FF>)\<close>
+    by (force simp add: kf_tensor_def xy)
+  then obtain EF where EFEFxy: \<open>(EF,E,F,x,y) \<in> Rep_kraus_family (kf_tensor_raw \<EE> \<FF>)\<close> and \<open>EF \<noteq> 0\<close>
+    by (auto simp: kf_domain_def)
+  then have \<open>EF = E \<otimes>\<^sub>o F\<close>
+    by (force simp: kf_tensor_raw.rep_eq case_prod_unfold)
+  with \<open>EF \<noteq> 0\<close> have \<open>E \<noteq> 0\<close> and \<open>F \<noteq> 0\<close>
+    by fastforce+
+  from EFEFxy have \<open>(E,x) \<in> Rep_kraus_family \<EE>\<close>
+    apply (transfer' fixing: E x)
+    by auto
+  with \<open>E \<noteq> 0\<close> have \<open>x \<in> kf_domain \<EE>\<close>
+    apply (transfer' fixing: E x)
+    by force
+  from EFEFxy have \<open>(F,y) \<in> Rep_kraus_family \<FF>\<close>
+    apply (transfer' fixing: F y)
+    by auto
+  with \<open>F \<noteq> 0\<close> have \<open>y \<in> kf_domain \<FF>\<close>
+    apply (transfer' fixing: F y)
+    by force
+  from  \<open>x \<in> kf_domain \<EE>\<close>  \<open>y \<in> kf_domain \<FF>\<close>
+  show \<open>xy \<in> kf_domain \<EE> \<times> kf_domain \<FF>\<close>
+    by (simp add: xy)
+next
+  fix xy assume xy_dom: \<open>xy \<in> kf_domain \<EE> \<times> kf_domain \<FF>\<close>
+  then obtain x y where xy: \<open>xy = (x,y)\<close> and xE: \<open>x \<in> kf_domain \<EE>\<close> and yF: \<open>y \<in> kf_domain \<FF>\<close>
+    by (auto simp: prod_eq_iff)
+  from xE obtain E where Ex: \<open>(E,x) \<in> Rep_kraus_family \<EE>\<close> and \<open>E \<noteq> 0\<close>
+    by (auto simp: kf_domain_def)
+  from yF obtain F where Fy: \<open>(F,y) \<in> Rep_kraus_family \<FF>\<close> and \<open>F \<noteq> 0\<close>
+    by (auto simp: kf_domain_def)
+  from Ex Fy have \<open>(E \<otimes>\<^sub>o F, E, F, x, y) \<in> Rep_kraus_family (kf_tensor_raw \<EE> \<FF>)\<close>
+    by (force simp: kf_tensor_raw.rep_eq case_prod_unfold)
+  moreover have \<open>E \<otimes>\<^sub>o F \<noteq> 0\<close>
+    by (simp add: \<open>E \<noteq> 0\<close> \<open>F \<noteq> 0\<close> tensor_op_nonzero)
+  ultimately have \<open>(E, F, x, y) \<in> kf_domain (kf_tensor_raw \<EE> \<FF>)\<close>
+    by (force simp: kf_domain_def)
+  then show \<open>xy \<in> kf_domain (kf_tensor \<EE> \<FF>)\<close>
+    by (force simp: kf_tensor_def xy case_prod_unfold)
+qed
 
 (* TODO move *)
-lemma kf_comp_id_left: \<open>kf_comp kf_id \<EE> \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>x. (x,())) \<EE>\<close>
-proof (rule kf_eqI_from_filter_eq_weak)
-  fix xy :: \<open>'c \<times> unit\<close>
-  define x where \<open>x = fst xy\<close>
-  then have xy: \<open>xy = (x,())\<close>
-    by (auto intro!: prod.expand simp: y_def)
-  have \<open>kf_filter ((=) xy) (kf_comp kf_id \<EE>) = kf_comp (kf_filter (\<lambda>_. True) kf_id) (kf_filter ((=)x) \<EE>)\<close>
-    by (auto intro!: arg_cong2[where f=kf_filter] simp add: xy simp flip: kf_filter_comp simp del: kf_filter_true)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_filter ((=)x) \<EE>\<close>
-    by (simp add: kf_comp_apply kf_eq_weakI)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_map (\<lambda>x. (x,())) (kf_filter ((=)x) \<EE>)\<close>
-    by (simp add: kf_eq_weak_def)
-  also have \<open>\<dots> = kf_filter ((=) xy) (kf_map (\<lambda>x. (x,())) \<EE>)\<close>
-    by (simp add: kf_filter_map xy)
-  finally show \<open>kf_filter ((=) xy) (kf_comp kf_id \<EE>) =\<^sub>k\<^sub>r \<dots>\<close>
-    by -
-qed
+lemma kf_domain_of_op[simp]: \<open>kf_domain (kf_of_op A) = {()}\<close> if \<open>A \<noteq> 0\<close>
+  apply (transfer' fixing: A)
+  using that by auto
 
-lemma kf_comp_id_right: \<open>kf_comp \<EE> kf_id \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>x. ((),x)) \<EE>\<close>
-proof (rule kf_eqI_from_filter_eq_weak)
-  fix xy :: \<open>unit \<times> 'c\<close>
-  define y where \<open>y = snd xy\<close>
-  then have xy: \<open>xy = ((),y)\<close>
-    by (auto intro!: prod.expand simp: y_def)
-  have \<open>kf_filter ((=) xy) (kf_comp \<EE> kf_id) = kf_comp (kf_filter ((=)y) \<EE>) (kf_filter (\<lambda>_. True) kf_id)\<close>
-    by (auto intro!: arg_cong2[where f=kf_filter] simp add: xy simp flip: kf_filter_comp simp del: kf_filter_true)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_filter ((=)y) \<EE>\<close>
-    by (simp add: kf_comp_apply kf_eq_weakI)
-  also have \<open>\<dots> =\<^sub>k\<^sub>r kf_map (Pair ()) (kf_filter ((=)y) \<EE>)\<close>
-    by (simp add: kf_eq_weak_def)
-  also have \<open>\<dots> = kf_filter ((=) xy) (kf_map (\<lambda>x. ((),x)) \<EE>)\<close>
-    by (simp add: kf_filter_map xy)
-  finally show \<open>kf_filter ((=) xy) (kf_comp \<EE> kf_id) =\<^sub>k\<^sub>r \<dots>\<close>
-    by -
-qed
-
-
+(* TODO move *)
+lemma kf_domain_id[simp]: \<open>kf_domain (kf_id :: ('a::{chilbert_space,not_singleton},_,_) kraus_family) = {()}\<close>
+  by (simp flip: kf_of_op_id)
 
 lift_definition denotation_cases :: \<open>(cl \<Rightarrow> denotation) \<Rightarrow> denotation\<close> is
   \<open>\<lambda>\<EE>. kf_apply (kf_comp_dependent (\<lambda>(c,_). km_some_kraus_family (\<EE> c)) (kf_tensor kf_complete_measurement_ket kf_id))\<close>
-proof (rename_tac \<EE>, intro conjI)
+proof (rename_tac \<EE>)
   fix \<EE> :: \<open>cl \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
-  assume asm: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (\<EE> c) \<and> km_norm (\<EE> c) \<le> 1\<close> for c
+  assume asm: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (\<EE> c)\<close> for c
   define \<FF> where \<open>\<FF> c = km_some_kraus_family (\<EE> c)\<close> for c
   have apply\<FF>: \<open>kf_apply (\<FF> c) = \<EE> c\<close> for c
     using asm \<FF>_def[abs_def] is_cq_map_def kf_apply_km_some_kraus_family by blast
-  have bdd1: \<open>bdd_above (range (\<lambda>x. kf_norm (\<FF> x)))\<close>
-    using asm by (auto simp add: km_norm_kf_norm intro!: bdd_aboveI simp flip: apply\<FF>)
-  then have bdd2: \<open>bdd_above ((\<lambda>x. kf_norm (\<FF> (f x))) ` X)\<close> for X f
-    by (smt (verit, ccfv_threshold) bdd_above_mono2 range_composition top.extremum)
-  show \<open>km_norm ((*\<^sub>k\<^sub>r) (kf_comp_dependent (\<lambda>(c, _). \<FF> c) (kf_tensor kf_complete_measurement_ket kf_id))) \<le> 1\<close>
-    by (smt (verit, ccfv_threshold) apply\<FF> asm kf_comp_dependent_norm_leq kf_norm_complete_measurement_ket
-        kf_norm_id_eq1 kf_norm_tensor km_norm_kf_norm mult_cancel_left2 split_def)
   show \<open>is_cq_map qFst
           (kf_apply (kf_comp_dependent (\<lambda>(c, _). \<FF> c) (kf_tensor kf_complete_measurement_ket kf_id)))\<close>
-  proof -
+  proof (cases \<open>bdd_above (range (\<lambda>x. kf_norm (\<FF> x)))\<close>)
+    case True
+    then have bdd2: \<open>bdd_above ((\<lambda>x. kf_norm (\<FF> (f x))) ` X)\<close> for X f
+      by (smt (verit, ccfv_threshold) bdd_above_mono2 range_composition top.extremum)
     define kf_cq_id :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2, cl\<times>unit) kraus_family\<close> where \<open>kf_cq_id = kf_tensor kf_complete_measurement_ket kf_id\<close>
     have kf_cq_id_norm: \<open>kf_norm (kf_cq_id) = 1\<close>
       by (simp add: kf_cq_id_def kf_norm_tensor)
@@ -776,8 +1142,9 @@ proof (rename_tac \<EE>, intro conjI)
     have \<FF>_left_id: \<open>kf_comp kf_cq_id (\<FF> c) =\<^sub>k\<^sub>r \<FF> c\<close> for c
       apply (rule kf_eq_weakI)
       using asm \<EE>_left_id
-      by (simp add: kf_comp_apply kf_cq_id_def kf_apply_complete_measurement_ket_km apply\<FF>
-          kf_id_apply kf_id_apply[abs_def] is_cq_map_def flip: km_tensor_kf_tensor id_def cq_id_qFst)
+      by (simp add: kf_comp_apply kf_cq_id_def apply\<FF>
+          kf_id_apply kf_id_apply[abs_def] is_cq_map_def 
+          flip: km_tensor_kf_tensor id_def cq_id_qFst km_complete_measurement_ket_kf_complete_measurement_ket)
     have bdd3: \<open>bdd_above ((\<lambda>(c,_). kf_norm (kf_comp kf_cq_id (\<FF> c))) ` X)\<close> for X :: \<open>(cl\<times>'a) set\<close>
       unfolding case_prod_unfold
       using bdd2 apply (rule bdd_above_mono2[OF _ subset_refl])
@@ -785,8 +1152,8 @@ proof (rename_tac \<EE>, intro conjI)
       using kf_cq_id_norm by auto
     have \<open>cq_id qFst o kf_apply (kf_comp_dependent (\<lambda>(c, _). \<FF> c) kf_cq_id) o cq_id qFst
       = kf_apply (kf_comp (kf_comp kf_cq_id (kf_comp_dependent (\<lambda>(c, _). \<FF> c) kf_cq_id)) kf_cq_id)\<close>
-      by (simp add: cq_id_qFst kf_comp_apply o_def kf_cq_id_def kf_apply_complete_measurement_ket_km kf_id_apply[abs_def] id_def
-          flip: km_tensor_kf_tensor)
+      by (simp add: cq_id_qFst kf_comp_apply o_def kf_cq_id_def kf_id_apply[abs_def] id_def
+          flip: km_tensor_kf_tensor km_complete_measurement_ket_kf_complete_measurement_ket)
     also have \<open>\<dots> = kf_apply (kf_comp (kf_comp_dependent (\<lambda>(c, _). (kf_comp kf_cq_id (\<FF> c))) kf_cq_id) kf_cq_id)\<close>
       apply (intro ext kf_apply_eqI kf_comp_cong_weak)
       unfolding kf_comp_def case_prod_unfold
@@ -827,30 +1194,656 @@ proof (rename_tac \<EE>, intro conjI)
       by (simp add: case_prod_unfold)
     finally show ?thesis
       by (simp add: is_cq_map_def flip: kf_cq_id_def)
+  next
+    case False
+    have *: \<open>UNIV = fst ` (UNIV \<times> {()})\<close>
+      by auto
+     have \<open>kf_comp_dependent (\<lambda>(c, _). \<FF> c) (kf_tensor kf_complete_measurement_ket kf_id) = 0\<close>
+       apply (rule kf_comp_dependent_invalid)
+       using False
+       apply (subst (asm) *, subst (asm) image_image)
+       by (simp add: kf_domain_tensor case_prod_unfold)
+    then show ?thesis
+      by simp
   qed
 qed
 
-lift_definition denotation_while :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> denotation\<close> is cq_map_while
-  by x
+lemma denotation_cases_bounded:
+  assumes \<open>\<And>c. denotation_norm (D c) \<le> B\<close>
+  shows \<open>denotation_norm (denotation_cases D) \<le> B\<close>
+proof (insert assms, transfer fixing: B)
+  fix D :: \<open>cl \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+  assume \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) D\<close>
+  then have cq: \<open>is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q (D c)\<close> for c
+    by fastforce
+  assume bdd: \<open>km_norm (D c) \<le> B\<close> for c
+  define \<FF> where \<open>\<FF> c = km_some_kraus_family (D c)\<close> for c
+  have apply\<FF>: \<open>kf_apply (\<FF> c) = D c\<close> for c
+    using cq \<FF>_def[abs_def] is_cq_map_def kf_apply_km_some_kraus_family by blast
+  have \<open>B \<ge> 0\<close>
+    using bdd[of undefined] km_norm_geq0[of \<open>D undefined\<close>]
+    by linarith
+  show \<open>km_norm ((*\<^sub>k\<^sub>r) (kf_comp_dependent (\<lambda>(c, _). km_some_kraus_family (D c)) (kf_tensor kf_complete_measurement_ket kf_id))) \<le> B\<close>
+    using bdd \<open>B \<ge> 0\<close>
+    apply (simp add: flip: \<FF>_def)
+    apply (simp add: km_norm_kf_norm flip: apply\<FF>)
+    by (metis (mono_tags, lifting) kf_comp_dependent_norm_leq kf_norm_complete_measurement_ket kf_norm_id_eq1 kf_norm_tensor mult_cancel_left2 split_def)
+qed
 
-lift_definition denotation_on_quantum :: \<open>(cl \<Rightarrow> (qu ell2, qu ell2, 'x) kraus_family) \<Rightarrow> denotation\<close>
-  is cq_map_on_q
+definition denotation_while_n :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> nat \<Rightarrow> denotation\<close> where
+  \<open>denotation_while_n e D n = denotation_cases (\<lambda>m. if e m then 0 else 1) * (denotation_cases (\<lambda>m. if e m then D else 0))^n\<close>
+
+lemma km_some_kraus_family_0[simp]: \<open>km_some_kraus_family 0 = 0\<close>
+proof -
+  have \<open>km_some_kraus_family 0 = kf_remove_0 (km_some_kraus_family 0)\<close>
+    by (simp add: km_some_kraus_family_def)
+  also have \<open>\<dots> = 0\<close>
+    apply (rule kf_eq_0_iff_kf_remove_0_is_0[THEN iffD1])
+    by (simp add: kf_eq_weak_def)
+  finally show ?thesis
+    by -
+qed
+
+lemma denotation_cases_0[simp]: \<open>denotation_cases 0 = 0\<close>
+  apply (simp add: func_zero)
+  apply transfer'
+  by (simp add: case_prod_unfold)
+
+
+
+
+
+lemma kf_norm_km_some_kraus_family[simp]: \<open>kf_norm (km_some_kraus_family \<EE>) = km_norm \<EE>\<close>
+  apply (cases \<open>kraus_map \<EE>\<close>)
+  by (auto intro!: km_norm_kf_norm[symmetric] simp: km_some_kraus_family_invalid km_norm_invalid)
+
+lemma denotation_cases_plus: 
+  assumes \<open>bdd_above (range (denotation_norm o D))\<close>
+  assumes \<open>bdd_above (range (denotation_norm o E))\<close>
+  shows \<open>denotation_cases (\<lambda>c. D c + E c) = denotation_cases D + denotation_cases E\<close>
+proof (insert assms, transfer)
+  fix D E :: \<open>cl \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+  assume \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) D\<close>
+  then have [iff]: \<open>kraus_map (D c)\<close> for c
+    using is_cq_map_def by auto
+  assume \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) E\<close>
+  then have [iff]: \<open>kraus_map (E c)\<close> for c
+    by (simp add: is_cq_map_def)
+  assume bdd0: \<open>bdd_above (range (km_norm \<circ> D))\<close> \<open>bdd_above (range (km_norm \<circ> E))\<close>
+  have bdd: \<open>bdd_above ((\<lambda>c. km_norm (\<lambda>\<rho>. D (fst c) \<rho> + E (fst c) \<rho>)) ` X)\<close> for X
+  proof -
+    from bdd0 obtain B where B: \<open>km_norm (D c) \<le> B\<close> for c
+      by (auto intro!: simp: bdd_above_def)
+    from bdd0 obtain C where C: \<open>km_norm (E c) \<le> C\<close> for c
+      by (auto intro!: simp: bdd_above_def)
+    have \<open>km_norm (\<lambda>\<rho>. D c \<rho> + E c \<rho>) \<le> B + C\<close> for c
+      using km_norm_triangle[OF \<open>kraus_map (D c)\<close> \<open>kraus_map (E c)\<close>] B[of c] C[of c]
+      by (simp add: plus_fun_def)
+    then show ?thesis
+      by (rule bdd_aboveI2)
+  qed
+  have bdd1: \<open>bdd_above ((\<lambda>x. km_norm (D (f x))) ` X)\<close> for f X
+    using bdd0(1) apply (rule bdd_above_mono) by auto
+  have bdd2: \<open>bdd_above ((\<lambda>x. km_norm (E (f x))) ` X)\<close> for f X
+    using bdd0(2) apply (rule bdd_above_mono) by auto
+  have 1: \<open>km_some_kraus_family (\<lambda>\<rho>. D c \<rho> + E c \<rho>) =\<^sub>k\<^sub>r kf_plus (km_some_kraus_family (D c)) (km_some_kraus_family (E c))\<close> for c
+    apply (rule kf_eq_weakI)
+    by (simp add: kf_apply_km_some_kraus_family kraus_map_add kf_plus_apply)
+
+  have inj: \<open>inj_on (\<lambda>p. case snd p of Inl d \<Rightarrow> Inl (fst p, ()) | Inr e \<Rightarrow> Inr (fst p, ())) X\<close> for X :: \<open>((cl \<times> unit) \<times> (unit + unit)) set\<close>
+    by (auto intro!: inj_onI simp: split!: sum.split_asm)
+
+  show \<open>kf_apply (kf_comp_dependent (\<lambda>(c,_). km_some_kraus_family (\<lambda>\<rho>. D c \<rho> + E c \<rho>)) (kf_tensor kf_complete_measurement_ket kf_id)) =
+           (\<lambda>\<rho>. kf_comp_dependent (\<lambda>(c,_). km_some_kraus_family (D c)) (kf_tensor kf_complete_measurement_ket kf_id) *\<^sub>k\<^sub>r \<rho> +
+                kf_comp_dependent (\<lambda>(c,_). km_some_kraus_family (E c)) (kf_tensor kf_complete_measurement_ket kf_id) *\<^sub>k\<^sub>r \<rho>)\<close>
+    by (auto simp: case_prod_unfold bdd bdd1 bdd2 kf_comp_dependent_kf_plus_left' kf_apply_map_inj inj
+        simp flip: kf_comp_dependent_kf_plus_left kf_plus_apply
+        intro!: 1 kf_comp_dependent_cong_weak ext kf_apply_eqI)
+qed
+
+lemma denotation_merge: 
+  assumes \<open>bdd_above (range (denotation_norm o D))\<close>
+  assumes \<open>bdd_above (range (denotation_norm o E))\<close>
+  shows \<open>denotation_cases D * denotation_cases E = denotation_cases (\<lambda>c. D c * E c)\<close>
+proof (insert assms, transfer)
+  write kf_comp (infixl "\<bullet>" 70)
+  write kf_comp_dependent (infixl "\<bullet>\<bullet>" 70)
+  write kf_map (infixr "``" 75)
+  fix D E :: \<open>cl \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+  assume \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) D\<close> and \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) E\<close>
+  then have [iff]: \<open>kraus_map (D c)\<close>   \<open>kraus_map (E c)\<close> for c
+    by (simp_all add: is_cq_map_def)
+  define \<DD> \<EE> where \<open>\<DD> c = km_some_kraus_family (D c)\<close> and \<open>\<EE> c = km_some_kraus_family (E c)\<close> for c
+  define meas :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2, cl \<times> unit) kraus_family\<close>
+    where \<open>meas = kf_tensor kf_complete_measurement_ket kf_id\<close>
+  have apply\<DD>: \<open>kf_apply (\<DD> c) = D c\<close> and apply\<EE>: \<open>kf_apply (\<EE> c) = E c\<close> for c
+    using \<DD>_def \<EE>_def by force+
+  assume bdd\<DD>': \<open>bdd_above (range (km_norm \<circ> D))\<close>
+  then have bdd\<DD>: \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (f x))) ` X)\<close> for f X
+    apply (rule bdd_above_mono)
+    by (auto simp: km_norm_kf_norm simp flip: apply\<DD>)
+  assume bdd\<EE>': \<open>bdd_above (range (km_norm \<circ> E))\<close>
+  then have bdd\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<EE> (g x))) ` X)\<close> for g X
+    apply (rule bdd_above_mono)
+    by (auto simp: km_norm_kf_norm simp flip: apply\<EE>)
+  from bdd\<DD> bdd\<EE>
+  have bdd\<DD>\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (g x)) * kf_norm (\<EE> (f x))) ` X)\<close> for f g X
+  proof -
+    from bdd\<DD>' obtain B where 1: \<open>kf_norm (\<DD> x) \<le> B\<close> for x
+      by (auto simp: bdd_above_def km_norm_kf_norm simp flip: apply\<DD>)
+    from bdd\<EE>' obtain C where 2: \<open>kf_norm (\<EE> x) \<le> C\<close> for x
+      by (auto simp: bdd_above_def km_norm_kf_norm simp flip: apply\<EE>)
+    show ?thesis
+      apply (rule bdd_aboveI2[where M=\<open>B*C\<close>])
+      using 1 2 apply (rule mult_mono')
+      by auto
+  qed
+  then have bdd\<DD>\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (g x) \<bullet> \<EE> (f x))) ` X)\<close> for f g X
+    apply (rule bdd_above_mono2)
+     apply (rule order_refl)
+    by (rule kf_comp_norm_leq)
+
+  have \<open>kf_apply ((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<circ> kf_apply ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)
+    = kf_apply (((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+    by (simp add: kf_comp_apply)
+  also have \<open>\<dots> = kf_apply ((\<lambda>(_, c, _). \<DD> c) \<bullet>\<bullet> (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
+    unfolding kf_comp_def
+    apply (intro ext kf_apply_eqI kf_comp_dependent_assoc_weak)
+    by (simp_all add: case_prod_unfold bdd\<DD>)
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(_,c,_). c) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
+    apply (rule sym)
+    apply (intro ext kf_apply_eqI kf_comp_dependent_assoc_weak kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans])
+    by (simp add: case_prod_unfold)
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
+    by x (* TODO needs asm *)
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (\<lambda>(x,_). (x,())) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
+    apply (rule sym)
+    apply (rule ext)
+    apply (rule kf_apply_eqI)
+    apply (rule kf_comp_dependent_cong_weak)
+    subgoal by x
+     apply (rule kf_eq_weak_reflI)
+    apply (rule kf_map_twice[THEN kf_eq_trans])
+    by (simp add: o_def case_prod_unfold)
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
+    apply (rule sym)
+    apply (rule ext)
+    apply (rule kf_apply_eqI)
+    apply (rule kf_comp_dependent_cong_weak)
+    subgoal by x
+     apply (rule kf_eq_weak_reflI)
+    apply (rule kf_map_cong)
+     apply (simp)
+    apply (rule kf_comp_map_left[THEN kf_eq_trans])
+    by simp
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+  proof -
+    have \<open>is_cq_map qFst (kf_apply ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+by -
+  then have \<open>kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas) =\<^sub>k\<^sub>r (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)\<close>
+by -
+  then have \<open>kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas) \<equiv>\<^sub>k\<^sub>r (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)\<close>
+by -
+  then show ?thesis
+    apply (rule_tac ext)
+    apply (rule kf_apply_eqI)
+    apply (rule kf_comp_dependent_cong_weak)
+    subgoal by x
+     apply (rule kf_eq_weak_reflI)
+    apply (rule kf_map_cong)
+     apply (simp)
+    by -
+qed
+  also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>((c,_),_). c) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+    apply (rule_tac ext)
+    apply (rule kf_apply_eqI)
+    apply (rule kf_comp_dependent_cong_weak)
+    subgoal by x
+     apply (rule kf_eq_weak_reflI)
+    apply (rule kf_map_twice[THEN kf_eq_trans])
+    by (simp add: o_def case_prod_unfold)
+  also have \<open>\<dots> = kf_apply ((\<lambda>((c,_),_). \<DD> c) \<bullet>\<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+    by (auto intro!: ext kf_apply_eqI kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans] simp: case_prod_unfold)
+  also have \<open>\<dots> = kf_apply ((\<lambda>(c,_). \<DD> c \<bullet> \<EE> c) \<bullet>\<bullet> meas)\<close>
+    apply (rule sym)
+    by (auto intro!: ext kf_apply_eqI kf_comp_dependent_assoc_weak kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans] kf_comp_dependent_assoc_weak[THEN kf_eq_weak_trans]
+        simp: case_prod_unfold bdd\<DD> bdd\<EE> kf_comp_def)
+  also have \<open>\<dots> = kf_apply ((\<lambda>(c, _). km_some_kraus_family (D c \<circ> E c)) \<bullet>\<bullet> meas)\<close>
+    apply (intro ext kf_apply_eqI kf_comp_dependent_cong_weak kf_eq_refl)
+    by (simp_all add: apply\<DD> apply\<EE> kf_comp_apply kf_eq_weak_def kraus_map_comp case_prod_unfold bdd\<DD>\<EE>)
+  finally show \<open>kf_apply (kf_comp_dependent (\<lambda>(c, _). \<DD> c) meas) \<circ>
+               kf_apply (kf_comp_dependent (\<lambda>(c, _). \<EE> c) meas) =
+               kf_apply (kf_comp_dependent (\<lambda>(c, _). km_some_kraus_family (D c \<circ> E c)) meas)\<close>
+    by -
+qed
+
+lemma denotation_while_n_sum:
+  \<open>(\<Sum>n\<le>M. denotation_while_n e D n) = denotation_cases (\<lambda>m. if e m then 0 else 1) * (denotation_cases (\<lambda>m. if e m then D else 1))^M\<close>
+proof (induction M)
+  case 0
+  show ?case
+    by (simp add: denotation_while_n_def)
+next
+  case (Suc M)
+  define eD1 eD "note" where \<open>eD1 = denotation_cases (\<lambda>m. if e m then D else 1)\<close>
+    and \<open>eD = denotation_cases (\<lambda>m. if e m then D else 0)\<close>
+    and \<open>note = denotation_cases (\<lambda>m. if e m then 0 else 1)\<close>
+  have bdd_cases: \<open>bdd_above (range (\<lambda>m. denotation_norm (if e m then X else Y)))\<close> for X Y
+    apply (rule bdd_aboveI2[where M=\<open>max (denotation_norm X) (denotation_norm Y)\<close>])
+    by auto
+  have eD1_decomp: \<open>eD1 = eD + note\<close>
+    by (auto simp add: eD1_def eD_def note_def bdd_cases simp flip: denotation_cases_plus
+        intro!: arg_cong[where f=denotation_cases])
+  have note_idem: \<open>note * note = note\<close>
+    unfolding note_def
+    apply (subst denotation_merge)
+    by (auto intro!: arg_cong[where f=denotation_cases] bdd_cases)
+  have eD_note: \<open>eD * note = 0\<close>
+    unfolding note_def eD_def
+    apply (subst denotation_merge)
+     apply (auto intro!: arg_cong[where f=denotation_cases] bdd_cases)[3]
+    apply (rewrite at \<open>denotation_cases (\<lambda>c. \<hole>)\<close> to 0 DEADID.rel_mono_strong)
+    by (auto simp flip: zero_fun_def)
+
+  have \<open>note * eD1^(Suc M) = note * eD1 * eD1^M\<close>
+    by (simp add: Extra_Ordered_Fields.sign_simps(4))
+  also have \<open>\<dots> = note * (eD + note) * eD1^M\<close>
+    using eD1_decomp by fastforce
+  also have \<open>\<dots> = note * eD * eD1^M + (note * note) * eD1^M\<close>
+    by (simp add: distrib_left distrib_right mult.assoc)
+  also have \<open>\<dots> = note * eD * eD1^M + note * eD1^M\<close>
+    using note_idem by presburger
+  also have \<open>\<dots> = note * eD * eD1^M + (\<Sum>n\<le>M. denotation_while_n e D n)\<close>
+    using Suc.IH eD1_def note_def by argo
+  also have \<open>\<dots> = denotation_while_n e D (Suc M) + (\<Sum>n\<le>M. denotation_while_n e D n)\<close>
+  proof (rule arg_cong[where f=\<open>\<lambda>x. x + _\<close>], induction M)
+    case 0
+    show ?case
+      by (simp add: denotation_while_n_def eD_def note_def)
+  next
+    case (Suc M)
+    have \<open>note * eD * eD1^(Suc M) = denotation_while_n e D (Suc M) * eD1\<close>
+      by (simp add: mult.assoc power_commutes flip: Suc.IH)
+    also have \<open>\<dots> = denotation_while_n e D M * (eD * (eD + note))\<close>
+      apply (simp add: denotation_while_n_def flip: eD1_def eD_def eD1_decomp)
+      by (metis Groups.mult_ac(1) power_commutes)
+    also have \<open>\<dots> = denotation_while_n e D M * (eD * eD)\<close>
+      by (simp add: distrib_left distrib_right eD_note flip: mult.assoc)
+    also have \<open>\<dots> = denotation_while_n e D (Suc (Suc M))\<close>
+      apply (simp add: denotation_while_n_def flip: eD_def mult.assoc)
+      by (simp add: Extra_Ordered_Fields.sign_simps(4) power_commutes)
+    finally show ?case
+      by -
+  qed
+  also have \<open>\<dots> = (\<Sum>n\<le>Suc M. denotation_while_n e D n)\<close>
+    by (simp add: add.commute)
+  finally show \<open>\<dots> = note * eD1^(Suc M)\<close>
+    by simp
+qed
+
+
+definition denotation_while :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> denotation\<close> where 
+  \<open>denotation_while e D = (\<Sum>\<^sub>\<infinity>n. denotation_while_n e D n)\<close>
+
+(* definition denotation_while_n' :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> nat \<Rightarrow> denotation\<close> where
+  \<open>denotation_while_n' e D n = (denotation_cases (\<lambda>m. if e m then D else 0))^n\<close> *)
+
+(* fun denotation_while_n :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> nat \<Rightarrow> denotation\<close> where
+  \<open>denotation_while_n e _ 0 = denotation_cases (\<lambda>m. if e m then 0 else 1)\<close>
+| \<open>denotation_while_n e D (Suc n) = denotation_cases (\<lambda>m. if e m then D * denotation_while_n e D n else 0)\<close>
+
+
+fun denotation_while_n' :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> nat \<Rightarrow> denotation\<close> where
+  \<open>denotation_while_n' e _ 0 = denotation_cases (\<lambda>m. if e m then 0 else 1)\<close>
+| \<open>denotation_while_n' e D (Suc n) = denotation_cases (\<lambda>m. if e m then D * denotation_while_n' e D n else 1)\<close>
+
+lemma
+  assumes \<open>denotation_norm D \<le> 1\<close>
+  shows \<open>denotation_norm (denotation_while_n' e D n) \<le> 1\<close>
+proof -
+  have *[iff]: \<open>denotation_norm (A * B) \<le> 1\<close> if \<open>denotation_norm A \<le> 1\<close> and \<open>denotation_norm /B \<le> 1\<close> for A B
+try0
+sledgehammer [dont_slice]
+by -
+  show ?thesis
+  apply (induction n)
+   apply (auto intro!: denotation_cases_bounded assms simp add: )
+try0
+sledgehammer [dont_slice]
+by - *)
+
+(* lemma \<open>denotation_while_n' e D (Suc n) = denotation_while_n' e D n + denotation_while_n e D (Suc n)\<close>
+proof -
+  have \<open>denotation_while_n' e D (Suc n) = denotation_cases (\<lambda>m. if e m then D * denotation_while_n e D n else 1)\<close>
+    by simp
+  also have \<open>\<dots> = \<close>
+  by x *)
+
+
+class pospace = order + topological_space +
+  assumes closed_superdiagonal_raw: \<open>(\<forall>x\<in>-{(x,y). x \<ge> y}. \<exists>A B. open A \<and> open B \<and> x \<in> A \<times> B \<and> A \<times> B \<subseteq> - {(x,y). x \<ge> y})\<close>
+  \<comment> \<open>Can't write \<open>closed {(x,y) | x y. x \<ge> y}\<close> due to locale-restrictions.
+      Instead, we unfold the definition of \<^const>\<open>closed\<close> on the product topology.\<close>
+
+lemma closed_superdiagonal: \<open>closed {(x::_::pospace,y). x \<ge> y}\<close>
+  using closed_superdiagonal_raw 
+  by (auto simp: closed_def open_prod_def)
+
+instance pospace \<subseteq> t2_space
+proof -
+  have rewrite: \<open>range (\<lambda>x::'a. (x, x)) = {(x,y). x \<ge> y} \<inter> prod.swap -` {(x,y). x \<ge> y}\<close>
+    by (auto intro!: simp: )
+  have \<open>closed (range (\<lambda>x::'a. (x, x)))\<close>
+    apply (subst rewrite)
+    by (intro closed_Int closed_superdiagonal closed_vimage continuous_on_swap)
+  then have \<open>Hausdorff_space (euclidean :: 'a topology)\<close>
+    by (simp add: Hausdorff_space_closedin_diagonal)
+  then show \<open>OFCLASS('a, t2_space_class)\<close>
+    by (rule hausdorff_OFCLASS_t2_space)
+qed
+
+lemma tendsto_le_pospace:
+  fixes x y :: \<open>'a :: pospace\<close>
+  assumes F: "\<not> trivial_limit F"
+    and x: "(f \<longlongrightarrow> x) F"
+    and y: "(g \<longlongrightarrow> y) F"
+    and ev: "eventually (\<lambda>x. g x \<le> f x) F"
+  shows "y \<le> x"
+proof -
+  define upper where \<open>upper = {(x::'a,y). x \<ge> y}\<close>
+  from x y have \<open>((\<lambda>x. (f x, g x)) \<longlongrightarrow> (x,y)) F\<close>
+    by (rule tendsto_Pair)
+  moreover from ev have \<open>\<forall>\<^sub>F x in F. (f x, g x) \<in> upper\<close>
+    by (simp add: upper_def)
+  moreover have \<open>closed upper\<close>
+    using closed_superdiagonal upper_def by blast
+  ultimately have \<open>(x,y) \<in> upper\<close>
+    apply (rule_tac Lim_in_closed_set)
+    using F by auto
+  then show \<open>y \<le> x\<close>
+    using upper_def by blast
+qed
+
+lemma has_sum_mono_neutral:
+  fixes f :: "'a\<Rightarrow>'b::{ordered_comm_monoid_add,pospace}"
+  assumes \<open>(f has_sum a) A\<close> and "(g has_sum b) B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "a \<le> b"
+proof -
+  define f' g' where \<open>f' x = (if x \<in> A then f x else 0)\<close> and \<open>g' x = (if x \<in> B then g x else 0)\<close> for x
+  have [simp]: \<open>f summable_on A\<close> \<open>g summable_on B\<close>
+    using assms(1,2) summable_on_def by auto
+  have \<open>(f' has_sum a) (A\<union>B)\<close>
+    by (smt (verit, best) DiffE IntE Un_iff f'_def assms(1) has_sum_cong_neutral)
+  then have f'_lim: \<open>(sum f' \<longlongrightarrow> a) (finite_subsets_at_top (A\<union>B))\<close>
+    by (meson has_sum_def)
+  have \<open>(g' has_sum b) (A\<union>B)\<close>
+  by (smt (verit, best) DiffD1 DiffD2 IntE UnCI g'_def assms(2) has_sum_cong_neutral)
+  then have g'_lim: \<open>(sum g' \<longlongrightarrow> b) (finite_subsets_at_top (A\<union>B))\<close>
+    using has_sum_def by blast
+
+  have "\<And>X i. \<lbrakk>X \<subseteq> A \<union> B; i \<in> X\<rbrakk> \<Longrightarrow> f' i \<le> g' i"
+    using assms by (auto simp: f'_def g'_def)
+  then have \<open>\<forall>\<^sub>F x in finite_subsets_at_top (A \<union> B). sum f' x \<le> sum g' x\<close>
+    by (intro eventually_finite_subsets_at_top_weakI sum_mono)
+  then show ?thesis
+    using f'_lim finite_subsets_at_top_neq_bot g'_lim tendsto_le_pospace
+    by fast
+qed
+
+lemma pospaceI:
+  assumes \<open>closed {(x::'a::{order,topological_space},y). x \<ge> y}\<close>
+  shows \<open>OFCLASS('a, pospace_class)\<close>
+  apply intro_classes
+  using assms
+  by (simp add: closed_def open_prod_def)
+
+instance complex :: pospace
+proof (rule pospaceI)
+  have \<open>closed ({xy. Re (fst xy) \<ge> Re (snd xy)} \<inter> {xy. Im (fst xy) = Im (snd xy)})\<close>
+    by (intro closed_Int closed_Collect_le closed_Collect_eq continuous_intros)
+  moreover have \<open>\<dots> = {(x, y). x \<ge> y}\<close>
+    by (auto intro!: simp: less_eq_complex_def)
+  ultimately show \<open>closed {(x::complex, y). x \<ge> y}\<close>
+    by simp
+qed
+
+lemmas continuous_on_cinner[continuous_intros] =
+  bounded_bilinear.continuous_on[OF bounded_sesquilinear.bounded_bilinear [OF bounded_sesquilinear_cinner]]
+
+lemma closed_Collect_le:
+  fixes f g :: "'a :: topological_space \<Rightarrow> 'b::pospace"
+  assumes f: "continuous_on UNIV f"
+    and g: "continuous_on UNIV g"
+  shows "closed {x. f x \<le> g x}"
+proof -
+  have \<open>closed {(x::'b,y). x \<ge> y}\<close>
+    using closed_superdiagonal by blast
+  then have \<open>closed ((\<lambda>x. (g x, f x)) -` \<dots>)\<close>
+    by (intro closed_vimage continuous_on_Pair assms)
+  also have \<open>\<dots> = {x . f x \<le> g x}\<close>
+    by auto
+  finally show ?thesis
+    by -
+qed
+
+instance cblinfun :: (chilbert_space, chilbert_space) pospace
+proof (rule pospaceI, cases \<open>heterogenous_same_type_cblinfun TYPE('a) TYPE('b)\<close>)
+  case True
+  then have le: \<open>x \<ge> y \<longleftrightarrow> (\<forall>h. h \<bullet>\<^sub>C x (heterogenous_cblinfun_id h) \<ge> h \<bullet>\<^sub>C y (heterogenous_cblinfun_id h))\<close> for x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    by (simp add: less_eq_cblinfun_def_heterogenous cblinfun.diff_left cinner_diff_right)
+  
+  have \<open>{(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y} =
+        (\<Inter>h. {xy::'a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'a \<Rightarrow>\<^sub>C\<^sub>L 'b. h \<bullet>\<^sub>C fst xy (heterogenous_cblinfun_id h) \<ge> h \<bullet>\<^sub>C snd xy (heterogenous_cblinfun_id h)})\<close>
+    by (auto intro!: simp: less_eq_cblinfun_def_heterogenous True cblinfun.diff_left cinner_diff_right)
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Int closed_Collect_le closed_Collect_eq continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y}\<close>
+    by -
+next
+  case False
+  then have le: \<open>x \<ge> y \<longleftrightarrow> x = y\<close> for x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    by (force simp add: less_eq_cblinfun_def_heterogenous cblinfun.diff_left cinner_diff_right)
+  have \<open>{(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y} =
+        (\<Inter>h. \<Inter>k. {xy::'a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'a \<Rightarrow>\<^sub>C\<^sub>L 'b. h \<bullet>\<^sub>C fst xy k = h \<bullet>\<^sub>C snd xy k})\<close>
+    by (auto intro!: cblinfun_eqI cinner_extensionality[where 'a='b]
+        simp: less_eq_cblinfun_def_heterogenous False cblinfun.diff_left cinner_diff_right)
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Int closed_Collect_eq continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y}\<close>
+    by -
+qed
+
+instance trace_class :: (chilbert_space, chilbert_space) pospace
+proof (rule pospaceI)
+  have \<open>{(x::('a,'b) trace_class, y). y \<le> x} = (\<lambda>(x,y). (from_trace_class x, from_trace_class y)) -` {(x,y). x \<ge> y}\<close>
+    by (auto intro!: simp: less_eq_trace_class_def)
+  also have \<open>closed \<dots>\<close>
+    apply (intro closed_vimage closed_superdiagonal)
+    by (auto intro!: continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x::('a,'b) trace_class, y). y \<le> x}\<close>
+    by -
+qed
+
+lemma pospace_fun:
+  \<open>OFCLASS('a \<Rightarrow> 'b::pospace, pospace_class)\<close>
+    \<comment> \<open>Ideally, we would just instantiate \<open>instance fun :: (type, pospace) pospace\<close> but that is rejected by Isabelle\<close>
+proof (rule pospaceI)
+  have \<open>closed {(x :: 'a \<Rightarrow> 'b,y). y a \<le> x a}\<close> for a
+    apply (simp add: case_prod_unfold)
+    apply (intro closed_Collect_le[internalize_sort' 'a] topological_space_axioms)
+     apply (rule continuous_on_product_then_coordinatewise)
+     apply (intro continuous_intros)
+    apply (rule continuous_on_product_then_coordinatewise)
+    by (intro continuous_intros)
+  then have \<open>closed (\<Inter>a. {(x :: 'a \<Rightarrow> 'b, y). x a \<ge> y a})\<close>
+    by blast
+  also have \<open>\<dots> = {(x, y). x \<ge> y}\<close>
+    by (auto simp: le_fun_def)
+  finally show \<open>closed \<dots>\<close>
+    by -
+qed
+
+lemma continuous_on_apply_denotation[continuous_intros]:
+  assumes \<open>continuous_on X f\<close>
+  shows \<open>continuous_on X (\<lambda>x. apply_denotation (f x))\<close>
+proof (rule continuous_on_compose2[OF _ assms])
+  show \<open>f ` X \<subseteq> UNIV\<close>
+    by simp
+  define S where \<open>S = range apply_denotation\<close>
+  have \<open>openin (top_of_set UNIV) (UNIV \<inter> apply_denotation -` U) \<longleftrightarrow> openin (top_of_set S) U\<close> if \<open>U \<subseteq> S\<close> for U
+  proof -
+    define RU where \<open>RU = apply_denotation -` U\<close>
+    have U_def: \<open>U = apply_denotation ` RU\<close>
+      using RU_def S_def that type_definition.Rep_range type_definition_denotation by fastforce
+    have \<open>openin (top_of_set UNIV) (UNIV \<inter> RU) = open RU\<close>
+      by (simp add: openin_subtopology)
+    also have \<open>\<dots> = (\<exists>T. open T \<and> U = T \<inter> S)\<close>
+      by (simp add: open_denotation_def openin_subtopology S_def U_def)
+    also have \<open>\<dots> = openin (top_of_set S) U\<close>
+      by (simp add: openin_subtopology)
+    finally show ?thesis
+      by (simp add: RU_def)
+  qed
+  then show \<open>continuous_on UNIV apply_denotation\<close>
+    apply (rule_tac quotient_map_imp_continuous_open[where T=S])
+    using apply_denotation by (auto simp: S_def)
+qed
+
+instance denotation :: pospace
+proof (rule pospaceI)
+  have \<open>{(x :: denotation, y). y \<le> x} = {(x, y). \<forall>\<rho>\<ge>0. apply_denotation x \<rho> \<le> apply_denotation y \<rho>}\<close>
+    by (simp add: less_eq_denotation_def)
+  also have \<open>\<dots> = (\<Inter>\<rho>\<in>{0..}. {xy. apply_denotation (fst xy) \<rho> \<le> apply_denotation (snd xy) \<rho>})\<close>
+    by auto
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Inter ballI closed_Collect_le continuous_intros intro: continuous_on_product_then_coordinatewise)
+  finally show \<open>closed {(x :: denotation, y). y \<le> x}\<close>
+    by -
+qed
+
+lemma tendsto_upperbound:
+  fixes x :: \<open>'a :: pospace\<close>
+  assumes x: "(f \<longlongrightarrow> x) F"
+      and ev: "eventually (\<lambda>i. a \<ge> f i) F"
+      and F: "\<not> trivial_limit F"
+  shows "a \<ge> x"
+  by (rule tendsto_le_pospace [OF F tendsto_const x ev])
+
+
+lemma has_sum_le_finite_sums:
+  fixes a :: \<open>'a::{comm_monoid_add,topological_space,pospace}\<close>
+  assumes \<open>(f has_sum a) A\<close>
+  assumes \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> A \<Longrightarrow> sum f F \<le> b\<close>
+  shows \<open>a \<le> b\<close>
+  by (metis assms eventually_finite_subsets_at_top_weakI finite_subsets_at_top_neq_bot has_sum_def tendsto_upperbound)
+
+
+lemma infsum_le_finite_sums:
+  fixes b :: \<open>'a::{comm_monoid_add,topological_space,pospace}\<close>
+  assumes \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> A \<Longrightarrow> sum f F \<le> b\<close>
+  shows \<open>infsum f A \<le> b\<close>
+  by (metis has_sum_le_finite_sums assms bot_least finite.intros(1) has_sum_infsum infsum_not_exists
+      sum.empty)
+
+lemma
+  assumes \<open>denotation_norm D \<le> 1\<close>
+  shows denotation_while_bounded[iff]: \<open>denotation_norm (denotation_while e D) \<le> 1\<close>
+    and denotation_while_has_sum: \<open>(denotation_while_n e D has_sum denotation_while e D) UNIV\<close>
+proof -
+(*   \<open>denotation_while_n e D n = (denotation_cases (\<lambda>m. if e m then D else 0))^n * (denotation_cases (\<lambda>m. if e m then 0 else 1))\<close> *)
+  define W where \<open>W = denotation_while_n e D\<close>
+  have rewrite_Wsum: \<open>(\<Sum>n\<le>M. W n) = (denotation_cases (\<lambda>m. if e m then D else 1))^M * (denotation_cases (\<lambda>m. if e m then 0 else 1))\<close> for M
+  proof (induction M)
+    case 0
+    show ?case
+      by (simp add: W_def denotation_while_n_def)
+  next
+    case (Suc M)
+    have \<open>(\<Sum>n\<le>Suc M. W n) = xxx\<close>
+      apply (simp add: )
+      by x
+    also have \<open>\<dots> = (denotation_cases (\<lambda>m. if e m then D else 1))^(Suc M) * (denotation_cases (\<lambda>m. if e m then 0 else 1))\<close>
+      by x
+    then show ?case
+      by -
+  qed
+  have finsum: \<open>(\<Sum>n\<in>F. km_bound (apply_denotation (W n))) \<le> id_cblinfun\<close> if \<open>finite F\<close> for F
+  proof -
+    define N where \<open>N = Max F\<close>
+    have \<open>(\<Sum>n\<in>F. km_bound (apply_denotation (W n))) \<le> (\<Sum>n\<le>N. km_bound (apply_denotation (W n)))\<close>
+      using that by (auto intro!: sum_mono2 simp: N_def)
+    have \<open>\<dots> = km_bound (\<Sum>n\<le>N. apply_denotation (W n))\<close>
+      by -
+    also have \<open>\<dots> = km_bound (apply_denotation (\<Sum>n\<le>N. W n))\<close>
+      by -
+    also have \<open>\<dots> = km_bound (apply_denotation XXXX)\<close>
+      by x
+    also have \<open>\<dots> = denotation_norm XXXX *\<^sub>C id_cblinfun\<close>
+      by -
+    also have \<open>\<dots> \<le> 1 *\<^sub>C id_cblinfun\<close>
+      by x
+    also have \<open>\<dots> = id_cblinfun\<close>
+      by simp
+    finally show ?thesis
+      by -
+  qed
+  then have \<open>summable_on_in cweak_operator_topology (\<lambda>n. km_bound (apply_denotation (W n))) UNIV\<close>
+    apply (rule summable_wot_boundedI)
+    by auto
+  then have km_summable: \<open>km_summable (\<lambda>n. apply_denotation (W n)) UNIV\<close>
+    by (simp add: km_summable_def)
+  then have \<open>kraus_map (\<lambda>\<rho>. \<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>)\<close>
+    apply (rule kraus_map_infsum[rotated])
+    using apply_denotation is_cq_map_def by blast
+  have \<open>infsum_in cweak_operator_topology (\<lambda>n. km_bound (apply_denotation (W n))) UNIV \<le> id_cblinfun\<close>
+    by (simp add: finsum infsum_wot_boundedI)
+  then have km_bound: \<open>km_bound (\<lambda>\<rho>. \<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>) \<le> id_cblinfun\<close>
+    apply (subst km_bound_infsum)
+    using apply_denotation km_summable by (auto intro!: simp: is_cq_map_def)
+  have \<open>denotation_while_n e D summable_on UNIV\<close>
+    by -
+  then show \<open>(denotation_while_n e D has_sum denotation_while e D) UNIV\<close>
+    by (simp add: denotation_while_def)
+  have while_infsum: \<open>apply_denotation (denotation_while e D) \<rho> = (\<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>)\<close> for \<rho>
+    by x
+  show \<open>denotation_norm (denotation_while e D) \<le> 1\<close>
+    using norm_cblinfun_mono[OF _ km_bound]
+    by (simp_all add: denotation_norm.rep_eq km_norm_def while_infsum[abs_def])
+qed
+
+
+(* lift_definition denotation_from_quantum :: \<open>(cl \<Rightarrow> (qu ell2, qu ell2, 'x) kraus_family) \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>\<EE>. cq_map_from_kraus_family qFst qSnd (\<lambda>c. kf_map (\<lambda>_. c) (\<EE> c))\<close>
+  by (rule cq_map_from_kraus_family_is_cq_map) *)
+
+definition denotation_from_quantum :: \<open>(cl \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (qu ell2, qu ell2) trace_class) \<Rightarrow> denotation\<close> where
+  \<open>denotation_from_quantum q = denotation_cases (\<lambda>c. Abs_denotation (km_tensor id (q c)))\<close>
+
+lemma denotation_from_quantum_bounded[iff]:
+  assumes \<open>\<And>c. km_norm (q c) \<le> 1\<close>
+  shows \<open>denotation_bounded (denotation_from_quantum q)\<close>
   by x
 
 fun denotation_raw :: \<open>raw_program \<Rightarrow> denotation\<close> where
-  denotation_raw_Skip: \<open>denotation_raw Skip = denotation_id\<close>
-| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = denotation_seq (denotation_raw c) (denotation_raw d)\<close>
+  denotation_raw_Skip: \<open>denotation_raw Skip = 1\<close>
+| denotation_raw_Seq:  \<open>denotation_raw (Seq c d) = denotation_raw c * denotation_raw d\<close>
 | denotation_raw_Sample: \<open>denotation_raw (Sample e) = denotation_sample e\<close>
 | denotation_raw_IfThenElse: \<open>denotation_raw (IfThenElse e c d) = denotation_cases (\<lambda>m. if e m then denotation_raw c else denotation_raw d)\<close>
 | denotation_raw_While: \<open>denotation_raw (While e c) = denotation_while e (denotation_raw c)\<close>
-| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = denotation_on_quantum \<EE>\<close>
+| denotation_raw_QuantumOp: \<open>denotation_raw (QuantumOp \<EE>) = denotation_from_quantum \<EE>\<close>
 | denotation_raw_Measurement: \<open>denotation_raw (Measurement m) = denotation_measurement m\<close>
-| denotation_raw_OracleCall: \<open>denotation_raw (OracleCall _) = undefined\<close>
+| denotation_raw_OracleCall: \<open>denotation_raw (OracleCall _) = 0\<close>
   \<comment> \<open>\<^const>\<open>OracleCall\<close> should not occur in valid programs\<close>
-| denotation_raw_InstantiateOracles: \<open>denotation_raw (InstantiateOracles _ _) = undefined\<close>
+| denotation_raw_InstantiateOracles: \<open>denotation_raw (InstantiateOracles _ _) = 0\<close>
   \<comment> \<open>\<^const>\<open>InstantiateOracles\<close> should not occur in valid programs\<close>
 | denotation_raw_LocalC: \<open>denotation_raw (LocalC F init c) = denotation_local_c F init (denotation_raw c)\<close>
 | denotation_raw_LocalQ: \<open>denotation_raw (LocalQ F init c) = denotation_local_q F init (denotation_raw c)\<close>
+
+lemma denotation_raw_bounded: \<open>denotation_bounded (denotation_raw p)\<close> if \<open>valid_oracle_program p\<close>
+    using that apply induction by auto
 
 (* fun denotation_raw :: "raw_program \<Rightarrow> cq_map" where
   denotation_raw_Skip: \<open>denotation_raw Skip = cq_kf_id\<close>
@@ -867,9 +1860,15 @@ fun denotation_raw :: "raw_program \<Rightarrow> cq_operator \<Rightarrow> cq_op
 
 lift_definition denotation :: "program \<Rightarrow> denotation" is denotation_raw.
 
+lemma denotation_bounded[iff]: \<open>denotation_bounded (denotation p)\<close>
+  apply transfer
+  by (auto intro!: denotation_raw_bounded simp: valid_program_def)
+
 lemma denotation_sample: \<open>denotation (sample x e) = denotation_sample (\<lambda>m. map_distr (\<lambda>xa. Classical_Registers.setter x xa m) (e m))\<close>
   apply (transfer' fixing: x e)
   by simp
+
+
 
 lemma kf_norm_sample_prob: \<open>kf_norm (kraus_map_sample (prob \<mu>) :: ('a::{chilbert_space,not_singleton},'a,'x) kraus_family) = weight \<mu>\<close>
   apply (subst kraus_map_sample_norm[of \<open>prob \<mu>\<close>])

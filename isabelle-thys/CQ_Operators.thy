@@ -609,7 +609,7 @@ proof -
        apply simp
       apply (simp add: kf_comp_def)
       apply (rule kf_comp_dependent_assoc[THEN kf_eq_trans])
-        apply (simp add: kf_norm_apply_qregister qregQ bdd)
+        apply (simp add: kf_norm_apply_qregister qregQ bdd case_prod_unfold)
        apply simp
       by simp
     also have \<open>\<dots> =\<^sub>k\<^sub>r 
@@ -656,12 +656,12 @@ proof -
      kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
      (kf_map (\<lambda>((a,b),c). (a,b,c)) (kf_map_inj (\<lambda>(c,x). ((c,c),x)) (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id)))\<close>
       apply (subst kf_comp_dependent_map_inj_right)
-      by (auto intro!: injI)
+      by (auto intro!: inj_onI)
     also have \<open>\<dots> =
      kf_comp_dependent (\<lambda>(_,_,c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
      (kf_map (\<lambda>(a,c). (a,a,c)) (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id))\<close>
       apply (subst kf_map_kf_map_inj_comp)
-      by (auto intro!: injI simp: o_def case_prod_unfold)
+      by (auto intro!: inj_onI simp: o_def case_prod_unfold)
     also have \<open>\<dots> =\<^sub>k\<^sub>r kf_comp_dependent (\<lambda>(_, c). kf_apply_qregister C (kf_constant (tc_butterfly (ket c) (ket c))))
                                        (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) kf_cq_id)\<close>
       apply (rule kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans])
@@ -711,6 +711,28 @@ proof -
     by (smt (verit, ccfv_threshold) kf_comp_dependent_norm_leq mult_cancel_right1 split_def)
   from 5 show ?thesis
     by (simp add: cq_map_from_kraus_family_def km_norm_kf_norm)
+qed
+
+
+lemma is_cq_map_plus:
+  assumes \<open>is_cq_map C \<EE>\<close>
+  assumes \<open>is_cq_map C \<FF>\<close>
+  shows \<open>is_cq_map C (\<lambda>\<rho>. \<EE> \<rho> + \<FF> \<rho>)\<close>
+proof -
+  wlog \<open>qregister C\<close>
+    using negation assms
+    by (simp add: non_qregister zero_fun_def)
+  from assms have \<open>kraus_map \<EE>\<close> and \<open>kraus_map \<FF>\<close>
+    using is_cq_map_def by auto
+  then have km: \<open>kraus_map (\<lambda>\<rho>. \<EE> \<rho> + \<FF> \<rho>)\<close>
+    by blast
+  from assms have cqE: \<open>cq_id C o \<EE> o cq_id C = \<EE>\<close> and cqF: \<open>cq_id C o \<FF> o cq_id C = \<FF>\<close>
+    using is_cq_map_def by auto
+  have cq: \<open>cq_id C o (\<lambda>\<rho>. \<EE> \<rho> + \<FF> \<rho>) o cq_id C = (\<lambda>\<rho>. \<EE> \<rho> + \<FF> \<rho>)\<close>
+    using cqE[THEN fun_cong] cqF[THEN fun_cong]
+    by (simp add: o_def complex_vector.linear_add bounded_clinear.clinear)
+  from km cq show ?thesis
+    by (simp add: is_cq_map_def)
 qed
 
 end
