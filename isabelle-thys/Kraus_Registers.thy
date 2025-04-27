@@ -13,7 +13,7 @@ proof (rule CollectI, erule CollectE, rename_tac Q E)
   proof -
     wlog [simp]: \<open>qregister Q\<close>
       using negation
-      by (auto intro!: kraus_familyI_0 simp: non_qregister)
+      by (auto simp: non_qregister)
     from \<open>kraus_family E\<close> obtain B where B: \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> B\<close> if \<open>finite F\<close> and \<open>F \<subseteq> E\<close> for F
       by (auto simp: kraus_family_def bdd_above_def)
     have \<open>(\<Sum>(E, x)\<in>F. E* o\<^sub>C\<^sub>L E) \<le> apply_qregister Q B\<close>
@@ -36,7 +36,10 @@ proof (rule CollectI, erule CollectE, rename_tac Q E)
       finally show ?thesis
         by -
     qed
-    then show ?thesis
+    moreover have \<open>0 \<notin> fst ` (\<lambda>(E,x). (apply_qregister Q E, x)) ` E\<close>
+      using \<open>kraus_family E\<close> apply_qregister_inject' 
+      by (force intro!:  image_eqI simp: kraus_family_def image_image case_prod_unfold apply_qregister_of_0)
+    ultimately show ?thesis
       by (auto intro!: bdd_aboveI simp: kraus_family_def)
   qed
 qed
@@ -209,13 +212,15 @@ lift_definition kf_annotate :: \<open>('a::chilbert_space, 'b::chilbert_space, '
   \<open>\<lambda>\<EE> :: ('a\<Rightarrow>\<^sub>C\<^sub>L'b \<times> 'x) set. (\<lambda>(E,x). (E,(x,E))) ` \<EE>\<close>
 proof (rule CollectI)
   fix \<EE> :: \<open>('a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'x) set\<close>
-  assume \<open>\<EE> \<in> Collect kraus_family\<close>
+  assume asm: \<open>\<EE> \<in> Collect kraus_family\<close>
   then have \<open>(\<lambda>(E, x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on \<EE>\<close>
     by (simp add: kraus_family_iff_summable')
   then have \<open>(\<lambda>(E, x). Abs_cblinfun_wot (E* o\<^sub>C\<^sub>L E)) summable_on (\<lambda>(E, x). (E, x, E)) ` \<EE>\<close>
       apply (subst summable_on_reindex)
-      by (auto intro!: inj_onI simp: o_def case_prod_unfold)
-  then show \<open>kraus_family ((\<lambda>(E, x). (E, x, E)) ` \<EE>)\<close>
+    by (auto intro!: inj_onI simp: o_def case_prod_unfold)
+  moreover have \<open>0 \<notin> fst ` (\<lambda>(E, x). (E, x, E)) ` \<EE>\<close>
+    using asm by (force simp: kraus_family_def)
+  ultimately show \<open>kraus_family ((\<lambda>(E, x). (E, x, E)) ` \<EE>)\<close>
     by (simp add: kraus_family_iff_summable')
 qed
 
@@ -445,25 +450,8 @@ lemma kf_norm_apply_qregister[simp]:
 lemma kf_domain_apply_qregister:
   assumes [iff]: \<open>qregister Q\<close>
   shows \<open>kf_domain (kf_apply_qregister Q \<EE>) = kf_domain \<EE>\<close>
-proof (rule Set.set_eqI)
-  fix x
-  have \<open>x \<in> kf_domain (kf_apply_qregister Q \<EE>) \<longleftrightarrow> (\<exists>E. E \<noteq> 0 \<and> (E,x) \<in> Rep_kraus_family (kf_apply_qregister Q \<EE>))\<close>
-    apply (transfer' fixing: )
-    by (force simp: case_prod_unfold)
-  also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F. E \<noteq> 0 \<and> E = apply_qregister Q F \<and> (F,x) \<in> Rep_kraus_family \<EE>)\<close>
-    by (force simp add: kf_apply_qregister.rep_eq)
-  also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F. F \<noteq> 0 \<and> E = apply_qregister Q F \<and> (F,x) \<in> Rep_kraus_family \<EE>)\<close>
-    using apply_qregister_inject' by force
-  also have \<open>\<dots> \<longleftrightarrow> (\<exists>F. F \<noteq> 0 \<and> (F,x) \<in> Rep_kraus_family \<EE>)\<close>
-    by presburger
-  also have \<open>\<dots> \<longleftrightarrow> x \<in> kf_domain \<EE>\<close>
-    apply (transfer' fixing: x)
-    by force
-  finally show \<open>x \<in> kf_domain (kf_apply_qregister Q \<EE>) \<longleftrightarrow> x \<in> kf_domain \<EE>\<close>
-    by -
-qed
-
-
+  apply (transfer' fixing: Q)
+  by (auto intro!: image_eqI simp: )
 
 lemma kf_comp_dependent_raw_apply_qregister: 
   fixes Q :: \<open>('a,'b) qregister\<close>
@@ -485,23 +473,27 @@ proof (cases \<open>bdd_above ((\<lambda>x. kf_norm (\<EE> x)) ` kf_domain \<FF>
       apply atomize_elim
       by (auto intro!: exI prod_eqI)
     have \<open>tuple \<in> Rep_kraus_family ?lhs \<longleftrightarrow>
-         (QF,y) \<in> Rep_kraus_family (kf_apply_qregister Q \<FF>)
+         QEF \<noteq> 0
+       \<and> (QF,y) \<in> Rep_kraus_family (kf_apply_qregister Q \<FF>)
        \<and> (QE,x) \<in> Rep_kraus_family (kf_apply_qregister Q (\<EE> y))
        \<and> QEF = QE o\<^sub>C\<^sub>L QF\<close>
       by (force simp add: tuple_def kf_comp_dependent_raw.rep_eq bddQ True kf_domain_apply_qregister)
     also have \<open>\<dots> \<longleftrightarrow> (\<exists>F. (apply_qregister Q F = QF) \<and> (F,y) \<in> Rep_kraus_family \<FF>) \<and>
              (\<exists>E. (apply_qregister Q E = QE) \<and> (E,x) \<in> Rep_kraus_family (\<EE> y)) \<and>
-             QEF = QE o\<^sub>C\<^sub>L QF\<close>
+             QEF = QE o\<^sub>C\<^sub>L QF \<and> QEF \<noteq> 0\<close>
       by (auto simp: kf_apply_qregister.rep_eq)
     also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F EF. QE = apply_qregister Q E \<and> QF = apply_qregister Q F \<and> QEF = apply_qregister Q EF
-          \<and> EF = E o\<^sub>C\<^sub>L F \<and> (F,y) \<in> Rep_kraus_family \<FF> \<and> (E,x) \<in> Rep_kraus_family (\<EE> y))\<close>
+          \<and> EF = E o\<^sub>C\<^sub>L F \<and> QEF \<noteq> 0 \<and> (F,y) \<in> Rep_kraus_family \<FF> \<and> (E,x) \<in> Rep_kraus_family (\<EE> y))\<close>
       by (metis qregister_compose)
     also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F EF. QE = apply_qregister Q E \<and> QF = apply_qregister Q F \<and> QEF = apply_qregister Q EF
-          \<and> (EF, F, E, y, x) \<in> Rep_kraus_family (kf_comp_dependent_raw \<EE> \<FF>))\<close>
+          \<and> EF = E o\<^sub>C\<^sub>L F \<and> EF \<noteq> 0 \<and> (F,y) \<in> Rep_kraus_family \<FF> \<and> (E,x) \<in> Rep_kraus_family (\<EE> y))\<close>
+      using apply_qregister_inject' by fastforce
+    also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F EF. QE = apply_qregister Q E \<and> QF = apply_qregister Q F \<and> QEF = apply_qregister Q EF
+           \<and> (EF, F, E, y, x) \<in> Rep_kraus_family (kf_comp_dependent_raw \<EE> \<FF>))\<close>
       using True
       by (force simp: kf_comp_dependent_raw.rep_eq)
     also have \<open>\<dots> \<longleftrightarrow> (\<exists>E F. QE = apply_qregister Q E \<and> QF = apply_qregister Q F 
-          \<and> (QEF, F, E, y, x) \<in> Rep_kraus_family (kf_apply_qregister Q (kf_comp_dependent_raw \<EE> \<FF>)))\<close>
+            \<and> (QEF, F, E, y, x) \<in> Rep_kraus_family (kf_apply_qregister Q (kf_comp_dependent_raw \<EE> \<FF>)))\<close>
       by (force simp: kf_apply_qregister.rep_eq)
     also have \<open>\<dots> \<longleftrightarrow> tuple \<in> Rep_kraus_family ?rhs\<close>
       by (force simp: tuple_def kf_map_inj.rep_eq)
@@ -718,6 +710,13 @@ lemma kraus_map_km_local_register[intro!]:
   by (metis assms(1,2) kf_apply_km_some_kraus_family km_local_register_kf_apply kraus_mapI)
 
 
+
+(* TODO move *)
+lemma apply_qregister_is_0_simp[simp]:
+  assumes \<open>qregister Q\<close>
+  shows \<open>(apply_qregister Q x = 0) \<longleftrightarrow> x = 0\<close>
+  by (metis apply_qregister_inject' apply_qregister_of_0 assms)
+
 lemma kf_apply_qregister_comp_dependent_raw: 
   \<open>kf_comp_dependent_raw (\<lambda>x. kf_apply_qregister Q (\<EE> x)) (kf_apply_qregister Q \<FF>) 
   = kf_map_inj (\<lambda>(A,B,x,y). (apply_qregister Q A, apply_qregister Q B, x, y)) (kf_apply_qregister Q (kf_comp_dependent_raw \<EE> \<FF>))\<close>
@@ -730,7 +729,8 @@ proof -
     by (auto intro!: image_eqI simp: case_prod_unfold kf_apply_qregister.rep_eq)
   show ?thesis
     apply (transfer' fixing: Q \<EE> \<FF>)
-    by (simp add: kf_domain_apply_qregister  image_image case_prod_beta qregister_compose)
+    by (simp add: kf_domain_apply_qregister image_image case_prod_beta qregister_compose filter_image apply_qregister_is_0_simp
+        flip: qregister_compose)
 qed
 
 
@@ -885,6 +885,24 @@ proof -
   show ?thesis
     by (simp add: \<EE>_def km_apply_qregister_kf_apply \<open>qregister Q\<close> partial_trace_is_kf_partial_trace kf_comp_apply)
 qed
+
+lemma km_apply_qregister_qFst: 
+  assumes [iff]: \<open>kraus_map \<EE>\<close>
+  shows \<open>km_apply_qregister qFst \<EE> = km_tensor \<EE> id\<close>
+proof -
+  define \<FF> where \<open>\<FF> = km_some_kraus_family \<EE>\<close>
+  have \<open>km_apply_qregister qFst \<EE> = kf_apply (kf_apply_qregister qFst \<FF>)\<close>
+    by (simp add: km_apply_qregister_def \<FF>_def)
+  also have \<open>\<dots> = kf_apply (kf_tensor \<FF> kf_id)\<close>
+    using kf_apply_qregister_qFst_weak kf_eq_weak_def by blast
+  also have \<open>\<dots> = km_tensor (kf_apply \<FF>) (kf_apply kf_id)\<close>
+    by (simp add: km_tensor_kf_tensor)
+  also have \<open>\<dots> = km_tensor \<EE> id\<close>
+    by (simp add: \<FF>_def kf_id_apply[abs_def] id_def)
+  finally show ?thesis
+    by -
+qed
+
 
 
 

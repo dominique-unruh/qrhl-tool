@@ -969,4 +969,74 @@ lemma separating_bounded_clinear_clinear:
 lemma partial_trace_0[simp]: \<open>partial_trace 0 = 0\<close>
   by (smt (verit, best) partial_trace_norm_reducing zero_less_norm_iff)
 
+lemma rel_topology_subtopology_pullback_topology:
+  assumes inj: \<open>inj_on f X\<close>
+  assumes r_def: \<open>\<And>x y. r x y \<longleftrightarrow> x = f y \<and> y \<in> X\<close>
+  shows \<open>rel_topology r (subtopology T (f ` X)) (pullback_topology X f T)\<close>
+proof (intro rel_topology_def[THEN iffD2] conjI allI impI)
+  show \<open>rel_fun (rel_set r) (=)
+        (openin (subtopology T (f ` X))) (openin (pullback_topology X f T))\<close>
+  proof (rule rel_funI)
+    fix U V assume \<open>rel_set r U V\<close>
+    then have UV: \<open>U = f ` V\<close> and \<open>V \<subseteq> X\<close>
+      by (auto simp: rel_set_def r_def)
+    have 1: \<open>openin (pullback_topology X f T) V\<close> if \<open>openin (subtopology T (f ` X)) U\<close>
+    proof -
+      define g where \<open>g = inv_into X f\<close>
+      from that obtain W where openW: \<open>openin T W\<close> and U_def: \<open>U = W \<inter> f ` X\<close>
+        by (auto intro!: simp: openin_subtopology)
+      have \<open>V = (f -` U) \<inter> X\<close>
+        using \<open>V \<subseteq> X\<close> \<open>inj_on f X\<close>  UV g_def
+        by (smt (verit, best) Int_left_commute image_Int_subset image_subset_iff_subset_vimage
+            inf.absorb_iff2 inf.orderE inf_le2 inj_on_image_eq_iff)
+      also have \<open>\<dots> = f -` (W \<inter> f ` X) \<inter> X\<close>
+        by (simp add: U_def)
+      also have \<open>\<dots> = f -` W \<inter> f -` f ` X \<inter> X\<close>
+        by force
+      also have \<open>\<dots> = f -` W \<inter> X\<close>
+        by blast
+      finally show ?thesis
+        using openW
+        by (auto simp add: openin_pullback_topology)
+    qed
+    have 2: \<open>openin (pullback_topology X f T) V \<Longrightarrow> openin (subtopology T (f ` X)) U\<close>
+      by (auto simp: openin_pullback_topology openin_subtopology UV)
+    from 1 2 show \<open>openin (subtopology T (f ` X)) U = openin (pullback_topology X f T) V\<close>
+      by fastforce
+  qed
+  show \<open>Domainp (rel_set r) U\<close> if \<open>openin (subtopology T (f ` X)) U\<close> for U
+  proof -
+    from that have \<open>U \<subseteq> range f\<close>
+      using openin_imp_subset by blast
+    then show ?thesis
+      apply (rule_tac DomainPI[of _ _ \<open>(f -` U) \<inter> X\<close>])
+      using openin_imp_subset that     
+      by (fastforce intro!: rel_setI simp: r_def)
+  qed
+  show \<open>Rangep (rel_set r) U\<close> if \<open>openin (pullback_topology X f T) U\<close> for U
+  proof -
+    from that have \<open>U \<subseteq> X\<close>
+      by (metis Int_iff openin_pullback_topology unfold_simps(2))
+    then show ?thesis
+      apply (rule_tac RangePI[of _ \<open>f ` U\<close>])
+      by (force intro!: rel_setI simp: r_def)
+  qed
+qed
+
+
+lemma rel_topology_bounded_linear_sot: \<open>rel_topology cr_cblinfun (top_of_set (Collect (bounded_clinear :: ('a::complex_normed_vector \<Rightarrow> 'b::complex_normed_vector) \<Rightarrow> _)))
+           (cstrong_operator_topology :: ('a \<Rightarrow>\<^sub>C\<^sub>L 'b) topology)\<close>
+proof -
+    have *: \<open>Collect bounded_clinear = range cblinfun_apply\<close>
+      using type_definition.Rep_range type_definition_cblinfun by fastforce
+  show ?thesis
+    unfolding cstrong_operator_topology_def *
+    apply (rule rel_topology_subtopology_pullback_topology)
+     apply (simp add: cblinfun_apply_inject inj_def)
+    by (simp add: cr_cblinfun_def)
+qed
+
+
+
+
 end

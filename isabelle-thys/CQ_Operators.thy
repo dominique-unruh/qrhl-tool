@@ -516,6 +516,10 @@ lemma cq_map_from_kraus_family_invalid1[simp]: \<open>cq_map_from_kraus_family n
 lemma cq_map_from_kraus_family_invalid2[simp]: \<open>cq_map_from_kraus_family C non_qregister \<EE> = 0\<close>
   by (simp add: cq_map_from_kraus_family_def[abs_def])
 
+(* TODO move *)
+lemma bdd_above_const_image[iff]: \<open>bdd_above ((\<lambda>_. x) ` Y)\<close>
+  by fast
+
 (* Inspiration from lift_definition denotation_cases :: \<open>(cl \<Rightarrow> denotation) \<Rightarrow> denotation\<close> ? *)
 lemma cq_map_from_kraus_family_is_cq_map: \<open>is_cq_map C (cq_map_from_kraus_family C Q \<EE>)\<close>
 proof -
@@ -562,7 +566,7 @@ proof -
        (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) (kf_apply_qregister C kf_complete_measurement_ket))\<close>
       apply (simp add: kf_cq_id_def kf_cq_map_def)
       apply (rule kf_comp_dependent_comp_assoc_weak[THEN kf_eq_weak_sym, THEN kf_eq_weak_trans])
-       apply (simp add: case_prod_unfold kf_norm_apply_qregister kf_norm_constant norm_tc_butterfly qregC)
+       apply (force simp: case_prod_unfold kf_norm_apply_qregister kf_norm_constant norm_tc_butterfly qregC)
       by (simp add: case_prod_unfold)
     also have \<open>\<dots> =
      kf_comp_dependent (\<lambda>(_, c). (kf_apply_qregister C (kf_comp kf_complete_measurement_ket (kf_constant (tc_butterfly (ket c) (ket c))))))
@@ -734,6 +738,143 @@ proof -
   from km cq show ?thesis
     by (simp add: is_cq_map_def)
 qed
+
+definition cq_map_local_c :: \<open>'cl CREGISTER \<Rightarrow> 'cl \<Rightarrow> 
+        ((('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class \<Rightarrow> (('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class) \<Rightarrow> 
+        ((('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class \<Rightarrow> (('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class)\<close> where
+  \<open>cq_map_local_c F init \<EE> = cq_id qFst o km_local_register (QREGISTER_chain qFst (QREGISTER_of_CREGISTER F))
+               (tc_butterfly (ket (init,undefined)) (ket (init,undefined))) \<EE> o cq_id qFst\<close>
+
+lemma is_cq_map_cq_map_local_c[intro]:
+  assumes \<open>kraus_map \<EE>\<close>
+  shows \<open>is_cq_map qFst (cq_map_local_c F init \<EE>)\<close>
+  using assms
+  by (auto intro!: kraus_map_comp simp add: cq_map_local_c_def is_cq_map_def)
+
+lemma kf_norm_cq_map_local_c: 
+  assumes \<open>kraus_map \<EE>\<close>
+  shows \<open>km_norm (cq_map_local_c F init \<EE>) \<le> km_norm \<EE>\<close>
+  by (auto intro!: km_comp_norm_leq[THEN order.trans] kraus_map_comp assms
+      km_norm_local_register[THEN order.trans]
+      simp: cq_map_local_c_def norm_tc_butterfly)
+
+definition cq_map_local_q :: \<open>'qu QREGISTER \<Rightarrow> ('qu ell2, 'qu ell2) trace_class \<Rightarrow> 
+        ((('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class \<Rightarrow> (('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class) \<Rightarrow> 
+        ((('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class \<Rightarrow> (('cl\<times>'qu) ell2, ('cl\<times>'qu) ell2) trace_class)\<close> where
+  \<open>cq_map_local_q Q \<rho> \<EE> = km_local_register (QREGISTER_chain qSnd Q)
+               (tc_tensor (tc_butterfly (ket undefined) (ket undefined)) \<rho>) \<EE>\<close>
+
+lemma cq_id_qFst: \<open>cq_id qFst = km_tensor km_complete_measurement_ket id\<close>
+  by (simp add: cq_id_def km_apply_qregister_qFst kraus_map_complete_measurement)
+
+lemma is_cq_map_kf_comp_dependent:
+  assumes cq\<FF>: \<open>\<And>x. x \<in> kf_domain \<FF> \<Longrightarrow> is_cq_map Q (kf_apply_on \<FF> {x})\<close>
+  assumes cq\<EE>: \<open>\<And>x. x \<in> kf_domain \<FF> \<Longrightarrow> is_cq_map Q (kf_apply (\<EE> x))\<close>
+  shows \<open>is_cq_map Q (kf_apply (kf_comp_dependent \<EE> \<FF>))\<close>
+proof -
+  wlog bdd\<EE>0: \<open>bdd_above ((kf_norm o \<EE>) ` kf_domain \<FF>)\<close>
+    using negation
+    by (simp add: kf_comp_dependent_invalid)
+  wlog qreg: \<open>qregister Q\<close> keeping bdd\<EE>0
+  proof -
+    from cq\<EE> negation
+    have \<open>\<EE> x =\<^sub>k\<^sub>r 0\<close> if \<open>x \<in> kf_domain \<FF>\<close> for x
+      by (simp add: non_qregister kf_eq_weak_def that)
+    then have \<open>kf_comp_dependent \<EE> \<FF> =\<^sub>k\<^sub>r 0\<close>
+      apply (rule kf_comp_dependent_cong_weak[THEN kf_eq_weak_trans, rotated])
+      using bdd\<EE>0 by auto
+    then show ?thesis
+      by (simp add: kf_eq_weak_def)
+  qed
+  from bdd\<EE>0 have bdd\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<EE> (f x))) ` X)\<close> if \<open>f ` X \<subseteq> kf_domain \<FF>\<close> for X f
+    apply (rule bdd_above_mono)
+    using that by force
+  then have bdd': \<open>bdd_above ((\<lambda>x. kf_norm (kf_comp (kf_apply_qregister Q (kf_complete_measurement (range ket))) (\<EE> x))) ` X)\<close>
+    if \<open>X \<subseteq> kf_domain \<FF>\<close> for X
+    apply (rule bdd_above_mono2[OF _ order_refl])
+    using that apply auto[1]
+    apply (rule kf_comp_norm_leq[THEN order_trans])
+    by (auto simp add: kf_norm_apply_qregister qreg)
+
+  have \<open>kf_apply (kf_comp_dependent \<EE> \<FF>) o cq_id Q = kf_apply (kf_comp_dependent \<EE> \<FF>)\<close>
+  proof -
+    have dom_compD: \<open>(x, y) \<in> kf_domain (kf_comp A B) \<Longrightarrow> x \<in> kf_domain B \<and> y \<in> kf_domain A\<close> for A B x y
+      using kf_domain_comp_subset[of A B] by blast
+
+    have \<open>kf_apply (kf_comp_dependent \<EE> \<FF>) o cq_id Q
+        = kf_apply (kf_comp (kf_comp_dependent \<EE> \<FF>) (kf_apply_qregister Q (kf_complete_measurement (range ket))))\<close>
+      by (simp add: cq_id_def km_complete_measurement_kf_complete_measurement km_apply_qregister_kf_apply qreg kf_comp_apply)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>(_, f). \<EE> f) (kf_comp \<FF> (kf_apply_qregister Q (kf_complete_measurement (range ket)))))\<close>
+      by (auto intro!: ext kf_apply_eqI kf_comp_comp_dependent_assoc_weak bdd\<EE> simp: o_def)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>(_, f). \<EE> f) (kf_map (\<lambda>(_,y). ((),y)) (kf_comp \<FF> (kf_apply_qregister Q (kf_complete_measurement (range ket))))))\<close>
+      apply (rule sym)
+      by (auto intro!: ext kf_apply_eqI kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans]
+          simp: case_prod_unfold)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>(_, f). \<EE> f) (kf_comp (kf_map id \<FF>) (kf_map (\<lambda>_.()) (kf_apply_qregister Q (kf_complete_measurement (range ket))))))\<close>
+      apply (rule sym)
+      by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_comp_map_both[THEN kf_eq_trans] bdd\<EE>
+          dest!: dom_compD
+          simp: case_prod_unfold)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>(_, f). \<EE> f) (kf_comp \<FF> (kf_map (\<lambda>_.()) (kf_apply_qregister Q (kf_complete_measurement (range ket))))))\<close>
+      by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_comp_cong kf_map_id bdd\<EE>
+          dest!: dom_compD
+          simp: case_prod_unfold)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>(_, f). \<EE> f) (kf_map (\<lambda>y. ((),y)) \<FF>))\<close>
+    proof -
+      have aux1: \<open>((=) x) = (\<lambda>(a,b). snd x = b)\<close> for x :: \<open>unit \<times> 'z\<close>
+        apply (cases x) by auto
+      have aux2: \<open>((=) x) = (\<lambda>y. y\<in>{x})\<close> for x
+        by auto
+      have aux3: \<open>((=) ()) = (\<lambda>_. True)\<close>
+        by auto
+      have \<open>kf_apply_on \<FF> {x} o cq_id Q = kf_apply_on \<FF> {x}\<close> for x
+        using cq\<FF>[of x]
+        by (metis cq_map_id_right in_kf_domain_iff_apply_nonzero is_cq_map_0)
+      then have \<open>kf_comp (kf_filter ((=)x) \<FF>) (kf_filter ((=)()) (kf_flatten (kf_apply_qregister Q (kf_complete_measurement (range ket))))) =\<^sub>k\<^sub>r kf_map (Pair ()) (kf_filter ((=)x) \<FF>)\<close> for x
+        apply (rule_tac kf_eq_weakI)
+        by (simp add: kf_comp_apply aux2[of x] aux3 qreg cq_id_def del: insert_iff
+            flip: kf_apply_on_def km_apply_qregister_kf_apply km_complete_measurement_kf_complete_measurement)
+      then have \<open>kf_comp \<FF> (kf_flatten (kf_apply_qregister Q (kf_complete_measurement (range ket)))) \<equiv>\<^sub>k\<^sub>r kf_map (Pair ()) \<FF>\<close>
+        apply (rule_tac kf_eqI_from_filter_eq_weak)
+        apply (subst (asm) kf_filter_comp[symmetric])
+        by (simp add: aux1 kf_filter_map)
+      then show ?thesis
+        by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak bdd\<EE>
+            dest!: dom_compD
+            simp: case_prod_unfold)
+    qed
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent \<EE>  \<FF>)\<close>
+      by (metis (no_types, lifting) ext kf_comp_dependent_map_right_weak kf_eq_weak_def split_conv)
+    finally show ?thesis
+      by -
+  qed
+  moreover have \<open>cq_id Q o kf_apply (kf_comp_dependent \<EE> \<FF>) = kf_apply (kf_comp_dependent \<EE> \<FF>)\<close>
+  proof -
+    have \<open>cq_id Q o kf_apply (kf_comp_dependent \<EE> \<FF>) = kf_apply (kf_comp (kf_apply_qregister Q (kf_complete_measurement (range ket))) (kf_comp_dependent \<EE> \<FF>))\<close>
+      by (simp add: cq_id_def km_complete_measurement_kf_complete_measurement km_apply_qregister_kf_apply qreg kf_comp_apply)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent (\<lambda>g. kf_comp (kf_apply_qregister Q (kf_complete_measurement (range ket))) (\<EE> g)) \<FF>)\<close>
+      apply (rule sym)
+      by (auto intro!: ext kf_apply_eqI kf_comp_dependent_comp_assoc_weak bdd\<EE>)
+    also have \<open>\<dots> = kf_apply (kf_comp_dependent \<EE> \<FF>)\<close>
+    proof -
+      have \<open>cq_id Q o kf_apply (\<EE> x) = kf_apply (\<EE> x)\<close> if \<open>x \<in> kf_domain \<FF>\<close> for x
+        using cq\<EE>[OF that]
+        by (simp add: cq_map_id_left)
+      then have \<open>kf_comp (kf_apply_qregister Q (kf_complete_measurement (range ket))) (\<EE> x) =\<^sub>k\<^sub>r \<EE> x\<close>
+        if \<open>x \<in> kf_domain \<FF>\<close> for x
+        apply (rule_tac kf_eq_weakI)
+        using that by (simp add: kf_comp_apply qreg cq_id_def del: insert_iff
+            flip: kf_apply_on_def km_apply_qregister_kf_apply km_complete_measurement_kf_complete_measurement)
+      then show ?thesis
+        by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak bdd')
+    qed
+    finally show ?thesis
+      by -
+  qed
+  ultimately show ?thesis
+    by (simp add: is_cq_map_def)
+qed
+
 
 end
 

@@ -28,8 +28,6 @@ hide_const (open) Coset.kernel
 
 subsubsection \<open>Wrapper types around registers\<close>
 
-
-
 typedecl cl
 typedecl qu
 instance qu :: default ..

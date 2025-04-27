@@ -1942,7 +1942,10 @@ proof -
     by -
 qed
 
-
+lemma Qqcompatible_comp_left[simp, intro]: "qcompatible F H \<Longrightarrow> Qqcompatible (QREGISTER_chain F G) H"
+  apply transfer
+  apply auto
+  by (metis (mono_tags, lifting) Laws_Quantum.swap_registers non_qregister_raw)
 
 
 end
