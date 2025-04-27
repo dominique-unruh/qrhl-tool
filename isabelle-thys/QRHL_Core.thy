@@ -690,11 +690,11 @@ proof -
 qed
 
 lift_definition kf_from_measurement :: \<open>('x,'a) measurement \<Rightarrow> ('a ell2,'a ell2,'x) kraus_family\<close> is
-  \<open>\<lambda>m :: 'x\<Rightarrow>('a,'a) l2bounded. range (\<lambda>x. (m x, x))\<close>
-    apply (intro CollectI kraus_familyI bdd_aboveI2)
-    apply (rule kf_from_measurement_norm_leq1_aux)
-    using kf_from_measurement_norm_leq1_aux
-    by auto
+  \<open>\<lambda>m :: 'x\<Rightarrow>('a,'a) l2bounded. Set.filter (\<lambda>(E,_). E\<noteq>0) (range (\<lambda>x. (m x, x)))\<close>
+  apply (intro CollectI kraus_familyI bdd_aboveI2)
+   apply (rule kf_from_measurement_norm_leq1_aux)
+  using kf_from_measurement_norm_leq1_aux
+  by auto
 
 (* TODO move to QRHL_Core *)
 lemma is_measurement_mproj[iff]: \<open>is_measurement (mproj M)\<close>
