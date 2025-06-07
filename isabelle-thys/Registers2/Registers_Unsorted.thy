@@ -255,6 +255,10 @@ proof -
     by (simp add: trace_class_sandwich qregister_co_dim_def trace_butterfly trace_norm_sandwich_isometry trace_norm_butterfly)
 qed
 
+lemma apply_qregister_tc_qswap[simp]: \<open>apply_qregister_tc qswap (tc_tensor t u) = tc_tensor u t\<close>
+  apply transfer'
+  by (simp add: iso_qregister_co_dim apply_qregister_qswap)
+
 lemma apply_qregister_tc_codim0: \<open>qregister_co_dim Q = 0 \<Longrightarrow> apply_qregister_tc Q t = 0\<close>
   by (metis (mono_tags, lifting) apply_qregister_tc.rep_eq from_trace_class_inverse func_zero zero_trace_class_def)
 
@@ -318,6 +322,12 @@ lemma apply_qregister_inv_inverse:
   using assms
   apply transfer'
   using iso_register_is_register register_inj by (auto intro!: inv_f_f simp: )
+
+lemma apply_qregister_tc_inv_inverse:
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>apply_qregister_tc (qregister_inv Q) (apply_qregister_tc Q t) = t\<close>
+  apply (transfer' fixing: Q)
+  by (simp add: apply_qregister_inv_inverse assms iso_qregister_co_dim iso_qregister_inv_iso)
 
 lemma apply_non_qregister_tc[simp]: \<open>apply_qregister_tc non_qregister x = 0\<close>
   apply transfer'

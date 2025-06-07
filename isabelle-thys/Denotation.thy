@@ -80,13 +80,15 @@ lift_definition zero_denotation :: denotation is 0
 lift_definition one_denotation :: denotation is \<open>cq_id qFst\<close>
   by simp
 lift_definition times_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
-  \<open>\<lambda>D E. D o E\<close>
+  \<open>\<lambda>D E. E o D\<close>
   by (smt (verit, best) cq_map_id_left fun.map_comp is_cq_map_def kraus_map_comp)
 lift_definition plus_denotation :: \<open>denotation \<Rightarrow> denotation \<Rightarrow> denotation\<close> is
   \<open>\<lambda>D E \<rho>. D \<rho> + E \<rho>\<close>
   by (auto intro!: is_cq_map_plus)
 instance..
 end
+
+lemmas [simp] = zero_denotation.rep_eq
 
 lemma zero_denotation_bounded[iff]: \<open>denotation_norm 0 = 0\<close>
   apply transfer
@@ -100,6 +102,12 @@ lemma times_denotation_bounded: \<open>denotation_norm (D * E) \<le> denotation_
   apply transfer
   by (metis Groups.mult_ac(2) is_cq_map_def km_comp_norm_leq)
 
+instance denotation :: power..
+
+lemma power_denotation_bounded: \<open>denotation_norm (D^n) \<le> denotation_norm D ^ n\<close>
+  apply (induction n)
+  by (auto intro!: times_denotation_bounded[THEN order_trans] mult_mono)
+
 instantiation denotation :: monoid_mult begin
 instance
 proof intro_classes
@@ -109,19 +117,21 @@ proof intro_classes
     by fastforce
   show \<open>1 * a = a\<close>
     apply transfer
-    using cq_map_id_left by blast
+    using cq_map_id_right by blast
   show \<open>a * 1 = a\<close>
     apply transfer
-    using cq_map_id_right by blast
+    using cq_map_id_left by blast
 qed
 end
 
 instantiation denotation :: topological_space begin
-lift_definition open_denotation :: \<open>denotation set \<Rightarrow> bool\<close> is \<open>openin (top_of_set (range apply_denotation))\<close>.
+lift_definition open_denotation :: \<open>denotation set \<Rightarrow> bool\<close> is \<open>openin (top_of_set (Collect (is_cq_map qFst)))\<close>.
 instance
 proof intro_classes
   show \<open>open (UNIV :: denotation set)\<close>
-    by (simp add: open_denotation_def)
+    apply (simp add: open_denotation_def)
+    by (smt (verit, best) Abs_denotation_inverse UNIV_I apply_denotation imageE image_eqI openin_subopen
+        openin_subtopology_self subsetI)
   show \<open>open (S \<inter> T)\<close> if \<open>open S\<close> and \<open>open T\<close> for S T :: \<open>denotation set\<close>
     using that
     apply transfer
@@ -133,30 +143,31 @@ proof intro_classes
 qed
 end
 
+lemma hausdorff_bounded_clinear[iff]: \<open>Hausdorff_space (top_of_set (Collect bounded_clinear))\<close>
+proof -
+  note [transfer_rule] = rel_topology_bounded_linear_sot
+  have [transfer_rule]: \<open>bi_unique cr_cblinfun\<close>
+    by (metis bi_total_eq bi_unique_eq cblinfun.bi_unique cblinfun.pcr_cr_eq)
+  show ?thesis
+    using hausdorff_sot[where 'a='a and 'b='b]
+    by (transfer, blast)
+qed
+
 instantiation denotation :: t2_space begin
 instance
 proof -
   define S :: \<open>(((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class) set\<close>
-    where \<open>S = range (apply_denotation)\<close>
+    where \<open>S = Collect (is_cq_map qFst)\<close>
   have hausdorff_S: \<open>Hausdorff_space (top_of_set S)\<close>
   proof -
-    define cb :: \<open>_ \<Rightarrow> (((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class)\<close> where \<open>cb = cblinfun_apply\<close>
-    note [transfer_rule] = rel_topology_bounded_linear_sot
-    have [transfer_rule]: \<open>bi_unique cr_cblinfun\<close>
-      by (metis bi_total_eq bi_unique_eq cblinfun.bi_unique cblinfun.pcr_cr_eq)
-    
-    have hausdorff_range_cb: \<open>Hausdorff_space (top_of_set (Collect (bounded_clinear :: (((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class) \<Rightarrow> _)))\<close>
-      using hausdorff_sot[where 'a=\<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close> and 'b=\<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>]
-      by (transfer, blast)
-
     have \<open>S \<subseteq> Collect bounded_clinear\<close>
       using apply_denotation
-      by (auto intro!: kraus_map_bounded_clinear simp add: S_def is_cq_map_def cb_def)
+      by (auto intro!: kraus_map_bounded_clinear simp add: S_def is_cq_map_def)
     then have top_S: \<open>top_of_set S = subtopology (top_of_set (Collect bounded_clinear)) S\<close>
       by (metis (no_types, lifting) subtopology_subtopology topspace_euclidean_subtopology
           topspace_subtopology_subset)
     show \<open>Hausdorff_space (top_of_set S)\<close>
-      using Hausdorff_space_subtopology top_S hausdorff_range_cb by metis
+      using Hausdorff_space_subtopology top_S hausdorff_bounded_clinear by metis
   qed
   show \<open>OFCLASS(denotation, t2_space_class)\<close>
   proof (intro_classes, transfer, fold S_def)
@@ -200,10 +211,11 @@ instance denotation :: semiring_1
 proof intro_classes
   fix D E F :: denotation
   show \<open>0 * D = 0\<close>
-    apply transfer' by auto
-  show \<open>D * 0 = 0\<close>
     apply transfer
     by (auto intro!: ext simp: complex_vector.linear_0 is_cq_map_def complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear)
+  show \<open>D * 0 = 0\<close>
+    apply transfer
+    by auto
   show \<open>(D + E) * F = D * F + E * F\<close>    
     apply transfer
     by (auto intro!: ext simp: complex_vector.linear_add is_cq_map_def complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear)
@@ -459,7 +471,7 @@ proof (insert assms, transfer fixing: B)
 qed
 
 definition denotation_while_n :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> denotation \<Rightarrow> nat \<Rightarrow> denotation\<close> where
-  \<open>denotation_while_n e D n = denotation_cases (\<lambda>m. if e m then 0 else 1) * (denotation_cases (\<lambda>m. if e m then D else 0))^n\<close>
+  \<open>denotation_while_n e D n = (denotation_cases (\<lambda>m. if e m then D else 0))^n * denotation_cases (\<lambda>m. if e m then 0 else 1)\<close>
 
 lemma denotation_cases_0[simp]: \<open>denotation_cases 0 = 0\<close>
   apply (simp add: func_zero)
@@ -510,33 +522,331 @@ proof (insert assms, transfer)
         intro!: 1 kf_comp_dependent_cong_weak ext kf_apply_eqI)
 qed
 
-lemma denotation_merge: 
-  assumes \<open>bdd_above (range (denotation_norm o D))\<close>
+(* TODO move *)
+lemma kf_filter_comp_singleton: \<open>kf_filter ((=) x) (kf_comp \<EE> \<FF>) = kf_comp (kf_filter ((=) (snd x)) \<EE>) (kf_filter ((=) (fst x)) \<FF>)\<close>
+  apply (simp add: case_prod_unfold flip: kf_filter_comp)
+  by (metis prod.expand)
+
+(* TODO move *)
+lemma kf_filter_comp_dependent_singleton: 
+  assumes \<open>bdd_above ((kf_norm \<circ> \<EE>) ` kf_domain \<FF>)\<close>
+  shows \<open>kf_filter ((=) x) (kf_comp_dependent \<EE> \<FF>) = kf_comp (kf_filter ((=) (snd x)) (\<EE> (fst x))) (kf_filter ((=) (fst x)) \<FF>)\<close>
+proof -
+  have \<open>kf_filter ((=) x) (kf_comp_dependent \<EE> \<FF>) = kf_comp_dependent (\<lambda>y. kf_filter ((=) (snd x)) (\<EE> y)) (kf_filter ((=) (fst x)) \<FF>)\<close>
+    apply (subst kf_filter_comp_dependent[symmetric])
+     apply (fact assms)
+    apply (simp_all add: case_prod_unfold)
+    by (metis prod.expand)
+  also have \<open>\<dots> = kf_comp (kf_filter ((=) (snd x)) (\<EE> (fst x))) (kf_filter ((=) (fst x)) \<FF>)\<close>
+    by (auto intro!: kf_comp_dependent_cong_left simp: kf_comp_def)
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move *)
+lemma kf_filter_kf_complete_measurement_singleton:
+  assumes \<open>is_ortho_set B\<close> and \<open>x \<in> B\<close>
+  shows \<open>kf_filter ((=) x) (kf_complete_measurement B) = kf_map_inj (\<lambda>_. x) (kf_of_op (selfbutter (sgn x)))\<close>
+proof -
+  have \<open>selfbutter (sgn x) \<noteq> 0\<close>
+    by (smt (verit) assms(1,2) is_ortho_set_def mult_cancel_right1 norm_butterfly norm_sgn norm_zero)
+  then show ?thesis
+    apply (transfer' fixing: B x)
+    by (auto simp add: assms)
+qed
+
+(* TODO move *)
+lemma kf_filter_kf_complete_measurement_ket_singleton:
+  \<open>kf_filter ((=) x) kf_complete_measurement_ket = kf_map_inj (\<lambda>_. x) (kf_of_op (selfbutter (ket x)))\<close>
+proof -
+  have neq0: \<open>selfbutter |x\<rangle> \<noteq> 0\<close>
+    using butterfly_apply[of \<open>ket x\<close> \<open>ket x\<close> \<open>ket x\<close>]
+    by force
+  have \<open>kf_filter ((=) x) kf_complete_measurement_ket = kf_map_inj (inv ket) (kf_filter (\<lambda>xa. x = inv ket xa) (kf_complete_measurement (range ket)))\<close>
+    by (simp add: kf_complete_measurement_ket_def kf_filter_map_inj)
+  also have \<open>\<dots> = kf_map_inj (inv ket) (kf_filter ((=) (ket x)) (kf_complete_measurement (range ket)))\<close>
+    apply (rule arg_cong[where f=\<open>kf_map_inj _\<close>])
+    apply (rule kf_filter_cong_eq[OF refl])
+    by auto
+  also have \<open>\<dots> = kf_map_inj (inv ket) (kf_map_inj (\<lambda>_. ket x) (kf_of_op (selfbutter (ket x))))\<close>
+    apply (rule arg_cong[where f=\<open>kf_map_inj _\<close>])
+    apply (transfer' fixing: x )
+    by (auto simp: image_iff neq0)
+  also have \<open>\<dots> = kf_map_inj (\<lambda>_. x) (kf_of_op (selfbutter (ket x)))\<close>
+    by (simp add: kf_map_inj_twice)
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move *)
+lemma separating_set_tensor_ell2: \<open>separating_set bounded_clinear ((\<lambda>(g,h). g \<otimes>\<^sub>s h) ` (UNIV \<times> UNIV))\<close>
+  apply (rule separating_set_bounded_clinear_dense)
+  apply (rewrite at \<open>ccspan \<hole>\<close> to \<open>{x. \<exists>a b. x = a \<otimes>\<^sub>s b}\<close> DEADID.rel_mono_strong)
+  using tensor_ell2_dense'[of UNIV UNIV]
+  by auto
+
+(* TODO move *)
+lemma separating_set_tensor_ell2_nested:
+  assumes \<open>separating_set (bounded_clinear :: (_ \<Rightarrow> 'c::complex_normed_vector) \<Rightarrow> _) A\<close>
+  assumes \<open>separating_set (bounded_clinear :: (_ \<Rightarrow> 'c) \<Rightarrow> _) B\<close>
+  shows \<open>separating_set (bounded_clinear :: (_ \<Rightarrow> 'c) \<Rightarrow> _) ((\<lambda>(g,h). g \<otimes>\<^sub>s h) ` (A \<times> B))\<close>
+  apply (rule separating_set_bounded_cbilinear_nested)
+     apply (rule separating_set_tensor_ell2)
+  using bounded_cbilinear_tensor_ell2 apply force
+  using assms by simp_all
+
+(* TODO move *)
+lemma sandwich_tc_tensor_ell2_left: \<open>sandwich_tc (tensor_ell2_left h*) (tc_tensor t u) = (h \<bullet>\<^sub>C tc_apply t h) *\<^sub>C u\<close>
+  apply (transfer' fixing: h)
+  by (simp add: sandwich_tensor_ell2_left)
+
+lemma tc_butterfly_apply[simp]: \<open>tc_apply (tc_butterfly g h) k = (h \<bullet>\<^sub>C k) *\<^sub>C g\<close>
+  apply (transfer' fixing: g h k)
+  by simp
+
+(*
+lemma circularity_of_trace:
+  \<comment> \<open>TODO cite "mathoverflow-circ-trace2"\<close>
+  fixes a :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close> and b :: \<open>'b \<Rightarrow>\<^sub>C\<^sub>L 'a\<close>
+    \<comment> \<open>The proof from \<open>conway00operator\<close> only works for square operators, we generalize it\<close>
+  assumes \<open>trace_class (a o\<^sub>C\<^sub>L b)\<close> and \<open>trace_class (b o\<^sub>C\<^sub>L a)\<close>
+    \<comment> \<open>Only \<^term>\<open>trace_class (a o\<^sub>C\<^sub>L b)\<close> is not sufficient, see "mathoverflow-circ-trace1"}.\<close>
+  shows \<open>trace (a o\<^sub>C\<^sub>L b) = trace (b o\<^sub>C\<^sub>L a)\<close>
+proof -
+  (* We first make a and b into square operators by padding them because for those the circularity of the trace is easier. *)
+  define a' b' :: \<open>('a\<times>'b) \<Rightarrow>\<^sub>C\<^sub>L ('a\<times>'b)\<close> 
+    where \<open>a' = cblinfun_right o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L cblinfun_left*\<close>
+      and \<open>b' = cblinfun_left o\<^sub>C\<^sub>L b o\<^sub>C\<^sub>L cblinfun_right*\<close>
+  have \<open>trace_class (cblinfun_right o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L b o\<^sub>C\<^sub>L cblinfun_right* :: ('a \<times> 'b) \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b))\<close>
+    apply (rule trace_class_comp_left)
+    apply (subst cblinfun_assoc_right)
+    apply (rule trace_class_comp_right)
+    by (fact assms)
+  then have \<open>trace_class (a' o\<^sub>C\<^sub>L b')\<close>
+    by (simp add: a'_def b'_def lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_left]] cblinfun_assoc_left)
+  have \<open>trace_class ((cblinfun_left o\<^sub>C\<^sub>L b o\<^sub>C\<^sub>L a) o\<^sub>C\<^sub>L cblinfun_left* :: ('a \<times> 'b) \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b))\<close>
+    apply (rule trace_class_comp_left)
+    apply (subst cblinfun_assoc_right)
+    apply (rule trace_class_comp_right)
+    by (fact assms)
+  then have \<open>trace_class (b' o\<^sub>C\<^sub>L a')\<close>
+    by (simp add: a'_def b'_def lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_right]] cblinfun_assoc_left)
+  define u p where \<open>u = polar_decomposition a'\<close> and \<open>p = abs_op a'\<close>
+  have \<open>a' = u o\<^sub>C\<^sub>L p\<close>
+    by (simp add: p_def polar_decomposition_correct u_def)
+  have \<open>p o\<^sub>C\<^sub>L b' = u* o\<^sub>C\<^sub>L a' o\<^sub>C\<^sub>L b'\<close>
+    by (simp add: p_def polar_decomposition_correct' u_def)
+  also from \<open>trace_class (a' o\<^sub>C\<^sub>L b')\<close>
+  have \<open>trace_class (u* o\<^sub>C\<^sub>L a' o\<^sub>C\<^sub>L b')\<close>
+    by (simp add: cblinfun_assoc_right trace_class_comp_right)
+  finally have \<open>trace_class (p o\<^sub>C\<^sub>L b')\<close>
+    by -
+  then have \<open>trace (u o\<^sub>C\<^sub>L p o\<^sub>C\<^sub>L b') = trace (p o\<^sub>C\<^sub>L b' o\<^sub>C\<^sub>L u)\<close>
+    by (simp add: cblinfun_assoc_right flip: circularity_of_trace)
+  moreover have \<open>trace (p o\<^sub>C\<^sub>L b' o\<^sub>C\<^sub>L u) = trace (b' o\<^sub>C\<^sub>L u o\<^sub>C\<^sub>L p)\<close>
+  proof -
+    define a b where \<open>a = p\<close> and \<open>b = b' o\<^sub>C\<^sub>L u\<close>
+
+    thm eigenspace_is_reducing
+
+(* 
+
+pn = proj (SUP eigenspaces \<ge> 1/n)
+
+pn invariant subspace \<Longrightarrow> pn a = pn a pn  (a comm. pn not needed)
+
+But: pn a \<longrightarrow> a  not clear.
+
+
+
+ *)
+
+    define p where \<open>p n = (\<Sum>i<n. spectral_dec_proj_tc a i)\<close> for n
+    have \<open>trace (a o\<^sub>C\<^sub>L b) = trace (b o\<^sub>C\<^sub>L a)\<close>
+      by x
+    then show ?thesis
+      by (simp add: a_def b_def cblinfun_assoc_left)
+  qed
+  ultimately have circ': \<open>trace (a' o\<^sub>C\<^sub>L b') = trace (b' o\<^sub>C\<^sub>L a')\<close>
+    using \<open>a' = u o\<^sub>C\<^sub>L p\<close>[symmetric]
+    apply simp
+    by (simp add: cblinfun_assoc_right)
+  show ?thesis
+  proof -
+    have \<open>trace (a o\<^sub>C\<^sub>L b) = trace (cblinfun_right o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L b o\<^sub>C\<^sub>L cblinfun_right* :: ('a \<times> 'b) \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b))\<close>
+      apply (subst (2) circularity_of_trace)
+       apply (simp add: trace_class_comp_right assms cblinfun_assoc_right)
+      by (simp add: lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_left]] cblinfun_assoc_left)
+    also have \<open>\<dots> = trace (a' o\<^sub>C\<^sub>L b')\<close>
+      by (simp add: a'_def b'_def lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_left]] cblinfun_assoc_left)
+    also from circ' have \<open>\<dots> = trace (b' o\<^sub>C\<^sub>L a')\<close>
+      by -
+    also have \<open>\<dots> = trace (cblinfun_left o\<^sub>C\<^sub>L b o\<^sub>C\<^sub>L a o\<^sub>C\<^sub>L cblinfun_left* :: ('a \<times> 'b) \<Rightarrow>\<^sub>C\<^sub>L ('a \<times> 'b))\<close>
+      by (simp add: a'_def b'_def lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_right]] cblinfun_assoc_left)
+    also have \<open>\<dots> = trace (b o\<^sub>C\<^sub>L a)\<close>
+      apply (subst circularity_of_trace)
+       apply (simp add: trace_class_comp_right assms cblinfun_assoc_right)
+      by (simp add: lift_cblinfun_comp[OF isometryD[OF isometry_cblinfun_left]] cblinfun_assoc_left)
+    finally show ?thesis
+      by -
+  qed
+qed
+*)
+
+
+lemma trace_sandwich_add_left:
+  assumes \<open>e* o\<^sub>C\<^sub>L f = 0\<close>
+  assumes [simp]: \<open>trace_class (e o\<^sub>C\<^sub>L t)\<close> \<open>trace_class (f o\<^sub>C\<^sub>L t)\<close>
+  shows \<open>trace (sandwich (e + f) t) = trace (sandwich e t) + trace (sandwich f t)\<close>
+proof -
+  have [simp]: \<open>f* o\<^sub>C\<^sub>L e = 0\<close>
+    by (metis adj_0 adj_cblinfun_compose assms(1) double_adj)
+  have [simp]: \<open>trace_class ((e + f) o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: cblinfun_compose_add_left)
+  have [simp]: \<open>trace_class (e* o\<^sub>C\<^sub>L e o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: cblinfun_compose_assoc trace_class_comp_right)
+  have [simp]: \<open>trace_class (f* o\<^sub>C\<^sub>L f o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: cblinfun_compose_assoc trace_class_comp_right)
+
+  have \<open>trace (sandwich (e + f) t) = trace (((e + f)* o\<^sub>C\<^sub>L (e + f)) o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: sandwich_apply circularity_of_trace flip: cblinfun_compose_assoc)
+  also have \<open>\<dots> = trace (((e* o\<^sub>C\<^sub>L e) + (f* o\<^sub>C\<^sub>L f)) o\<^sub>C\<^sub>L t)\<close>
+    apply (rule arg_cong[where f=\<open>\<lambda>x. trace (x o\<^sub>C\<^sub>L _)\<close>])
+    by (simp add: cblinfun_compose_add_right cblinfun_compose_add_left adj_plus assms)
+  also have \<open>\<dots> = trace ((e* o\<^sub>C\<^sub>L e) o\<^sub>C\<^sub>L t) + trace ((f* o\<^sub>C\<^sub>L f) o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: cblinfun_compose_add_left trace_plus)
+  also have \<open>\<dots> = trace (sandwich e t) + trace (sandwich f t)\<close>
+    by (simp add: sandwich_apply circularity_of_trace flip: cblinfun_compose_assoc)
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move *)
+lemma trace_sandwich_diff_left:
+  assumes \<open>e* o\<^sub>C\<^sub>L f = f* o\<^sub>C\<^sub>L f\<close>
+  assumes [simp]: \<open>trace_class (e o\<^sub>C\<^sub>L t)\<close> \<open>trace_class (f o\<^sub>C\<^sub>L t)\<close>
+  shows \<open>trace (sandwich (e - f) t) = trace (sandwich e t) - trace (sandwich f t)\<close>
+  using trace_sandwich_add_left[of \<open>e - f\<close> f t] assms
+  by (simp add: cblinfun_compose_minus_left adj_minus)
+
+(* TODO move *)
+lemma trace_sandwich_tc_add_left:
+  assumes \<open>e* o\<^sub>C\<^sub>L f = 0\<close>
+  shows \<open>trace_tc (sandwich_tc (e + f) t) = trace_tc (sandwich_tc e t) + trace_tc (sandwich_tc f t)\<close>
+  apply (transfer fixing: e f)
+  by (simp add: trace_sandwich_add_left trace_class_comp_right assms)
+
+(* TODO move *)
+lemma trace_sandwich_tc_diff_left:
+  assumes \<open>e* o\<^sub>C\<^sub>L f = f* o\<^sub>C\<^sub>L f\<close>
+  shows \<open>trace_tc (sandwich_tc (e - f) t) = trace_tc (sandwich_tc e t) - trace_tc (sandwich_tc f t)\<close>
+  using trace_sandwich_tc_add_left[of \<open>e - f\<close> f t] assms
+  by (simp add: cblinfun_compose_minus_left adj_minus)
+
+(* TODO move *)
+lemma hilbert_schmidt_sqrt_op:
+  assumes \<open>trace_class t\<close>
+  shows \<open>hilbert_schmidt (sqrt_op t)\<close>
+  by (metis assms hilbert_schmidtI sqrt_op_def sqrt_op_unique trace_class_0 trace_class_comp_right)
+
+(* lemma trace_sandwich_mono_left:
+  assumes \<open>e* o\<^sub>C\<^sub>L e \<le> f* o\<^sub>C\<^sub>L f\<close>
+  assumes \<open>t \<ge> 0\<close>
+  assumes \<open>trace_class (sqrt_op t)\<close>
+    \<comment> \<open>This is stronger than needed, but we'd need to weaken the condition \<^term>\<open>trace_class a\<close> in @{thm [source] circularity_of_trace} first (see there).\<close>
+  shows \<open>trace (sandwich e t) \<le> trace (sandwich f t)\<close>
+proof -
+  have [simp]: \<open>trace_class t\<close>
+    by (metis assms(2,3) sqrt_op_square trace_class_comp_right)
+  have \<open>trace (sandwich e t) = trace (e* o\<^sub>C\<^sub>L e o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: sandwich_apply trace_class_comp_right circularity_of_trace assms cblinfun_assoc_left)
+  also have \<open>\<dots> = trace (e* o\<^sub>C\<^sub>L e o\<^sub>C\<^sub>L sqrt_op t* o\<^sub>C\<^sub>L sqrt_op t)\<close>
+    by (simp add: cblinfun_assoc_right sqrt_op_square assms sqrt_op_pos pos_selfadjoint selfadjoint_def[THEN iffD1])
+  also have \<open>\<dots> = trace (sandwich (sqrt_op t) (e* o\<^sub>C\<^sub>L e))\<close>
+    by (simp add: sandwich_apply trace_class_comp_right circularity_of_trace assms cblinfun_assoc_left)
+  also have \<open>\<dots> \<le> trace (sandwich (sqrt_op t) (f* o\<^sub>C\<^sub>L f))\<close>
+    by (metis assms(1,3) sandwich_apply sandwich_mono trace_cblinfun_mono trace_class_adj trace_class_comp_right)
+  also have \<open>\<dots> = trace (f* o\<^sub>C\<^sub>L f o\<^sub>C\<^sub>L sqrt_op t* o\<^sub>C\<^sub>L sqrt_op t)\<close>
+    by (simp add: sandwich_apply trace_class_comp_right circularity_of_trace assms cblinfun_assoc_left)
+  also have \<open>\<dots> = trace (f* o\<^sub>C\<^sub>L f o\<^sub>C\<^sub>L t)\<close>
+    by (simp add: cblinfun_assoc_right sqrt_op_square assms sqrt_op_pos pos_selfadjoint selfadjoint_def[THEN iffD1])
+  also have \<open>\<dots> = trace (sandwich f t)\<close>
+    by (simp add: sandwich_apply trace_class_comp_right circularity_of_trace assms cblinfun_assoc_left)
+  finally show ?thesis
+    by -
+qed *)
+
+lemma trace_sandwich_mono_left:
+  assumes \<open>e \<le> f\<close>
+  assumes \<open>t \<ge> 0\<close>
+  assumes \<open>f* o\<^sub>C\<^sub>L e = e* o\<^sub>C\<^sub>L e\<close>
+  assumes [simp]: \<open>trace_class (e o\<^sub>C\<^sub>L t)\<close> \<open>trace_class (f o\<^sub>C\<^sub>L t)\<close>
+  shows \<open>trace (sandwich e t) \<le> trace (sandwich f t)\<close>
+proof -
+  have \<open>trace (sandwich e t) \<le> trace (sandwich (f - e) t) + trace (sandwich e t)\<close>
+    by (simp add: assms(2) sandwich_pos trace_pos)
+  also have \<open>\<dots> = trace (sandwich ((f-e) + e) t)\<close>
+    apply (rule trace_sandwich_add_left[symmetric])
+    by (simp_all add: cblinfun_compose_minus_left adj_minus assms cblinfun_compose_minus_left)
+  also have \<open>\<dots> = trace (sandwich f t)\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+
+lemma trace_sandwich_tc_mono_left:
+  assumes \<open>e \<le> f\<close>
+  assumes \<open>t \<ge> 0\<close>
+  assumes \<open>f* o\<^sub>C\<^sub>L e = e* o\<^sub>C\<^sub>L e\<close>
+  shows \<open>trace_tc (sandwich_tc e t) \<le> trace_tc (sandwich_tc f t)\<close>
+  using assms
+  apply (transfer fixing: e f)
+  by (auto intro!: trace_class_comp_right trace_sandwich_mono_left)
+
+
+lemma is_Proj_pos:
+  assumes \<open>is_Proj P\<close>
+  shows \<open>P \<ge> 0\<close>
+  by (metis assms is_Proj_algebraic positive_cblinfun_squareI)
+
+
+lemma denotation_merge:
   assumes \<open>bdd_above (range (denotation_norm o E))\<close>
-  shows \<open>denotation_cases D * denotation_cases E = denotation_cases (\<lambda>c. D c * E c)\<close>
-proof (insert assms, transfer)
+  assumes \<open>bdd_above (range (denotation_norm o D))\<close>
+  assumes E_readonly: \<open>\<And>c \<rho>. let \<rho>' = apply_denotation (E c) (tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>) in
+                             sandwich_tc (selfbutter (ket c) \<otimes>\<^sub>o id_cblinfun) \<rho>' = \<rho>'\<close>
+  shows \<open>denotation_cases E * denotation_cases D = denotation_cases (\<lambda>c. E c * D c)\<close>
+proof (rule apply_denotation_inject[THEN iffD1])
   write kf_comp (infixl "\<bullet>" 70)
   write kf_comp_dependent (infixl "\<bullet>\<bullet>" 70)
   write kf_map (infixr "``" 75)
-  fix D E :: \<open>cl \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class \<Rightarrow> ((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
-  assume \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) D\<close> and \<open>pred_fun \<top> (is_cq_map \<lbrakk>#1\<rbrakk>\<^sub>q) E\<close>
-  then have [iff]: \<open>kraus_map (D c)\<close>   \<open>kraus_map (E c)\<close> for c
+  define D' E' where \<open>D' x = apply_denotation (D x)\<close> and \<open>E' x = apply_denotation (E x)\<close> for x
+  then have \<open>is_cq_map qFst (D' c)\<close> and \<open>is_cq_map qFst (E' c)\<close> for c
+    using apply_denotation
+    by simp_all
+  then have [iff]: \<open>kraus_map (D' c)\<close>   \<open>kraus_map (E' c)\<close> for c
     by (simp_all add: is_cq_map_def)
-  define \<DD> \<EE> where \<open>\<DD> c = km_some_kraus_family (D c)\<close> and \<open>\<EE> c = km_some_kraus_family (E c)\<close> for c
+  define \<DD> \<EE> where \<open>\<DD> c = km_some_kraus_family (D' c)\<close> and \<open>\<EE> c = km_some_kraus_family (E' c)\<close> for c
   define meas :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2, cl \<times> unit) kraus_family\<close>
     where \<open>meas = kf_tensor kf_complete_measurement_ket kf_id\<close>
-  have apply\<DD>: \<open>kf_apply (\<DD> c) = D c\<close> and apply\<EE>: \<open>kf_apply (\<EE> c) = E c\<close> for c
+  have apply\<DD>: \<open>kf_apply (\<DD> c) = D' c\<close> and apply\<EE>: \<open>kf_apply (\<EE> c) = E' c\<close> for c
     using \<DD>_def \<EE>_def by force+
-  assume bdd\<DD>': \<open>bdd_above (range (km_norm \<circ> D))\<close>
+
+  from assms
+  have bdd\<DD>': \<open>bdd_above (range (km_norm \<circ> D'))\<close>
+    by (simp add: D'_def denotation_norm.rep_eq)
   then have bdd\<DD>: \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (f x))) ` X)\<close> for f X
     apply (rule bdd_above_mono)
     by (auto simp: km_norm_kf_norm simp flip: apply\<DD>)
-  assume bdd\<EE>': \<open>bdd_above (range (km_norm \<circ> E))\<close>
+  from assms
+  have bdd\<EE>': \<open>bdd_above (range (km_norm \<circ> E'))\<close>
+    by (simp add: E'_def denotation_norm.rep_eq)
   then have bdd\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<EE> (g x))) ` X)\<close> for g X
     apply (rule bdd_above_mono)
     by (auto simp: km_norm_kf_norm simp flip: apply\<EE>)
   from bdd\<DD> bdd\<EE>
-  have bdd\<DD>\<EE>: \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (g x)) * kf_norm (\<EE> (f x))) ` X)\<close> for f g X
+  have \<open>bdd_above ((\<lambda>x. kf_norm (\<DD> (g x)) * kf_norm (\<EE> (f x))) ` X)\<close> for f g X
   proof -
     from bdd\<DD>' obtain B where 1: \<open>kf_norm (\<DD> x) \<le> B\<close> for x
       by (auto simp: bdd_above_def km_norm_kf_norm simp flip: apply\<DD>)
@@ -552,8 +862,11 @@ proof (insert assms, transfer)
      apply (rule order_refl)
     by (rule kf_comp_norm_leq)
 
-  have \<open>kf_apply ((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<circ> kf_apply ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)
-    = kf_apply (((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+
+  have \<open>apply_denotation (denotation_cases E * denotation_cases D)
+    = kf_apply ((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<circ> kf_apply ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)\<close>
+    by (simp add: denotation_cases.rep_eq times_denotation.rep_eq meas_def \<DD>_def D'_def \<EE>_def E'_def)
+  also have \<open>\<dots> = kf_apply (((\<lambda>(c, _). \<DD> c) \<bullet>\<bullet> meas) \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
     by (simp add: kf_comp_apply)
   also have \<open>\<dots> = kf_apply ((\<lambda>(_, c, _). \<DD> c) \<bullet>\<bullet> (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
     unfolding kf_comp_def
@@ -564,7 +877,126 @@ proof (insert assms, transfer)
     apply (intro ext kf_apply_eqI kf_comp_dependent_assoc_weak kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans])
     by (simp add: case_prod_unfold)
   also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
-    by x (* TODO needs asm *)
+  proof (intro ext kf_apply_eqI kf_comp_dependent_cong_weak kf_eq_weak_reflI kf_map_cong kf_eq_refl)
+    show \<open>bdd_above ((kf_norm \<circ> \<DD>) ` kf_domain ((\<lambda>(_, c, _). c) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))))\<close>
+      by (auto intro!: bdd\<DD>)
+    have \<open>c = d\<close> if \<open>(((c,()),()),(d,())) \<in> kf_domain (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close> for c d
+    proof (rule ccontr)
+      assume \<open>c \<noteq> d\<close>
+      have app_map: \<open>kf_apply (kf_map_inj (\<lambda>_::unit. d) E) = kf_apply E\<close> for d E
+        by (auto intro!: ext kf_apply_map_inj inj_onI)
+      from that
+      have \<open>kf_apply_on (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)) {(((c,()),()),(d,()))} \<noteq> 0\<close> (is \<open>?f \<noteq> 0\<close>)
+        by (simp add: in_kf_domain_iff_apply_nonzero)
+      moreover have \<open>clinear ?f\<close>
+        by (intro bounded_clinear.clinear bounded_linear_intros)
+      ultimately obtain \<rho> where \<open>(meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)) *\<^sub>k\<^sub>r @{(((c,()),()),(d,()))} \<rho> \<noteq> 0\<close> and \<open>\<rho> \<ge> 0\<close>
+        using eq_from_separatingIx[OF separating_density_ops[of 1], of ?f 0]
+        by (auto intro!: simp: zero_fun_def complex_vector.linear_zero)
+      then have \<open>(kf_filter ((=) (d, ())) meas \<bullet> (\<EE> c \<bullet> kf_filter ((=) (c, ())) meas)) *\<^sub>k\<^sub>r \<rho> \<noteq> 0\<close>
+        apply (simp add: kf_apply_on_def)
+        apply (subst (asm) flip_eq_const)
+        by (simp add: kf_apply_on_def kf_filter_comp_singleton kf_filter_comp_dependent_singleton
+            flip_eq_const bdd\<EE> case_prod_unfold)
+      then have \<open>km_tensor (sandwich_tc (selfbutter |d\<rangle>)) id (E' c (km_tensor (sandwich_tc (selfbutter |c\<rangle>)) id \<rho>)) \<noteq> 0\<close>
+        by (simp add: meas_def kf_filter_tensor_singleton
+            kf_filter_kf_complete_measurement_ket_singleton kf_comp_apply kf_id_apply[abs_def]
+            app_map kf_of_op_apply[abs_def] apply\<EE>
+            flip: km_tensor_kf_tensor id_def)
+      then have neq0: \<open>sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)) \<noteq> 0\<close>
+        by (simp add: sandwich_tc_id_cblinfun[abs_def] id_def flip: km_tensor_sandwich_tc)
+      moreover have \<open>sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)) = 0\<close>
+      proof -
+        have *: \<open>sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho> = tc_tensor (tc_butterfly |c\<rangle> |c\<rangle>) (sandwich_tc (tensor_ell2_left |c\<rangle>*) \<rho>)\<close>
+          apply (rule eq_from_separatingI2x[where x=\<rho>])
+             apply (rule separating_set_bounded_clinear_tc_tensor_nested)
+              apply (rule separating_set_tc_butterfly_nested)
+               apply (rule separating_set_ket)
+              apply (rule separating_set_ket)
+             apply (rule separating_set_UNIV)
+            apply (intro bounded_linear_intros)
+           apply (intro bounded_linear_intros)
+          by (auto simp add: sandwich_tc_tensor sandwich_tc_butterfly sandwich_tc_tensor_ell2_left cinner_ket)
+        have \<open>norm (sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)))
+             = trace_tc (sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)))\<close>
+          apply (auto intro!: norm_tc_pos sandwich_tc_pos kraus_map_pos[of \<open>E' c\<close>] \<open>\<rho> \<ge> 0\<close>)
+          by -
+        also 
+        have \<open>\<dots> \<le> trace_tc (sandwich_tc (id_cblinfun - (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun)) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)))\<close>
+        proof (rule trace_sandwich_tc_mono_left)
+          from \<open>c \<noteq> d\<close>
+          have \<open>is_Proj (id_cblinfun - selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun - selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun)\<close>
+            by (simp add: is_Proj_algebraic tensor_op_adjoint comp_tensor_op adj_minus cblinfun_compose_minus_left
+                cblinfun_compose_minus_right orthogonal_ket[THEN iffD2])
+          then show \<open>selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun \<le> id_cblinfun - selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun\<close>
+            apply (rule_tac diff_ge_0_iff_ge[THEN iffD1])
+            by (rule is_Proj_pos)
+          show \<open>0 \<le> E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)\<close>
+            by (auto intro!: kraus_map_pos[of \<open>E' c\<close>] sandwich_tc_pos \<open>\<rho> \<ge> 0\<close>)
+          from \<open>c \<noteq> d\<close>
+          show \<open>(id_cblinfun - selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun = (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun)* o\<^sub>C\<^sub>L selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun\<close>
+            by (auto simp: tensor_op_adjoint comp_tensor_op adj_minus cblinfun_compose_minus_left orthogonal_ket[THEN iffD2])
+        qed
+        also have \<open>\<dots> = trace_tc (sandwich_tc id_cblinfun (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)))
+         - trace_tc (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)))\<close>
+          apply (rule trace_sandwich_tc_diff_left)
+          by (simp add: tensor_op_adjoint comp_tensor_op adj_minus cblinfun_compose_minus_left)
+        also have \<open>\<dots> = trace_tc (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>))
+         - trace_tc (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>))\<close>
+          apply (rule arg_cong2[where f=minus])
+           apply force 
+          using E_readonly[of c]
+          by (simp add: E'_def[symmetric] Let_def * )
+        also have \<open>\<dots> = 0\<close>
+          by simp
+        finally show ?thesis
+          by (metis complex_of_real_mono_iff norm_le_zero_iff of_real_0)
+      qed
+(* OLD PROOF *)
+(*       proof (rule eq_from_separatingIx[where x=\<rho>, OF separating_density_ops])
+        show \<open>0 < (1::real)\<close>
+          by simp
+        show \<open>clinear (\<lambda>a. sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) a)))\<close>
+          by (intro bounded_clinear.clinear bounded_linear_intros kraus_map_bounded_clinear[OF \<open>kraus_map (E' c)\<close>, THEN comp_bounded_clinear, unfolded o_def])
+        show \<open>clinear (\<lambda>a. 0)\<close>
+          using complex_vector.linear_zero by blast
+        fix \<rho> :: \<open>((cl \<times> qu) ell2, (cl \<times> qu) ell2) trace_class\<close>
+        assume \<rho>pos: \<open>\<rho> \<in> {t. 0 \<le> t \<and> norm t \<le> 1}\<close>
+        have *: \<open>sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho> = tc_tensor (tc_butterfly |c\<rangle> |c\<rangle>) (sandwich_tc (tensor_ell2_left |c\<rangle>* ) \<rho>)\<close>
+          apply (rule eq_from_separatingI2x[where x=\<rho>])
+             apply (rule separating_set_bounded_clinear_tc_tensor_nested)
+              apply (rule separating_set_tc_butterfly_nested)
+               apply (rule separating_set_ket)
+              apply (rule separating_set_ket)
+             apply (rule separating_set_UNIV)
+            apply (intro bounded_linear_intros)
+           apply (intro bounded_linear_intros)
+          by (auto simp add: sandwich_tc_tensor sandwich_tc_butterfly sandwich_tc_tensor_ell2_left cinner_ket)
+        have \<open>E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>) \<ge>
+              sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>))
+            + sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>))\<close> (is \<open>_ \<ge> \<dots>\<close>)
+          by -
+        moreover have \<open>\<dots> = E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>) + sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>))\<close>
+          apply (rule arg_cong[where f=\<open>\<lambda>x. x + _\<close>])
+          using E_readonly[of c]
+          by (simp add: E'_def[symmetric] Let_def * )
+        ultimately have \<open>sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)) \<le> 0\<close>
+          by fastforce
+        moreover have \<open>sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)) \<ge> 0\<close>
+          using \<rho>pos
+          by (auto intro!: sandwich_tc_pos kraus_map_pos[OF \<open>kraus_map (E' c)\<close>] simp: )
+        ultimately show \<open>sandwich_tc (selfbutter |d\<rangle> \<otimes>\<^sub>o id_cblinfun) (E' c (sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) \<rho>)) = 0\<close>
+          by order
+      qed *)
+      with neq0
+      show \<open>False\<close>
+        by blast
+    qed
+    then show \<open>(case cd of (_, (d, _)) \<Rightarrow> d) =
+       (case cd of (cuu, du) \<Rightarrow> (case cuu of (cu, u) \<Rightarrow> (case cu of (c, _) \<Rightarrow> \<lambda>_ _. c) u) du)\<close>
+      if \<open>cd \<in> kf_domain (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close> for cd
+      using that by (auto split!: prod.split)
+  qed
   also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (\<lambda>(x,_). (x,())) `` (meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)))\<close>
     apply (rule sym)
     by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_map_twice[THEN kf_eq_trans] 
@@ -574,16 +1006,24 @@ proof (insert assms, transfer)
     by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_map_cong kf_comp_map_left[THEN kf_eq_trans]
         simp: bdd\<DD>)
   also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>(((c,_),_),_). c) `` (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
-  proof -
-    have \<open>is_cq_map qFst (kf_apply ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
-      thm is_cq_map_kf_comp_dependent
-      by -
-    then have \<open>kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas) =\<^sub>k\<^sub>r (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)\<close>
-      by -
-    then have \<open>kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas) \<equiv>\<^sub>k\<^sub>r (\<lambda>x. (x,())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)\<close>
-      by -
-    then show ?thesis
-      by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_map_cong simp: bdd\<DD>)
+  proof (intro ext kf_apply_eqI kf_comp_dependent_cong_weak kf_map_cong refl kf_eq_weak_reflI kf_eqI_from_filter_eq_weak)
+    show \<open>bdd_above ((kf_norm \<circ> \<DD>) ` kf_domain ((\<lambda>(((c, _), _), _). c) `` (kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))))\<close>
+      by (simp add: bdd\<DD>)
+    fix tuple :: \<open>((cl \<times> unit) \<times> unit) \<times> unit\<close>
+    obtain c where [simp]: \<open>tuple = ((c,()),())\<close>
+      by (auto simp: prod_eq_iff)
+    from cq_map_id_left[OF \<open>is_cq_map qFst (E' _)\<close>]
+    have \<open>km_tensor km_complete_measurement_ket id \<circ> E' d = E' d\<close> for d
+      by (simp add: cq_id_qFst)
+    then have \<open>kf_apply meas o kf_apply (\<EE> d) = kf_apply (\<EE> d)\<close> for d
+      by (simp add: apply\<EE> is_cq_map_def cq_id_qFst meas_def kf_id_apply[abs_def] flip: km_tensor_kf_tensor km_complete_measurement_ket_kf_complete_measurement_ket id_def)
+    then have \<open>kf_flatten meas \<bullet> (\<EE> (fst c) \<bullet> kf_filter ((=) c) meas) =\<^sub>k\<^sub>r (\<lambda>x. (x, ())) `` (\<EE> (fst c) \<bullet> kf_filter ((=) c) meas)\<close>
+      apply (rule_tac kf_eq_weakI)
+      apply (auto simp add: kf_comp_apply o_def)
+      by metis
+    then show \<open>kf_filter ((=) tuple) (kf_flatten meas \<bullet> ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas)) =\<^sub>k\<^sub>r kf_filter ((=) tuple) ((\<lambda>x. (x, ())) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
+      by (simp add: kf_filter_comp kf_filter_comp_dependent_singleton kf_filter_comp_singleton
+          case_prod_unfold bdd\<EE> kf_filter_map)
   qed
   also have \<open>\<dots> = kf_apply (\<DD> \<bullet>\<bullet> (\<lambda>((c,_),_). c) `` ((\<lambda>(c, _). \<EE> c) \<bullet>\<bullet> meas))\<close>
     by (auto intro!: ext kf_apply_eqI kf_comp_dependent_cong_weak kf_map_cong kf_map_twice[THEN kf_eq_trans]
@@ -594,17 +1034,17 @@ proof (insert assms, transfer)
     apply (rule sym)
     by (auto intro!: ext kf_apply_eqI kf_comp_dependent_assoc_weak kf_comp_dependent_map_right_weak[THEN kf_eq_weak_trans] kf_comp_dependent_assoc_weak[THEN kf_eq_weak_trans]
         simp: case_prod_unfold bdd\<DD> bdd\<EE> kf_comp_def)
-  also have \<open>\<dots> = kf_apply ((\<lambda>(c, _). km_some_kraus_family (D c \<circ> E c)) \<bullet>\<bullet> meas)\<close>
+  also have \<open>\<dots> = kf_apply ((\<lambda>(c, _). km_some_kraus_family (D' c \<circ> E' c)) \<bullet>\<bullet> meas)\<close>
     apply (intro ext kf_apply_eqI kf_comp_dependent_cong_weak kf_eq_refl)
     by (simp_all add: apply\<DD> apply\<EE> kf_comp_apply kf_eq_weak_def kraus_map_comp case_prod_unfold bdd\<DD>\<EE>)
-  finally show \<open>kf_apply (kf_comp_dependent (\<lambda>(c, _). \<DD> c) meas) \<circ>
-               kf_apply (kf_comp_dependent (\<lambda>(c, _). \<EE> c) meas) =
-               kf_apply (kf_comp_dependent (\<lambda>(c, _). km_some_kraus_family (D c \<circ> E c)) meas)\<close>
+  also have \<open>\<dots> = apply_denotation (denotation_cases (\<lambda>c. E c * D c))\<close>
+    by (simp add: denotation_cases.rep_eq D'_def E'_def times_denotation.rep_eq meas_def \<DD>_def D'_def \<EE>_def E'_def meas_def)
+  finally show \<open>apply_denotation (denotation_cases E * denotation_cases D) = apply_denotation (denotation_cases (\<lambda>c. E c * D c))\<close>
     by -
 qed
 
 lemma denotation_while_n_sum:
-  \<open>(\<Sum>n\<le>M. denotation_while_n e D n) = denotation_cases (\<lambda>m. if e m then 0 else 1) * (denotation_cases (\<lambda>m. if e m then D else 1))^M\<close>
+  \<open>(\<Sum>n\<le>M. denotation_while_n e D n) = (denotation_cases (\<lambda>m. if e m then D else 1))^M * denotation_cases (\<lambda>m. if e m then 0 else 1)\<close>
 proof (induction M)
   case 0
   show ?case
@@ -620,26 +1060,33 @@ next
   have eD1_decomp: \<open>eD1 = eD + note\<close>
     by (auto simp add: eD1_def eD_def note_def bdd_cases simp flip: denotation_cases_plus
         intro!: arg_cong[where f=denotation_cases])
+  have c_fst_c: \<open>sandwich_tc (selfbutter |c\<rangle> \<otimes>\<^sub>o id_cblinfun) (cq_id qFst (tc_tensor (tc_butterfly |c\<rangle> |c\<rangle>) \<rho>)) =
+           cq_id \<lbrakk>#1\<rbrakk>\<^sub>q (tc_tensor (tc_butterfly |c\<rangle> |c\<rangle>) \<rho>)\<close> for c \<rho>
+    apply (simp add: classical_on_def[THEN iffD1])
+    apply (transfer' fixing: c)
+    by (simp add: sandwich_apply comp_tensor_op tensor_op_adjoint)
   have note_idem: \<open>note * note = note\<close>
     unfolding note_def
     apply (subst denotation_merge)
-    by (auto intro!: arg_cong[where f=denotation_cases] bdd_cases)
-  have eD_note: \<open>eD * note = 0\<close>
+    by (auto intro!: arg_cong[where f=denotation_cases] bdd_cases
+        simp: Let_def one_denotation.rep_eq c_fst_c)
+  have eD_note: \<open>note * eD = 0\<close>
     unfolding note_def eD_def
     apply (subst denotation_merge)
-     apply (auto intro!: arg_cong[where f=denotation_cases] bdd_cases)[3]
+       apply (auto intro!: arg_cong[where f=denotation_cases] bdd_cases
+        simp: Let_def one_denotation.rep_eq c_fst_c)[3]
     apply (rewrite at \<open>denotation_cases (\<lambda>c. \<hole>)\<close> to 0 DEADID.rel_mono_strong)
     by (auto simp flip: zero_fun_def)
-
-  have \<open>note * eD1^(Suc M) = note * eD1 * eD1^M\<close>
-    by (simp add: Extra_Ordered_Fields.sign_simps(4))
-  also have \<open>\<dots> = note * (eD + note) * eD1^M\<close>
+  have \<open>eD1^(Suc M) * note = eD1^M * eD1 * note\<close>
+    by (metis power_Suc2)
+  also have \<open>\<dots> = eD1^M * (eD + note) * note\<close>
     using eD1_decomp by fastforce
-  also have \<open>\<dots> = note * eD * eD1^M + (note * note) * eD1^M\<close>
+  also have \<open>\<dots> = eD1^M * eD * note + eD1^M * note * note\<close>
     by (simp add: distrib_left distrib_right mult.assoc)
-  also have \<open>\<dots> = note * eD * eD1^M + note * eD1^M\<close>
-    using note_idem by presburger
-  also have \<open>\<dots> = note * eD * eD1^M + (\<Sum>n\<le>M. denotation_while_n e D n)\<close>
+  also have \<open>\<dots> = eD1^M * eD * note + eD1^M * note\<close>
+    using note_idem
+    by (metis (no_types, lifting) apply_denotation_inject fun.map_comp times_denotation.rep_eq)
+  also have \<open>\<dots> = eD1^M * eD * note + (\<Sum>n\<le>M. denotation_while_n e D n)\<close>
     using Suc.IH eD1_def note_def by argo
   also have \<open>\<dots> = denotation_while_n e D (Suc M) + (\<Sum>n\<le>M. denotation_while_n e D n)\<close>
   proof (rule arg_cong[where f=\<open>\<lambda>x. x + _\<close>], induction M)
@@ -648,22 +1095,21 @@ next
       by (simp add: denotation_while_n_def eD_def note_def)
   next
     case (Suc M)
-    have \<open>note * eD * eD1^(Suc M) = denotation_while_n e D (Suc M) * eD1\<close>
+    have \<open>eD1^(Suc M) * eD * note = eD1 * denotation_while_n e D (Suc M)\<close>
       by (simp add: mult.assoc power_commutes flip: Suc.IH)
-    also have \<open>\<dots> = denotation_while_n e D M * (eD * (eD + note))\<close>
+    also have \<open>\<dots> = ((eD + note) * eD) * denotation_while_n e D M\<close>
       apply (simp add: denotation_while_n_def flip: eD1_def eD_def eD1_decomp)
       by (metis Groups.mult_ac(1) power_commutes)
-    also have \<open>\<dots> = denotation_while_n e D M * (eD * eD)\<close>
+    also have \<open>\<dots> = (eD * eD) * denotation_while_n e D M\<close>
       by (simp add: distrib_left distrib_right eD_note flip: mult.assoc)
     also have \<open>\<dots> = denotation_while_n e D (Suc (Suc M))\<close>
-      apply (simp add: denotation_while_n_def flip: eD_def mult.assoc)
-      by (simp add: Extra_Ordered_Fields.sign_simps(4) power_commutes)
+      by (simp add: denotation_while_n_def flip: eD_def mult.assoc)
     finally show ?case
       by -
   qed
   also have \<open>\<dots> = (\<Sum>n\<le>Suc M. denotation_while_n e D n)\<close>
     by (simp add: add.commute)
-  finally show \<open>\<dots> = note * eD1^(Suc M)\<close>
+  finally show \<open>\<dots> = eD1^(Suc M) * note\<close>
     by simp
 qed
 

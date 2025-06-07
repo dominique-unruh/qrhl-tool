@@ -394,6 +394,9 @@ lemma iso_qregister_chain_inv: \<open>iso_qregister I \<Longrightarrow> qregiste
   using iso_register_inv_comp2 iso_register_def inv_unique_comp 
   by auto
 
+lemma iso_qregister_id[simp]: \<open>iso_qregister qregister_id\<close>
+  by (auto intro!: exI[of _ qregister_id] simp: iso_qregister_def')
+
 lemma qswap_iso[simp]: \<open>iso_qregister qswap\<close>
   by (auto intro!: exI[of _ qswap] simp: iso_qregister_def')
 

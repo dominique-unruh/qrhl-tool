@@ -903,7 +903,187 @@ proof -
     by -
 qed
 
+lemma kf_apply_qregister_id[simp]: \<open>kf_apply_qregister qregister_id = id\<close>
+  apply transfer'
+  by simp
 
+lemma km_apply_qregister_id_left[simp]: \<open>km_apply_qregister qregister_id \<EE> = kf_apply (km_some_kraus_family \<EE>)\<close>
+  by (simp add: km_apply_qregister_def)
+
+lemma km_apply_qregister_chain: \<open>km_apply_qregister (qregister_chain Q R) \<EE> = km_apply_qregister Q (km_apply_qregister R \<EE>)\<close>
+  by (metis kf_apply_qregister_chain kf_apply_qregister_non_qregister km_apply_qregister_def km_apply_qregister_kf_apply non_qregister)
+
+
+lemma km_apply_qregister_id_right[simp]: 
+  assumes \<open>qregister Q\<close>
+  shows \<open>km_apply_qregister Q id = id\<close>
+proof -
+  from qcomplement_exists[OF \<open>qregister Q\<close>]
+  have \<open>let 'g::type = qregister_decomposition_basis Q in ?thesis\<close>
+  proof (rule with_type_mp)
+    assume \<open>\<exists>R::('g, 'b) qregister. qcomplements Q R\<close>
+    then obtain R :: \<open>('g, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+      by auto
+    then have iso: \<open>iso_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q\<close>
+      by (simp add: qcomplements_def')
+    show \<open>km_apply_qregister Q id = id\<close>
+    proof (rule eq_from_separatingI2[OF separating_set_bounded_clinear_apply_qregister_tensor_tc[where Q=\<open>\<lbrakk>Q,R\<rbrakk>\<^sub>q\<close>]])
+      show \<open>iso_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
+        using iso by -
+      show \<open>bounded_clinear (km_apply_qregister Q id)\<close>
+        by (metis km_apply_qregister_def kraus_map_bounded_clinear kraus_map_def_raw)
+      show \<open>bounded_clinear id\<close>
+        by auto
+      fix t u
+      show \<open>km_apply_qregister Q id (apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)) = id (apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u))\<close> for t u
+        by (metis \<open>qcomplements Q R\<close> id_def kf_apply_km_some_kraus_family kf_apply_qregister_apply_tensor km_apply_qregister_def kraus_map_id)
+    qed
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by -
+qed
+
+lemma kf_apply_qregister_apply_qregister_tc: 
+  assumes \<open>iso_qregister Q\<close>
+  shows \<open>kf_apply_qregister Q \<EE> *\<^sub>k\<^sub>r apply_qregister_tc Q t = apply_qregister_tc Q (\<EE> *\<^sub>k\<^sub>r t)\<close>
+  by (simp add: kf_apply_qregister_iso_qregister_explicit apply_qregister_tc_inv_inverse assms)
+
+lemma km_apply_qregister_apply_qregister_tc: 
+  assumes \<open>iso_qregister Q\<close> and \<open>kraus_map \<EE>\<close>
+  shows \<open>km_apply_qregister Q \<EE> (apply_qregister_tc Q t) = apply_qregister_tc Q (\<EE> t)\<close>
+  by (simp add: km_apply_qregister_def kf_apply_qregister_apply_qregister_tc assms)
+
+lemma kf_apply_qregister_apply_on_tensor_right:
+  assumes \<open>qcomplements Q R\<close>
+  shows \<open>kf_apply_qregister R \<EE> *\<^sub>k\<^sub>r @X apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)
+      = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t (\<EE> *\<^sub>k\<^sub>r @X u))\<close>
+proof -
+  have [iff]: \<open>qcomplements R Q\<close>
+    by (meson Laws_Complement_Quantum.complements_sym assms qcomplements.rep_eq)
+  have [iff]: \<open>iso_qregister \<lbrakk>R, Q\<rbrakk>\<^sub>q\<close>
+    using qcomplements_def' by blast
+  have [iff]: \<open>iso_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q\<close>
+  using assms qcomplements_def' by blast
+
+
+  define \<EE>X where \<open>\<EE>X = kf_filter (\<lambda>x. x \<in> X) \<EE>\<close>
+  have \<open>kf_apply_qregister R \<EE> *\<^sub>k\<^sub>r @X apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)
+      = kf_apply_qregister R \<EE>X *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)\<close>
+    by (simp add: kf_apply_on_def kf_filter_kf_apply_qregister flip: \<EE>X_def)
+  also have \<open>\<dots> = kf_apply_qregister R \<EE>X *\<^sub>k\<^sub>r apply_qregister_tc (qregister_chain \<lbrakk>R, Q\<rbrakk>\<^sub>q qswap) (tc_tensor t u)\<close>
+    by simp
+  also have \<open>\<dots> = kf_apply_qregister R \<EE>X *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>R, Q\<rbrakk>\<^sub>q (apply_qregister_tc qswap (tc_tensor t u))\<close>
+    apply (subst qregister_chain_apply_tc)
+    by (simp_all add: qregister_chain_apply_tc)
+  also have \<open>\<dots> = kf_apply_qregister R \<EE>X *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>R, Q\<rbrakk>\<^sub>q (tc_tensor u t)\<close>
+    by simp
+  also have \<open>\<dots> = kf_apply_qregister R \<EE> *\<^sub>k\<^sub>r @X apply_qregister_tc \<lbrakk>R, Q\<rbrakk>\<^sub>q (tc_tensor u t)\<close>
+  by (metis \<EE>X_def kf_apply_on_def kf_filter_kf_apply_qregister)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>R, Q\<rbrakk>\<^sub>q (tc_tensor (\<EE> *\<^sub>k\<^sub>r @X u) t)\<close>
+    by (simp add: kf_apply_qregister_apply_on_tensor \<EE>X_def)
+  also have \<open>\<dots> = apply_qregister_tc (qregister_chain \<lbrakk>Q, R\<rbrakk>\<^sub>q qswap) (tc_tensor (\<EE> *\<^sub>k\<^sub>r @X u) t)\<close>
+    by simp
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (apply_qregister_tc qswap (tc_tensor (\<EE> *\<^sub>k\<^sub>r @X u) t))\<close>
+    apply (subst qregister_chain_apply_tc)
+    by (simp_all add: qregister_chain_apply_tc)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t (\<EE> *\<^sub>k\<^sub>r @X u))\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+
+lemma kf_apply_qregister_apply_tensor_right:
+  assumes \<open>qcomplements Q R\<close>
+  shows \<open>kf_apply_qregister R \<EE> *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t u)
+      = apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q (tc_tensor t (\<EE> *\<^sub>k\<^sub>r u))\<close>
+  using kf_apply_qregister_apply_on_tensor_right[OF assms, of \<EE> UNIV]
+  by simp
+
+
+lemma kf_apply_qregister_qSnd_weak:
+(* TODO: also kr_eq-form (by reduction to this) *)
+  shows \<open>kf_apply_qregister qSnd \<EE> =\<^sub>k\<^sub>r kf_tensor kf_id \<EE>\<close>
+proof -
+  have \<open>kf_apply_qregister qSnd \<EE> *\<^sub>k\<^sub>r tc_tensor t u = kf_tensor kf_id \<EE> *\<^sub>k\<^sub>r tc_tensor t u\<close> 
+    for t :: \<open>('a ell2, 'a ell2) trace_class\<close> and u
+  proof -
+    have \<open>kf_apply_qregister qSnd \<EE> *\<^sub>k\<^sub>r tc_tensor t u
+       = kf_apply_qregister qSnd \<EE> *\<^sub>k\<^sub>r apply_qregister_tc \<lbrakk>#1,#2.\<rbrakk>\<^sub>q (tc_tensor t u)\<close>
+      by simp
+    also have \<open>\<dots> = apply_qregister_tc \<lbrakk>\<lbrakk>#1\<rbrakk>\<^sub>q, \<lbrakk>#2.\<rbrakk>\<^sub>q\<rbrakk>\<^sub>q (tc_tensor t (\<EE> *\<^sub>k\<^sub>r u))\<close>
+      apply (subst kf_apply_qregister_apply_tensor_right)
+      by (simp_all add: QCOMPLEMENT_fst QREGISTER_of_qFst QREGISTER_of_qSnd Registers_Automation.qcomplements_tac_aux1)
+    also have \<open>\<dots> = tc_tensor t (\<EE> *\<^sub>k\<^sub>r u)\<close>
+      by simp
+    also have \<open>\<dots> = kf_tensor kf_id \<EE> *\<^sub>k\<^sub>r tc_tensor t u\<close>
+      by (simp add: kf_apply_tensor)
+    finally show ?thesis
+      by -
+  qed
+  then show ?thesis
+    apply (rule_tac kf_eq_weak_from_separatingI)
+     apply (rule separating_set_bounded_clinear_tc_tensor)
+    by auto
+qed
+
+
+lemma km_apply_qregister_qSnd: 
+  assumes [iff]: \<open>kraus_map \<EE>\<close>
+  shows \<open>km_apply_qregister qSnd \<EE> = km_tensor id \<EE>\<close>
+proof -
+  define \<FF> where \<open>\<FF> = km_some_kraus_family \<EE>\<close>
+  have \<open>km_apply_qregister qSnd \<EE> = kf_apply (kf_apply_qregister qSnd \<FF>)\<close>
+    by (simp add: km_apply_qregister_def \<FF>_def)
+  also have \<open>\<dots> = kf_apply (kf_tensor kf_id \<FF>)\<close>
+    using kf_apply_qregister_qSnd_weak kf_eq_weak_def by blast
+  also have \<open>\<dots> = km_tensor (kf_apply kf_id) (kf_apply \<FF>)\<close>
+    by (simp add: km_tensor_kf_tensor)
+  also have \<open>\<dots> = km_tensor id \<EE>\<close>
+    by (simp add: \<FF>_def kf_id_apply[abs_def] id_def)
+  finally show ?thesis
+    by -
+qed
+
+
+lemma kraus_map_km_apply_qregister[simp, intro]:
+  assumes \<open>kraus_map \<EE>\<close>
+  shows \<open>kraus_map (km_apply_qregister Q \<EE>)\<close>
+  using km_apply_qregister_def kraus_map_def_raw by blast
+
+lemma km_apply_qregister_pair_tensor: 
+  assumes \<open>qcompatible Q R\<close>
+  assumes \<open>kraus_map \<EE>\<close> and \<open>kraus_map \<FF>\<close>
+  shows \<open>km_apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (km_tensor \<EE> \<FF>) = km_apply_qregister Q \<EE> o km_apply_qregister R \<FF>\<close>
+proof -
+  have \<open>km_apply_qregister Q \<EE> o km_apply_qregister R \<FF> = km_apply_qregister (qregister_chain \<lbrakk>Q,R\<rbrakk>\<^sub>q qFst) \<EE> o km_apply_qregister (qregister_chain \<lbrakk>Q,R\<rbrakk>\<^sub>q qSnd) \<FF>\<close>
+    by (simp add: assms)
+  also have \<open>\<dots> = km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q \<EE>) \<circ> km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q \<FF>)\<close>
+    by (simp add: km_apply_qregister_chain)
+  also have \<open>\<dots> = km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_tensor \<EE> id) \<circ> km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_tensor id \<FF>)\<close>
+    by (simp add: km_apply_qregister_qFst km_apply_qregister_qSnd assms)
+  also have \<open>\<dots> = km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_tensor \<EE> id \<circ> km_tensor id \<FF>)\<close>
+    by (auto intro!: ext simp: km_apply_qregister_comp km_tensor_kraus_map assms)
+  also have \<open>\<dots> = km_apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (km_tensor \<EE> \<FF>)\<close>
+    by (metis assms(2,3) fun.map_id km_tensor_compose_distrib km_tensor_kraus_map_exists kraus_map_id o_id)
+  finally show ?thesis
+    by simp
+qed
+
+(* lemma km_apply_qregister_qFst:
+  assumes \<open>kraus_map \<EE>\<close>
+  shows \<open>km_apply_qregister qFst \<EE> (tc_tensor t u) = tc_tensor (\<EE> t) u\<close>
+try0
+sledgehammer [dont_slice]
+by -
+
+lemma km_apply_qregister_qSnd:
+  assumes \<open>kraus_map \<EE>\<close>
+  shows \<open>km_apply_qregister qSnd \<EE> (tc_tensor t u) = tc_tensor t (\<EE> u)\<close>
+try0
+sledgehammer [dont_slice]
+by - *)
 
 
 

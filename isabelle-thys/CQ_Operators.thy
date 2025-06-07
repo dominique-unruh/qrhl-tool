@@ -170,7 +170,6 @@ definition is_cq_map :: \<open>('c, 'r) qregister \<Rightarrow> (('r ell2, 'r el
 lemma cq_id_invalid[simp]: \<open>cq_id non_qregister = 0\<close>
   by (simp add: cq_id_def km_apply_qregister_invalid_Q)
 
-
 (* (* TODO same for km_ *)
 lemma kf_bound_apply_qregister:
   \<comment> \<open>I believe this is an equality. But the proof is not obvious.\<close>
@@ -228,12 +227,15 @@ lemma kraus_map_cq_id[iff]: \<open>kraus_map (cq_id C)\<close>
 lemma is_cq_map_id[iff]: \<open>is_cq_map C (cq_id C)\<close>
   by (auto simp: is_cq_map_def)
 
-lemma bounded_clinear_cq_id[bounded_clinear, iff]: \<open>bounded_clinear (cq_id C)\<close>
-  by (simp add: kraus_map_bounded_clinear)
+lemma cq_id_0[simp]: \<open>cq_id Q 0 = 0\<close>
+  by (intro complex_vector.linear_0 bounded_clinear.clinear kraus_map_bounded_clinear kraus_map_cq_id)
 
 lemma is_cq_map_0[iff]: \<open>is_cq_map Q 0\<close>
-  apply (auto intro!: ext simp add: is_cq_map_def o_def)
-  by (metis bounded_clinear_CBlinfun_apply bounded_clinear_cq_id cblinfun.real.zero_right)
+  by (auto intro!: ext simp add: is_cq_map_def o_def)
+
+
+lemma bounded_clinear_cq_id[bounded_clinear, iff]: \<open>bounded_clinear (cq_id C)\<close>
+  by (simp add: kraus_map_bounded_clinear)
 
 definition cq_prob :: \<open>('c,'r) qregister \<Rightarrow> ('r ell2, 'r ell2) trace_class \<Rightarrow> 'c \<Rightarrow> real\<close> where
   \<open>cq_prob C \<rho> c = norm (sandwich_tc (apply_qregister C (selfbutter (ket c))) \<rho>)\<close>
@@ -874,6 +876,44 @@ proof -
   ultimately show ?thesis
     by (simp add: is_cq_map_def)
 qed
+
+lemma classical_on_chain: 
+  assumes \<open>classical_on Q t\<close>
+  assumes \<open>iso_qregister \<lbrakk>R,S\<rbrakk>\<^sub>q\<close>
+  shows \<open>classical_on (qregister_chain R Q) (apply_qregister_tc \<lbrakk>R,S\<rbrakk>\<^sub>q (tc_tensor t u))\<close>
+proof (rule classical_on_def[THEN iffD2])
+  have [iff]: \<open>qcompatible R S\<close>
+    using assms(2) iso_qregister_def' by blast
+  then have [iff]: \<open>qregister S\<close>
+    using qcompatible_def by blast
+
+  have \<open>cq_id (qregister_chain R Q) (apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u))
+        = km_apply_qregister (qregister_chain R Q) km_complete_measurement_ket (apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u))\<close>
+    by (simp add: cq_id_def)
+  also have \<open>\<dots> = km_apply_qregister R (km_apply_qregister Q km_complete_measurement_ket) (apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u))\<close>
+    by (simp add: km_apply_qregister_chain)
+  also have \<open>\<dots> = km_apply_qregister \<lbrakk>R,S\<rbrakk>\<^sub>q (km_tensor (km_apply_qregister Q km_complete_measurement_ket) id) (apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u))\<close>
+    by (simp add: km_apply_qregister_pair_tensor assms)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>R,S\<rbrakk>\<^sub>q (km_tensor (km_apply_qregister Q km_complete_measurement_ket) id (tc_tensor t u))\<close>
+    by (simp add: km_apply_qregister_apply_qregister_tc km_tensor_kraus_map assms)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>R,S\<rbrakk>\<^sub>q (tc_tensor (km_apply_qregister Q km_complete_measurement_ket t) u)\<close>
+    by (simp add: km_tensor_apply km_tensor_kraus_map_exists)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>R,S\<rbrakk>\<^sub>q (tc_tensor (cq_id Q t) u)\<close>
+    by (simp add: cq_id_def)
+  also have \<open>\<dots> = apply_qregister_tc \<lbrakk>R,S\<rbrakk>\<^sub>q (tc_tensor t u)\<close>
+    by (metis assms classical_on_def)
+  finally show \<open>cq_id (qregister_chain R Q) (apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u)) = apply_qregister_tc \<lbrakk>R, S\<rbrakk>\<^sub>q (tc_tensor t u)\<close>
+    by -
+qed
+
+
+lemma classical_butterfly: \<open>classical_on qregister_id (tc_butterfly (ket c) (ket c))\<close>
+  by (simp add: classical_on_def cq_id_def)
+
+
+lemma classical_on_qFst_butterket[simp]: \<open>classical_on qFst (tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>)\<close>
+  using classical_on_chain[where u=\<rho> and R=qFst and S=qSnd, OF classical_butterfly[of c]]
+  by simp
 
 
 end
