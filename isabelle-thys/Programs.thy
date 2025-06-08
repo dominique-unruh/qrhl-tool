@@ -550,16 +550,6 @@ lemma denotation_localvars1:
   by (simp add: kraus_equivalent'_def kf_apply'_def kf_filter_map_outcome) *)
 
 
-lemma cq_map_local_c_bot[simp]:
-  shows \<open>cq_map_local_c \<bottom> m E = E\<close>
-proof (rule ext)
-  fix \<rho>
-  show \<open>cq_map_local_c \<bottom> m E \<rho> = E \<rho>\<close>
-    (* apply (rule local_defE[of E]) *)
-    apply (transfer' fixing: m)
-    by (simp add: copy_CREGISTER_from_bot[abs_def])
-qed
-
 (* TODO move *)
 lemma one_dim_cblinfun_eqI:
   fixes a b :: \<open>'a::one_dim \<Rightarrow>\<^sub>C\<^sub>L 'b::complex_normed_vector\<close>
@@ -580,117 +570,10 @@ lemma tensor_ell2_one_dim_1_1: \<open>tensor_ell2 1 1 = 1\<close>
   apply (subst ket_CARD_1_is_1[symmetric])+
   by (simp add: tensor_ell2_ket)
 
-(* lemma swap_ell2_one_dim_1[simp]: \<open>swap_ell2 = 1\<close>
-  apply (rule one_dim_cblinfun_eqI)
-  apply (simp flip: tensor_ell2_one_dim_1_1)
-  by (simp add: tensor_ell2_one_dim_1_1) *)
+(* lift_definition cq_classical_carrier :: \<open>('c,'q) cq_operator \<Rightarrow> 'c set\<close> is
+  \<open>\<lambda>\<rho>. {c. \<rho> c \<noteq> 0}\<close>. *)
 
-(* (* TODO move *)
-(* TODO move *)
-lemma cq_operator_eqI:
-  assumes \<open>\<And>c. Rep_cq_operator s c = Rep_cq_operator t c\<close>
-  shows \<open>s = t\<close>
-  using assms
-  apply transfer'
-  by auto *)
-
-(* lemma kf_apply'_empty[simp]:
-  \<open>E *\<^sub>k\<^sub>r @{} \<rho> = 0\<close>
-  by (simp add: kf_apply'_def) *)
-
-(* TODO move *)
-lemma Rep_cq_map_apply_quantum_op:
-  fixes c :: 'c and \<rho> :: \<open>('c,'q) cq_operator\<close> and E :: \<open>'c \<Rightarrow> ('q ell2, 'r ell2, 'd) kraus_family\<close>
-  assumes \<open>bdd_above (range (\<lambda>c. kf_norm (E c)))\<close>
-  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_quantum_op E) \<rho>) c = kf_apply (E c) (Rep_cq_operator \<rho> c)\<close>
-  apply (transfer fixing: E c)
-  apply (subst infsum_single[where i=c])
-  by (simp_all add: assms)
-  
-(* TODO move *)
-lemma Rep_cq_map_apply_of_op:
-  fixes c :: 'c and \<rho> :: \<open>('c,'q) cq_operator\<close> and a :: \<open>'q ell2 \<Rightarrow>\<^sub>C\<^sub>L 'r ell2\<close>
-  shows \<open>Rep_cq_operator (cq_map_apply (cq_map_of_op a) \<rho>) c = kf_apply (kf_of_op a) (Rep_cq_operator \<rho> c)\<close>
-  by (simp add: cq_map_of_op_def Rep_cq_map_apply_quantum_op power_le_one)
-
-
-(* lemma kf_apply'_map_outcome[simp]: \<open>kf_apply' X (kf_map_outcome f E) = kf_apply' (f -` X) E\<close>
-  by (auto intro!: simp: kf_apply'_def kf_filter_map_outcome) *)
-
-(* TODO move *)
-lemma cq_map_of_op_id[simp]: \<open>cq_map_apply (cq_map_of_op id_cblinfun) = id\<close>
-  by (auto intro!: ext cq_operator_eqI simp: Rep_cq_map_apply_of_op)
-
-lemma Rep_cq_map_apply_partial_trace: \<open>Rep_cq_operator (cq_map_apply cq_map_partial_trace \<rho>) c
-  = kf_apply (kraus_map_partial_trace (range ket)) (Rep_cq_operator \<rho> c)\<close>
-  apply (transfer' fixing: c)
-  apply (subst infsum_single[of c])
-  by auto
-
-lemma cq_norm_raw_pos[iff]: \<open>cq_norm_raw \<rho> \<ge> 0\<close>
-  by (auto intro!: infsum_nonneg simp: cq_norm_raw_def)
-
-(* instantiation cq_operator :: (type,type) norm begin
-lift_definition norm_cq_operator :: \<open>('a, 'b) cq_operator \<Rightarrow> real\<close> is cq_norm_raw.
-instance..
-end *)
-
-setup \<open>Sign.add_const_constraint
-  (\<^const_name>\<open>norm\<close>, SOME \<^typ>\<open>'a::norm \<Rightarrow> real\<close>)\<close>
-
-
-(* lift_definition cq_tensor :: \<open>('c1,'q1) cq_operator \<Rightarrow> ('c2,'q2) cq_operator \<Rightarrow> ('c1\<times>'c2, 'q1\<times>'q2) cq_operator\<close> is
-  \<open>\<lambda>\<rho>1 \<rho>2 (c1,c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)\<close>
-proof (intro conjI allI)
-  fix \<rho>1 :: \<open>'c1 \<Rightarrow> ('q1 ell2, 'q1 ell2) trace_class\<close> and \<rho>2 :: \<open>'c2 \<Rightarrow> ('q2 ell2, 'q2 ell2) trace_class\<close> and c :: \<open>'c1\<times>'c2\<close>
-  assume asm1: \<open>(\<forall>c. 0 \<le> \<rho>1 c) \<and> \<rho>1 abs_summable_on UNIV\<close>
-  assume asm2: \<open>(\<forall>c. 0 \<le> \<rho>2 c) \<and> \<rho>2 abs_summable_on UNIV\<close>
-  from asm1 asm2 show \<open>0 \<le> (case c of (c1, c2) \<Rightarrow> tc_tensor (\<rho>1 c1) (\<rho>2 c2))\<close>
-    apply (cases c)
-    by (simp add: tc_tensor_pos)
-  from asm1 have sum1: \<open>(\<lambda>x. norm (\<rho>1 x)) abs_summable_on UNIV\<close>
-    by simp
-  from asm2 have sum2: \<open>(\<lambda>x. norm (\<rho>2 x)) abs_summable_on UNIV\<close>
-    by simp
-  show \<open>(\<lambda>(c1, c2). tc_tensor (\<rho>1 c1) (\<rho>2 c2)) abs_summable_on UNIV\<close>
-  proof -
-    from abs_summable_times[OF sum1 sum2]
-    show ?thesis
-      by (simp add: norm_tc_tensor case_prod_beta)
-  qed
-qed *)
-
-
-(* lemma norm_cq_tensor: \<open>norm (cq_tensor \<rho> \<sigma>) = norm \<rho> * norm \<sigma>\<close>
-proof transfer
-  fix \<rho> :: \<open>'e \<Rightarrow> ('g ell2, 'g ell2) trace_class\<close> and \<sigma> :: \<open>'b \<Rightarrow> ('d ell2, 'd ell2) trace_class\<close>
-  assume asm1: \<open>(\<forall>c. 0 \<le> \<rho> c) \<and> \<rho> abs_summable_on UNIV\<close>
-  assume asm2: \<open>(\<forall>c. 0 \<le> \<sigma> c) \<and> \<sigma> abs_summable_on UNIV\<close>
-  from asm1 have sum1: \<open>(\<lambda>x. norm (\<rho> x)) abs_summable_on UNIV\<close>
-    by simp
-  from asm2 have sum2: \<open>(\<lambda>x. norm (\<sigma> x)) abs_summable_on UNIV\<close>
-    by simp
-  have \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho> c1) (\<sigma> c2)) = (\<Sum>\<^sub>\<infinity>(c1,c2). norm (\<rho> c1) * norm (\<sigma> c2))\<close>
-    by (simp add: cq_norm_raw_def norm_tc_tensor case_prod_unfold)
-  also
-  from abs_summable_times[OF sum1 sum2]
-  have \<open>\<dots> = (\<Sum>\<^sub>\<infinity>c1. norm (\<rho> c1)) * (\<Sum>\<^sub>\<infinity>c2. norm (\<sigma> c2))\<close>
-    apply (subst infsum_product)
-    by (auto intro!: simp: case_prod_unfold)
-  also have \<open>\<dots> = cq_norm_raw \<rho> * cq_norm_raw \<sigma>\<close>
-    by (metis cq_norm_raw_def)
-  finally show \<open>cq_norm_raw (\<lambda>(c1, c2). tc_tensor (\<rho> c1) (\<sigma> c2)) = cq_norm_raw \<rho> * cq_norm_raw \<sigma>\<close>
-    by -
-qed *)
-
-
-definition \<open>cq_tensor_left \<rho> \<sigma> = cq_map_apply (cq_map_classical fst) (cq_tensor \<rho> (fixed_cl_cq_operator () \<sigma>))\<close>
-definition \<open>cq_tensor_right \<rho> \<sigma> = cq_map_apply (cq_map_classical snd) (cq_tensor (fixed_cl_cq_operator () \<rho>) \<sigma>)\<close>
-
-lift_definition cq_classical_carrier :: \<open>('c,'q) cq_operator \<Rightarrow> 'c set\<close> is
-  \<open>\<lambda>\<rho>. {c. \<rho> c \<noteq> 0}\<close>.
-
-lemma Rep_cq_map_classical_inj:
+(* lemma Rep_cq_map_classical_inj:
   assumes inj: \<open>inj_on f X\<close>
   assumes carrier: \<open>cq_classical_carrier \<rho> \<subseteq> X\<close>
   shows \<open>Rep_cq_operator (cq_map_apply (cq_map_classical f) \<rho>) c
@@ -712,35 +595,10 @@ proof (insert carrier, transfer' fixing: c f X)
     by (force simp: c'_def)
   finally show \<open>(\<Sum>\<^sub>\<infinity>d. kf_apply' {c} (kf_map_outcome_inj (\<lambda>_. f d) kf_id) (\<rho> d)) = \<dots>\<close>
     by -
-qed
+qed *)
 
 
-lemma Rep_cq_tensor[simp]:
-  \<open>Rep_cq_operator (cq_tensor \<rho> \<sigma>) (c,d) = tc_tensor (Rep_cq_operator \<rho> c) (Rep_cq_operator \<sigma> d)\<close>
-  apply (transfer' fixing: c d)
-  by auto
-
-lemma Rep_fixed_cl_cq_operator[simp]:
-  shows \<open>Rep_cq_operator (fixed_cl_cq_operator c \<rho>) d = of_bool (\<rho> \<ge> 0 \<and> c=d) *\<^sub>C \<rho>\<close>
-  apply (transfer' fixing: c d \<rho>)
-  by auto
-
-
-
-lemma Rep_cq_tensor_left[simp]:
-  assumes \<open>\<sigma> \<ge> 0\<close> and \<open>trace_tc \<sigma> \<le> 1\<close>
-  shows \<open>Rep_cq_operator (cq_tensor_left \<rho> \<sigma>) c = tc_tensor (Rep_cq_operator \<rho> c) \<sigma>\<close>
-proof -
-  have [simp]: \<open>inv fst c = (c,())\<close>
-    by (metis range_fst split_pairs surj_f_inv_f unit.exhaust)
-  show ?thesis
-    unfolding cq_tensor_left_def
-    apply (subst Rep_cq_map_classical_inj[where X=UNIV])
-    using assms
-    by (auto simp: inj_def)
-qed
-
-lemma cq_apply_map_tensor_id_right:
+(* lemma cq_apply_map_tensor_id_right:
   fixes \<rho> :: \<open>('a ell2, 'a ell2) trace_class\<close> and \<sigma> :: \<open>('b ell2, 'b ell2) trace_class\<close>
     and E :: \<open>('c, 'a, 'd, 'e) cq_map\<close>
   assumes \<open>\<rho> \<ge> 0\<close> and \<open>trace_tc \<rho> \<le> 1\<close>
@@ -783,24 +641,22 @@ proof (rule cq_operator_eqI)
   finally show \<open>Rep_cq_operator (cq_map_apply (cq_map_tensor_id_right E) (fixed_cl_cq_operator c (tc_tensor \<rho> \<sigma>))) d = \<dots>\<close>
     by -
 qed
+ *)
 
-lemma Rep_apply_fixed_cl_cq_operator:
+(* lemma Rep_apply_fixed_cl_cq_operator:
   assumes \<open>\<rho> \<ge> 0\<close>
   shows \<open>Rep_cq_operator (cq_map_apply E (fixed_cl_cq_operator c \<rho>)) d = kf_apply' {d} (Rep_cq_map E c) \<rho>\<close>
   apply (transfer' fixing: c d \<rho>)
   apply (subst infsum_single)
   using assms
-  by auto
+  by auto *)
 
-lemma is_kraus_map_kf_apply'[iff]: \<open>kraus_map (kf_apply' X E)\<close>
-  by (simp add: kf_apply'_def)
-
-lemma separating_set_kraus_map_range_irrelevant:
+(* lemma separating_set_kraus_map_range_irrelevant:
   assumes \<open>separating_set (kraus_map :: (('q::chilbert_space,'q) trace_class \<Rightarrow> ('r::chilbert_space,'r) trace_class) \<Rightarrow> bool) S\<close>
   shows \<open>separating_set (kraus_map :: (('q,'q) trace_class \<Rightarrow> ('s::chilbert_space,'s) trace_class) \<Rightarrow> bool) S\<close>
-  by x
+  by x *)
 
-lemma kraus_equivalent'_from_separatingI:
+(* lemma kraus_equivalent'_from_separatingI:
   fixes E F :: \<open>('q::chilbert_space,'r::chilbert_space,'x) kraus_family\<close>
   assumes \<open>separating_set (kraus_map :: (('q,'q) trace_class \<Rightarrow> (complex,complex) trace_class) \<Rightarrow> bool) S\<close>
   assumes \<open>\<And>x \<rho>. \<rho> \<in> S \<Longrightarrow> kf_apply' {x} E \<rho> = kf_apply' {x} F \<rho>\<close>
@@ -813,9 +669,9 @@ proof -
     using assms(2) by (auto intro!: simp: )
   then show ?thesis
     by (simp add: kraus_equivalent'I)
-qed
+qed *)
 
-lemma cq_map_eq_from_separatingI:
+(* lemma cq_map_eq_from_separatingI:
   fixes E F :: \<open>('c1,'q1,'c2,'q2) cq_map\<close>
   assumes sep: \<open>separating_set (kraus_map :: (('q1 ell2,'q1 ell2) trace_class \<Rightarrow> (complex, complex) trace_class) \<Rightarrow> bool) S\<close>
   assumes pos: \<open>\<And>\<rho>. \<rho> \<in> S \<Longrightarrow> \<rho> \<ge> 0\<close>
@@ -838,7 +694,7 @@ proof -
     by auto
   then show \<open>cq_map_equiv E F\<close>
     by (rule cq_map_eqI)
-qed
+qed *)
 
 (* TODO move *)
 lemma trace_tc_scaleR: \<open>trace_tc (r *\<^sub>R t) = r *\<^sub>R trace_tc t\<close>
@@ -919,22 +775,13 @@ end *)
   apply (transfer' fixing: r)
   using assms by (simp add: zero_cq_operator.rep_eq) *)
 
-lemma set_filter_image: \<open>Set.filter P (f ` X) = f` (Set.filter (\<lambda>x. P (f x)) X)\<close>
-  by auto
-
 lemma scale0_kraus_family[simp]: \<open>0 *\<^sub>R \<EE> = 0\<close> for \<EE> :: \<open>(_,_,_) kraus_family\<close>
   apply transfer'
   by simp
 
-lemma kf_filter_0[simp]: \<open>kf_filter P 0 = 0\<close>
-  apply transfer' by simp
-
-lemma kf_apply'_0_left[simp]: \<open>kf_apply' X 0 \<rho> = 0\<close>
-  by (simp add: kf_apply'_def)
-
 lemma kf_scale_map':
   assumes \<open>r \<ge> 0\<close>
-  shows \<open>kf_apply' X (r *\<^sub>R \<EE>) \<rho> = r *\<^sub>R kf_apply' X \<EE> \<rho>\<close>
+  shows \<open>(r *\<^sub>R \<EE>) *\<^sub>k\<^sub>r @X \<rho> = r *\<^sub>R (\<EE> *\<^sub>k\<^sub>r @X \<rho>)\<close>
 proof -
   wlog \<open>r > 0\<close>
     using negation assms
@@ -943,23 +790,14 @@ proof -
     using \<open>r > 0\<close>
     by (auto intro!: inj_onI simp:)
   show ?thesis
-    unfolding kf_apply'_def
+    unfolding kf_apply_on_def
     apply (transfer' fixing: r)
     using assms
-    by (auto intro!: simp: set_filter_image case_prod_unfold infsum_reindex o_def
+    by (auto intro!: simp: filter_image case_prod_unfold infsum_reindex o_def
         sandwich_tc_scaleR_left infsum_scaleR_right)
 qed
 
-lemma norm_pos_cq: \<open>norm \<rho> \<ge> 0\<close> for \<rho> :: \<open>(_,_) cq_operator\<close>
-  apply transfer
-  by (metis Infinite_Sum.infsum_nonneg_complex complex_of_real_nn_iff cq_norm_raw_trace trace_tc_0 trace_tc_mono)
-
-lemma norm_leq1_cq: \<open>norm \<rho> \<le> 1\<close> for \<rho> :: \<open>(_,_) cq_operator\<close>
-  apply transfer
-  by auto
-
-(* TODO move *)
-lemma cq_map_apply_scaleR:
+(* lemma cq_map_apply_scaleR:
   assumes \<open>r * norm \<rho> \<le> 1\<close>
   shows \<open>cq_map_apply E (r *\<^sub>R \<rho>) = r *\<^sub>R cq_map_apply E \<rho>\<close>
 proof -
@@ -979,54 +817,33 @@ proof -
     apply (transfer' fixing: r)
     apply (auto intro!: ext simp: r_pos)
     by -
-qed
+qed *)
 
-(* TODO move *)
-lemma cq_map_local_q_bot:
-  fixes E :: \<open>('c, 'q, 'd, 'q) cq_map\<close>
-    and \<rho> :: \<open>('q ell2,'q ell2) trace_class\<close> and \<rho>' :: \<open>('c, 'q) cq_operator\<close>
-  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> \<le> 1\<close>
-  shows \<open>cq_map_apply (cq_map_local_q \<bottom> \<rho> E) \<rho>' = norm \<rho> *\<^sub>R cq_map_apply E \<rho>'\<close>
-proof -
-  have \<open>cq_map_apply (cq_map_local_q \<bottom> \<rho> E) \<rho>' = cq_map_apply (cq_map_seq (cq_map_tensor_op_right \<rho>) (cq_map_seq (cq_map_tensor_id_right E) cq_map_partial_trace)) \<rho>'\<close>
-    by (simp add: cq_map_apply_seq cq_map_local_q_def cq_map_auxiliary_state_def)
-  also have \<open>\<dots> = cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
-    by (simp add: cq_map_apply_seq)
-  also have \<open>\<dots> = cq_map_apply E (cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
-    by (simp add: cq_map_partial_trace_tensor_id_right)
-  also have \<open>\<dots> = cq_map_apply E (norm \<rho> *\<^sub>R \<rho>')\<close>
-    by (simp add: cq_map_apply_partial_trace_tensor_op_right)
-  also have \<open>\<dots> = norm \<rho> *\<^sub>R cq_map_apply E \<rho>'\<close>
-    using assms
-    by (auto simp: mult_le_one norm_leq1_cq norm_pos_cq cq_map_apply_scaleR)
-  finally show ?thesis
-    by -
-qed
 
-lemma scale_1_cq_operator[simp]: 
+(* lemma scale_1_cq_operator[simp]: 
   fixes \<rho> :: \<open>('c,'q) cq_operator\<close>
   shows \<open>1 *\<^sub>R \<rho> = \<rho>\<close>
   apply transfer
   by simp
-
-lemma cq_map_local_q_bot'[simp]:
-  fixes E :: \<open>('c, 'q, 'd, 'q) cq_map\<close>
-    and \<rho> :: \<open>('q ell2,'q ell2) trace_class\<close>
-  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> = 1\<close>
-  shows \<open>cq_map_local_q \<bottom> \<rho> E = E\<close>
-  apply (auto intro!: cq_map_eqI simp: )
-  apply (subst cq_map_local_q_bot)
-  using assms
-  by auto
+ *)
 
 lemma denotation_localvars:
-  \<open>denotation (localvars C Q p) = cq_map_local_c (CREGISTER_of C) undefined (cq_map_local_q (QREGISTER_of Q) (tc_butterfly |undefined\<rangle> |undefined\<rangle>) (denotation (block p)))\<close>
+  \<open>denotation (localvars C Q p) = denotation_local_c (CREGISTER_of C) undefined
+     (denotation_local_q (QREGISTER_of Q) (tc_butterfly |undefined\<rangle> |undefined\<rangle>) (denotation (block p)))\<close>
   by (simp add: localvars_def denotation_localvars1)
 
+lemma denotation_local_c_bot[simp]: \<open>denotation_local_c \<bottom> c D = D\<close>
+  apply (transfer' fixing: c)
+  by simp
+
+lemma denotation_local_q_bot[simp]:
+  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> = 1\<close>
+  shows \<open>denotation_local_q \<bottom> \<rho> D = D\<close>
+  apply (transfer' fixing: \<rho>)
+  using assms by simp
+
 lemma localvars1_empty: "denotation (localvars1 empty_cregister empty_qregister P) = denotation P"
-  apply (simp add: denotation_localvars1)
-  apply (subst cq_map_local_q_bot')
-  by (simp_all add: norm_tc_butterfly)
+  by (simp add: denotation_localvars1 norm_tc_butterfly)
 
 lemma localvars_empty: "denotation (localvars empty_cregister empty_qregister P) = denotation (block P)"
   by (simp add: localvars1_empty localvars_def)
@@ -1034,14 +851,17 @@ lemma localvars_empty: "denotation (localvars empty_cregister empty_qregister P)
 
 lift_definition kf_in_qref_strict :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>\<EE> Q. \<forall>(E,x)\<in>\<EE>. E \<in> Rep_QREGISTER Q\<close>.
-definition kf_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
-  \<open>kf_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. kraus_equivalent' \<EE> \<FF> \<and> kf_in_qref_strict \<FF> Q)\<close>
+(* definition kf_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
+  \<open>kf_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. \<EE> \<equiv>\<^sub>k\<^sub>r \<FF> \<and> kf_in_qref_strict \<FF> Q)\<close> *)
 
-lift_definition qc_map_in_qref :: \<open>('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
+definition km_in_qref where \<open>km_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF> :: (_,_,unit) kraus_family. kf_apply \<FF> = \<EE> \<and> kf_in_qref_strict \<FF> Q)\<close>
+
+
+(* lift_definition qc_map_in_qref :: \<open>('cl1,'qu,'cl2,'qu) cq_map \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> is
   \<open>\<lambda>\<EE> Q. \<forall>x. kf_in_qref (\<EE> x) Q\<close>
   apply (auto intro!: simp: cq_map_rel_def kf_in_qref_def)
   using kraus_equivalent'_trans kraus_equivalent'_sym
-  by meson
+  by meson *)
 
 lemma qc_map_in_qref_seq:
   assumes \<open>qc_map_in_qref E Q\<close>

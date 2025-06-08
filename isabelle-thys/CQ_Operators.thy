@@ -1065,6 +1065,41 @@ lemma is_cq_map_complete_measurement[iff]:
   by (simp add: is_cq_map_def cq_id_def comp_def)
 
 
+lemma cq_map_local_c_bot[simp]:
+  shows \<open>cq_map_local_c \<bottom> m E = E\<close>
+proof (rule ext)
+  fix \<rho>
+  show \<open>cq_map_local_c \<bottom> m E \<rho> = E \<rho>\<close>
+    (* apply (rule local_defE[of E]) *)
+    apply (transfer' fixing: m)
+    by (simp add: copy_CREGISTER_from_bot[abs_def])
+qed
+
+lemma cq_map_local_q_bot:
+  fixes E :: \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class \<Rightarrow> (('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
+    and \<rho> :: \<open>('q ell2,'q ell2) trace_class\<close> and \<rho>' :: \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
+  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> \<le> 1\<close>
+  shows \<open>cq_map_local_q \<bottom> \<rho> E \<rho>' = norm \<rho> *\<^sub>R E \<rho>'\<close>
+proof -
+  have \<open>cq_map_apply (cq_map_local_q \<bottom> \<rho> E) \<rho>' = cq_map_apply (cq_map_seq (cq_map_tensor_op_right \<rho>) (cq_map_seq (cq_map_tensor_id_right E) cq_map_partial_trace)) \<rho>'\<close>
+    by (simp add: cq_map_apply_seq cq_map_local_q_def cq_map_auxiliary_state_def)
+  also have \<open>\<dots> = cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
+    by (simp add: cq_map_apply_seq)
+  also have \<open>\<dots> = cq_map_apply E (cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
+    by (simp add: cq_map_partial_trace_tensor_id_right)
+  also have \<open>\<dots> = cq_map_apply E (norm \<rho> *\<^sub>R \<rho>')\<close>
+    by (simp add: cq_map_apply_partial_trace_tensor_op_right)
+  also have \<open>\<dots> = norm \<rho> *\<^sub>R cq_map_apply E \<rho>'\<close>
+    using assms
+    by (auto simp: mult_le_one norm_leq1_cq norm_pos_cq cq_map_apply_scaleR)
+  finally show ?thesis
+    by -
+qed
+
+lemma cq_map_local_q_bot'[simp]:
+  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> = 1\<close>
+  shows \<open>cq_map_local_q \<bottom> \<rho> E = E\<close>
+  by (auto intro!: ext simp: cq_map_local_q_bot assms)
 
 end
 
