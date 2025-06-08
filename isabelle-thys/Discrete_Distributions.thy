@@ -42,7 +42,7 @@ next
     apply (rule_tac nonneg_bdd_above_summable_on)
     by auto
   then have "infsum f UNIV \<le> 1"
-    apply (rule infsum_le_finite_sums)
+    apply (rule Infinite_Sum.infsum_le_finite_sums)
     using assm by auto
   with summable show "is_distribution f"
     unfolding is_distribution_def using assm by simp
@@ -64,7 +64,7 @@ proof -
     apply (rule nonneg_bdd_above_summable_on)
     using assms by auto
   then show "infsum f UNIV \<le> 1"
-    apply (rule infsum_le_finite_sums)
+    apply (rule Infinite_Sum.infsum_le_finite_sums)
     using assms by auto
 qed
 

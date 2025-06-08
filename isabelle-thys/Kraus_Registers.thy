@@ -1071,19 +1071,42 @@ proof -
     by simp
 qed
 
-(* lemma km_apply_qregister_qFst:
-  assumes \<open>kraus_map \<EE>\<close>
-  shows \<open>km_apply_qregister qFst \<EE> (tc_tensor t u) = tc_tensor (\<EE> t) u\<close>
-try0
-sledgehammer [dont_slice]
-by -
 
-lemma km_apply_qregister_qSnd:
+lemma kf_apply_qregister_scaleR:
+  shows \<open>kf_apply_qregister Q (r *\<^sub>R \<EE>) = r *\<^sub>R kf_apply_qregister Q \<EE>\<close>
+  apply (transfer' fixing: r Q)
+  by (force simp: apply_qregister_scaleR image_iff)
+
+lemma kf_apply_qregister_kf_id[simp]:
+  assumes \<open>qregister Q\<close>
+  shows \<open>kf_apply_qregister Q kf_id = kf_id\<close>
+  unfolding kf_id_def
+  apply (transfer' fixing: Q)
+  by (simp add: assms)
+
+lemma kf_apply_qregister_empty_qregister: 
+  \<open>kf_apply_qregister (empty_qregister :: ('a::{CARD_1,enum},'b) qregister) \<EE> =\<^sub>k\<^sub>r kf_norm \<EE> *\<^sub>R kf_id\<close>
+proof -
+  let ?e = \<open>empty_qregister :: ('a::{CARD_1,enum},'b) qregister\<close>
+  have \<open>kf_apply_qregister ?e \<EE> =\<^sub>k\<^sub>r kf_apply_qregister ?e (kf_norm \<EE> *\<^sub>R kf_id)\<close>
+    apply (rule kf_apply_qregister_cong_weak)
+    by (rule kf_one_dim_is_id)
+  also have \<open>\<dots> = kf_norm \<EE> *\<^sub>R kf_apply_qregister ?e kf_id\<close>
+    by (rule kf_apply_qregister_scaleR)
+  also have \<open>\<dots> = kf_norm \<EE> *\<^sub>R kf_id\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+lemma km_apply_qregister_empty_qregister[simp]: 
   assumes \<open>kraus_map \<EE>\<close>
-  shows \<open>km_apply_qregister qSnd \<EE> (tc_tensor t u) = tc_tensor t (\<EE> u)\<close>
-try0
-sledgehammer [dont_slice]
-by - *)
+  shows \<open>km_apply_qregister empty_qregister \<EE> t = km_norm \<EE> *\<^sub>R t\<close>
+  using kf_apply_qregister_empty_qregister[of \<open>km_some_kraus_family \<EE>\<close>, where 'b='b]
+  using assms
+  by (simp add: kf_eq_weak_def kf_scale_apply[OF km_norm_geq0, abs_def]
+      flip: km_apply_qregister_kf_apply)
+
 
 
 

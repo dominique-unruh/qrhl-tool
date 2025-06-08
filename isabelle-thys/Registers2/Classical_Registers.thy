@@ -162,6 +162,12 @@ lemma cregister_raw_empty_cregister_raw: \<open>cregister_raw empty_cregister_ra
   apply (auto intro!: exI simp add: Axioms_Classical.register_def empty_cregister_raw_def)
   by (simp add: valid_getter_setter_def)
 
+lemma empty_cregister_raw_None[simp]: \<open>empty_cregister_raw (\<lambda>_. None) = (\<lambda>_. None)\<close>
+  by (auto simp add: empty_cregister_raw_def register_from_getter_setter_def)
+
+lemma empty_cregister_raw_Some[simp]: \<open>empty_cregister_raw (\<lambda>_. Some x) = Some\<close>
+  by (auto simp add: empty_cregister_raw_def register_from_getter_setter_def)
+
 lift_definition empty_cregister :: \<open>('a::{CARD_1,enum}, 'b) cregister\<close> is
   empty_cregister_raw
   using cregister_raw_empty_cregister_raw by fast

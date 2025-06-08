@@ -916,5 +916,155 @@ lemma classical_on_qFst_butterket[simp]: \<open>classical_on qFst (tc_tensor (tc
   by simp
 
 
+lemma is_cq_map_tendsto:
+  assumes cq: \<open>\<forall>\<^sub>F x in F. is_cq_map Q (\<EE> x)\<close>
+  assumes nontrivial: \<open>F \<noteq> \<bottom>\<close>
+  assumes \<EE>lim: \<open>(\<EE> \<longlongrightarrow> \<FF>) F\<close>
+  assumes kraus: \<open>kraus_map \<FF>\<close>
+  shows \<open>is_cq_map Q \<FF>\<close>
+proof -
+  have \<open>(cq_id Q o \<FF> o cq_id Q) = \<FF>\<close>
+  proof (rule ext)
+    fix t :: \<open>('c ell2, 'c ell2) trace_class\<close>
+    have cont: \<open>continuous_on UNIV (\<lambda>a. cq_id Q \<circ> a \<circ> cq_id Q)\<close>
+      by (auto intro!: continuous_intros)
+    from \<open>(\<EE> \<longlongrightarrow> \<FF>) F\<close>
+    have \<open>((\<lambda>x. cq_id Q o (\<EE> x) o cq_id Q) \<longlongrightarrow> cq_id Q o \<FF> o cq_id Q) F\<close>
+      apply (rule tendsto_compose_at_within[unfolded o_def, where S=UNIV])
+      using cont
+      by (auto simp: o_def continuous_on_def)
+    then have \<open>(\<EE> \<longlongrightarrow> cq_id Q o \<FF> o cq_id Q) F\<close>
+      apply (rule tendsto_cong[THEN iffD1, rotated])
+      using cq unfolding is_cq_map_def
+      apply (rule eventually_mono)
+      by simp
+    then have 1: \<open>((\<lambda>x. \<EE> x t) \<longlongrightarrow> (cq_id Q o \<FF> o cq_id Q) t) F\<close>
+      by (simp add: tendsto_coordinatewise)
+    from \<open>(\<EE> \<longlongrightarrow> \<FF>) F\<close>
+    have 2: \<open>((\<lambda>x. \<EE> x t) \<longlongrightarrow> \<FF> t) F\<close>
+      by (simp add: tendsto_coordinatewise)
+    from nontrivial 1 2 show \<open>(cq_id Q o \<FF> o cq_id Q) t = \<FF> t\<close>
+      by (rule tendsto_unique)
+  qed
+  with kraus
+  show \<open>is_cq_map Q \<FF>\<close>
+    using is_cq_map_def by blast
+qed
+
+lemma is_cq_map_sum:
+  assumes cq: \<open>\<And>x. x \<in> A \<Longrightarrow> is_cq_map Q (\<EE> x)\<close>
+  shows \<open>is_cq_map Q (\<Sum>x\<in>A. \<EE> x)\<close>
+  using cq apply (induction A rule:infinite_finite_induct)
+  by (auto simp: is_cq_map_0 func_plus is_cq_map_plus simp flip: zero_fun_apply)
+
+lemma is_cq_map_has_sum:
+  assumes cq: \<open>\<And>x. x \<in> A \<Longrightarrow> is_cq_map Q (\<EE> x)\<close>
+  assumes \<EE>summable: \<open>km_summable \<EE> A\<close>
+  assumes \<EE>sum: \<open>(\<EE> has_sum \<FF>) A\<close>
+  shows \<open>is_cq_map Q \<FF>\<close>
+proof -
+  from \<EE>summable \<EE>sum
+  have \<open>kraus_map \<FF>\<close>
+    apply (rule kraus_map_has_sum[rotated])
+    using cq is_cq_map_def by blast
+  from \<EE>sum
+  have \<open>(sum \<EE> \<longlongrightarrow> \<FF>) (finite_subsets_at_top A)\<close>
+    by (simp add: has_sum_def)
+  then show \<open>is_cq_map Q \<FF>\<close>
+    apply (rule is_cq_map_tendsto[rotated 2])
+    using \<open>kraus_map \<FF>\<close> assms
+    by (auto intro!: eventually_finite_subsets_at_top_weakI is_cq_map_sum)
+qed
+
+lemma cq_id_qregister_pair:
+  assumes \<open>qcompatible Q R\<close>
+  shows \<open>cq_id \<lbrakk>Q,R\<rbrakk>\<^sub>q = cq_id Q o cq_id R\<close>
+  unfolding cq_id_def
+  apply (subst km_complete_measurement_ket_tensor[symmetric])
+  apply (subst km_apply_qregister_pair_tensor)
+  using assms by auto
+
+
+lemma cq_id_qregister_chain:
+  \<open>cq_id (qregister_chain Q R) = km_apply_qregister Q (cq_id R)\<close>
+  by (simp add: cq_id_def km_apply_qregister_chain)
+
+
+lemma cq_id_qregister_tensor: 
+  \<open>cq_id (qregister_tensor Q R) = km_tensor (cq_id Q) (cq_id R)\<close>
+proof -
+  wlog [iff]: \<open>qregister Q\<close> \<open>qregister R\<close>
+    using negation
+    by (auto simp: cq_id_invalid non_qregister)
+  show ?thesis
+    apply (rule_tac eq_from_separatingI2[OF separating_set_bounded_clinear_tc_tensor])
+      apply simp 
+     apply (simp add: km_tensor_kraus_map kraus_map_bounded_clinear) 
+    by (simp add: qregister_tensor_pair cq_id_qregister_pair cq_id_qregister_chain
+        km_apply_qregister_pair_tensor km_apply_qregister_qFst km_apply_qregister_qSnd km_tensor_apply
+        km_tensor_kraus_map_exists)
+qed
+
+lemma is_cq_map_qregister_tensor:
+  assumes \<open>is_cq_map Q \<EE>\<close>
+  assumes \<open>is_cq_map R \<FF>\<close>
+  shows \<open>is_cq_map (qregister_tensor Q R) (km_tensor \<EE> \<FF>)\<close>
+proof (intro is_cq_map_def[THEN iffD2] conjI)
+  from assms have [iff]: \<open>kraus_map \<EE>\<close>  \<open>kraus_map \<FF>\<close>
+    using is_cq_map_def by auto
+  then show \<open>kraus_map (km_tensor \<EE> \<FF>)\<close>
+    by (meson km_tensor_kraus_map)
+  have \<open>cq_id (qregister_tensor Q R) \<circ> km_tensor \<EE> \<FF> \<circ> cq_id (qregister_tensor Q R)
+    = km_tensor (cq_id Q) (cq_id R) o km_tensor \<EE> \<FF> o km_tensor (cq_id Q) (cq_id R)\<close>
+    by (simp add: cq_id_qregister_tensor)
+  also have \<open>\<dots> = km_tensor (cq_id Q o \<EE> o cq_id Q) (cq_id R o \<FF> o cq_id R)\<close>
+    by (simp add: km_tensor_compose_distrib km_tensor_kraus_map_exists kraus_map_comp)
+  also have \<open>\<dots> = km_tensor \<EE> \<FF>\<close>
+    by (metis assms(1,2) is_cq_map_def)
+  finally show \<open>cq_id (qregister_tensor Q R) \<circ> km_tensor \<EE> \<FF> \<circ> cq_id (qregister_tensor Q R) = km_tensor \<EE> \<FF>\<close>
+    by -
+qed
+
+
+lemma cq_id_empty_qregister[simp]: \<open>cq_id empty_qregister = id\<close>
+  by (auto intro!: ext simp add: cq_id_def)
+
+
+lemma is_cq_map_empty_qregister[simp]: \<open>is_cq_map empty_qregister \<EE> \<longleftrightarrow> kraus_map \<EE>\<close>
+  by (simp add: is_cq_map_def)
+
+lemma is_cq_map_qFst_chain:
+  assumes [iff]: \<open>is_cq_map Q \<EE>\<close>
+  assumes [iff]: \<open>kraus_map \<FF>\<close>
+  shows \<open>is_cq_map (qregister_chain qFst Q) (km_tensor \<EE> \<FF>)\<close>
+proof (intro is_cq_map_def[THEN iffD2] conjI)
+  from assms have [iff]: \<open>kraus_map \<EE>\<close>
+    using is_cq_map_def by auto
+  with assms show \<open>kraus_map (km_tensor \<EE> \<FF>)\<close>
+    by (meson km_tensor_kraus_map)
+  have \<open>cq_id (qregister_chain qFst Q) \<circ> km_tensor \<EE> \<FF> \<circ> cq_id (qregister_chain qFst Q)
+    = km_tensor (cq_id Q) id \<circ> km_tensor \<EE> \<FF> \<circ> km_tensor (cq_id Q) id\<close>
+    by (simp add: cq_id_qregister_chain km_apply_qregister_qFst)
+  also have \<open>\<dots> = km_tensor (cq_id Q o \<EE> o cq_id Q) \<FF>\<close>
+    by (simp add: km_tensor_kraus_map_exists kraus_map_comp flip: km_tensor_compose_distrib)
+  also have \<open>\<dots> = km_tensor \<EE> \<FF>\<close>
+    by (metis assms(1,2) is_cq_map_def)
+  finally show \<open>cq_id (qregister_chain qFst Q) \<circ> km_tensor \<EE> \<FF> \<circ> cq_id (qregister_chain qFst Q) = km_tensor \<EE> \<FF>\<close>
+    by -
+qed
+
+lemma is_cq_map_qFst[intro!]:
+  assumes \<open>is_cq_map qregister_id \<EE>\<close>
+  assumes \<open>kraus_map \<FF>\<close>
+  shows \<open>is_cq_map qFst (km_tensor \<EE> \<FF>)\<close>
+  using is_cq_map_qFst_chain[OF assms]
+  by simp
+
+lemma is_cq_map_complete_measurement[iff]: 
+  \<open>is_cq_map qregister_id km_complete_measurement_ket\<close>
+  by (simp add: is_cq_map_def cq_id_def comp_def)
+
+
+
 end
 

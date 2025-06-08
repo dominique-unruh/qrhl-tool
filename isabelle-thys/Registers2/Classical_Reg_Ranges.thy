@@ -1173,6 +1173,27 @@ proof -
     by (simp add: ACTUAL_CREGISTER.rep_eq ACTUAL_CREGISTER_content.rep_eq)
 qed
 
+lemma CREGISTER_of_empty_cregister[simp]: \<open>CREGISTER_of (empty_cregister :: ('a::{CARD_1,enum},'b) cregister) = \<bottom>\<close>
+proof -
+  let ?empty = \<open>empty_cregister :: ('a,'b) cregister\<close>
+  let ?empty_raw = \<open>empty_cregister_raw :: 'a cupdate \<Rightarrow> 'b cupdate\<close>
+  have None: \<open>Map.empty \<in> range (apply_cregister ?empty)\<close>
+    apply (rule range_eqI[where x=\<open>\<lambda>_. None\<close>])
+    by simp
+  have Some: \<open>Some \<in> range (apply_cregister ?empty)\<close>
+    apply (rule range_eqI[where x=\<open>Some\<close>])
+    by simp
+  have *: \<open>apply_cregister empty_cregister x = Some\<close> if \<open>apply_cregister empty_cregister x \<noteq> Map.empty\<close> for x :: \<open>'a cupdate\<close>
+    apply (cases x rule: option_CARD_1_exhaust)
+    using that
+    by auto
+  have 1: \<open>range (apply_cregister ?empty) = empty_cregister_range\<close>
+    by (auto intro!: None Some * simp: empty_cregister_range_def)
+  show ?thesis
+    apply transfer'
+    using 1 by simp
+qed
+
 
 
 end

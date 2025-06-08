@@ -1919,6 +1919,27 @@ proof (rule is_swap_on_qupdate_set_unique[where Q=\<open>range (apply_qregister 
     by (rule is_swap_on_qupdate_set_swap_ell2, simp)
 qed
 
+lemma swap_QREGISTER_bot[simp]: \<open>swap_QREGISTER \<bottom> = id_cblinfun\<close>
+proof -
+  let ?empty = \<open>empty_qregister :: (unit,_) qregister\<close>
+  let ?swap = \<open>swap_ell2 :: (unit*unit) ell2 \<Rightarrow>\<^sub>C\<^sub>L _\<close>
+  have \<open>swap_QREGISTER \<bottom> = swap_QREGISTER (QREGISTER_of ?empty)\<close>
+    by simp
+  also have \<open>\<dots> = apply_qregister (qregister_tensor ?empty ?empty) ?swap\<close>
+    apply (subst swap_QREGISTER_QREGISTER_of)
+    by auto
+  also have \<open>\<dots> = apply_qregister (qregister_tensor ?empty ?empty) (one_dim_iso ?swap *\<^sub>C id_cblinfun)\<close>
+    by simp
+  also have \<open>\<dots> = one_dim_iso ?swap *\<^sub>C apply_qregister (qregister_tensor ?empty ?empty) id_cblinfun\<close>
+    by simp
+  also have \<open>\<dots> = apply_qregister (qregister_tensor ?empty ?empty) id_cblinfun\<close>
+    by simp
+  also have \<open>\<dots> = id_cblinfun\<close>
+    using apply_qregister_of_id empty_qregister_is_register qregister_qregister_tensor by blast
+  finally show ?thesis
+    by -
+qed
+
 lemma is_swap_on_qupdate_set_swap_QREGISTER:
   assumes \<open>ACTUAL_QREGISTER Q\<close>
   shows \<open>is_swap_on_qupdate_set (Rep_QREGISTER Q) (swap_QREGISTER Q)\<close>

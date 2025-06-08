@@ -1182,6 +1182,11 @@ proof -
     by (smt (verit, ccfv_threshold) with_type_mp)
 qed
 
+lemma iso_qregister_pair_id_empty[iff]: \<open>iso_qregister (qregister_pair qregister_id empty_qregister)\<close>
+  by (metis iso_qregister_def' iso_qregister_id qcompatible_empty qregister_chain_is_qregister
+      qregister_chain_pair_Fst qregister_left_right_inverse)
+
+
 
 
 end

@@ -1118,5 +1118,286 @@ definition denotation_while :: \<open>(cl \<Rightarrow> bool) \<Rightarrow> deno
   \<open>denotation_while e D = (\<Sum>\<^sub>\<infinity>n. denotation_while_n e D n)\<close>
 
 
+lemma continuous_on_apply_denotation[continuous_intros]:
+  assumes \<open>continuous_on X f\<close>
+  shows \<open>continuous_on X (\<lambda>x. apply_denotation (f x))\<close>
+proof (rule continuous_on_compose2[OF _ assms])
+  show \<open>f ` X \<subseteq> UNIV\<close>
+    by simp
+  define S where \<open>S = range apply_denotation\<close>
+  have S_def': \<open>S = Collect (is_cq_map qFst)\<close>
+    using S_def type_definition.Rep_range type_definition_denotation by blast
+  have \<open>openin (top_of_set UNIV) (UNIV \<inter> apply_denotation -` U) \<longleftrightarrow> openin (top_of_set S) U\<close> if \<open>U \<subseteq> S\<close> for U
+  proof -
+    define RU where \<open>RU = apply_denotation -` U\<close>
+    have U_def: \<open>U = apply_denotation ` RU\<close>
+      using RU_def S_def that type_definition.Rep_range type_definition_denotation by fastforce
+    have \<open>openin (top_of_set UNIV) (UNIV \<inter> RU) = open RU\<close>
+      by (simp add: openin_subtopology)
+    also have \<open>\<dots> = (\<exists>T. open T \<and> U = T \<inter> S)\<close>
+      by (simp add: open_denotation_def openin_subtopology S_def' U_def)
+    also have \<open>\<dots> = openin (top_of_set S) U\<close>
+      by (simp add: openin_subtopology)
+    finally show ?thesis
+      by (simp add: RU_def)
+  qed
+  then show \<open>continuous_on UNIV apply_denotation\<close>
+    apply (rule_tac quotient_map_imp_continuous_open[where T=S])
+    using apply_denotation by (auto simp: S_def)
+qed
+
+instance denotation :: pospace
+proof (rule pospaceI)
+  have \<open>{(x :: denotation, y). y \<le> x} = {(x, y). \<forall>\<rho>\<ge>0. apply_denotation x \<rho> \<le> apply_denotation y \<rho>}\<close>
+    by (simp add: less_eq_denotation_def)
+  also have \<open>\<dots> = (\<Inter>\<rho>\<in>{0..}. {xy. apply_denotation (fst xy) \<rho> \<le> apply_denotation (snd xy) \<rho>})\<close>
+    by auto
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Inter ballI closed_Collect_le continuous_intros intro: continuous_on_product_then_coordinatewise)
+  finally show \<open>closed {(x :: denotation, y). y \<le> x}\<close>
+    by -
+qed
+
+lemma apply_denotation_sum: \<open>apply_denotation (\<Sum>x\<in>A. \<EE> x) = (\<Sum>x\<in>A. apply_denotation (\<EE> x))\<close>
+proof (induction A rule:infinite_finite_induct)
+  case (infinite A)
+  then show ?case
+    by simp
+next
+  case empty
+  then show ?case
+    by simp
+next
+  case (insert x F)
+  have \<open>apply_denotation (\<Sum>x\<in>insert x F. \<EE> x) = apply_denotation (\<EE> x + (\<Sum>x\<in>F. \<EE> x))\<close>
+    by (simp add: insert.hyps)
+  also have \<open>\<dots> = apply_denotation (\<EE> x) + apply_denotation (\<Sum>x\<in>F. \<EE> x)\<close>
+    by (auto simp: plus_denotation.rep_eq)
+  also have \<open>\<dots> = apply_denotation (\<EE> x) + (\<Sum>x\<in>F. apply_denotation (\<EE> x))\<close>
+    by (simp add: insert)
+  also have \<open>\<dots> = (\<Sum>x\<in>insert x F. apply_denotation (\<EE> x))\<close>
+    using insert.hyps by fastforce
+  finally show ?case
+    by -
+qed
+
+lemma tendsto_denotation_apply_denotation:
+  \<open>(g \<longlongrightarrow> t) F \<longleftrightarrow> ((\<lambda>x. apply_denotation (g x)) \<longlongrightarrow> apply_denotation t) F\<close>
+proof -
+  define s f where \<open>s = apply_denotation t\<close> and \<open>f x = apply_denotation (g x)\<close> for x
+  define T :: \<open>(((cl \<times> qu) ell2, _) trace_class \<Rightarrow> _) topology\<close>
+    where \<open>T = top_of_set (Collect (is_cq_map qFst))\<close>
+
+  have [simp]: \<open>apply_denotation x \<in> apply_denotation ` U \<longleftrightarrow> x \<in> U\<close> for x U
+    using apply_denotation_inject by fastforce
+  have [iff]: \<open>apply_denotation t \<in> topspace T\<close>
+    using T_def apply_denotation by force
+  have app_den_cq_map: \<open>V \<in> range (image apply_denotation) \<longleftrightarrow> V \<subseteq> Collect (is_cq_map qFst)\<close> for V
+    apply (simp add: in_range_image_iff flip: Ball_Collect)
+    by (smt (verit, ccfv_threshold) Abs_denotation_inverse apply_denotation imageE mem_Collect_eq rangeI subsetI
+        subset_image_iff)
+  have \<open>(g \<longlongrightarrow> t) F \<longleftrightarrow> (\<forall>U. open U \<longrightarrow> t \<in> U \<longrightarrow> (\<forall>\<^sub>F x in F. g x \<in> U))\<close>
+    by (simp add: limitin_def flip: limitin_canonical_iff)
+  also have \<open>\<dots> \<longleftrightarrow> (\<forall>U. openin T (apply_denotation ` U) \<longrightarrow> t \<in> U \<longrightarrow> (\<forall>\<^sub>F x in F. g x \<in> U))\<close>
+    using T_def open_denotation.rep_eq by presburger
+  also have \<open>\<dots> \<longleftrightarrow> (\<forall>U. openin T (apply_denotation ` U) \<longrightarrow> s \<in> apply_denotation ` U \<longrightarrow> (\<forall>\<^sub>F x in F. f x \<in> apply_denotation ` U))\<close>
+    by (simp add: f_def s_def)
+  also have \<open>\<dots> \<longleftrightarrow> (\<forall>V\<in>range (image apply_denotation). openin T V \<longrightarrow> s \<in> V \<longrightarrow> (\<forall>\<^sub>F x in F. f x \<in> V))\<close>
+    by blast
+  also have \<open>\<dots> \<longleftrightarrow> (\<forall>V\<subseteq>Collect (is_cq_map qFst). openin T V \<longrightarrow> s \<in> V \<longrightarrow> (\<forall>\<^sub>F x in F. f x \<in> V))\<close>
+    by (simp add: app_den_cq_map Ball_def)
+  also have \<open>\<dots> \<longleftrightarrow> (\<forall>V. openin T V \<longrightarrow> s \<in> V \<longrightarrow> (\<forall>\<^sub>F x in F. f x \<in> V))\<close>
+    apply (rule all_cong1)
+    by (auto simp: T_def openin_open)
+  also have \<open>\<dots> \<longleftrightarrow> limitin T f s F\<close>
+    by (simp add: limitin_def s_def)
+  also have \<open>\<dots> \<longleftrightarrow> (f \<longlongrightarrow> s) F\<close>
+    using apply_denotation by (simp add: T_def limitin_subtopology s_def f_def)
+  finally show \<open>(g \<longlongrightarrow> t) F \<longleftrightarrow> (f \<longlongrightarrow> s) F\<close>
+    by -
+qed
+
+lemma tendsto_denotation_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_denotation) ===> cr_denotation ===> (=) ===> (\<longleftrightarrow>))
+           tendsto tendsto\<close>
+proof (intro rel_funI, rename_tac f g s t F G)
+  fix g :: \<open>'c \<Rightarrow> denotation\<close> and f s t and F G :: \<open>'c filter\<close>
+  assume \<open>((=) ===> cr_denotation) f g\<close> and st: \<open>cr_denotation s t\<close> and [symmetric, simp]: \<open>F = G\<close>
+  then have fg: \<open>cr_denotation (f x) (g x)\<close> for x
+    by (simp add: rel_fun_def)
+  from st have st': \<open>s = apply_denotation t\<close>
+    by (meson cr_denotation_def)
+  from fg have fg': \<open>f x = apply_denotation (g x)\<close> for x
+    by (simp add: cr_denotation_def)
+  show \<open>(f \<longlongrightarrow> s) F \<longleftrightarrow> (g \<longlongrightarrow> t) G\<close>
+    by (simp add: st' fg'[abs_def] tendsto_denotation_apply_denotation)
+qed
+
+lemma has_sum_denotation_apply_denotation:
+  \<open>(g has_sum t) A \<longleftrightarrow> ((\<lambda>x. apply_denotation (g x)) has_sum apply_denotation t) A\<close>
+proof -
+  have \<open>(g has_sum t) A \<longleftrightarrow> (sum g \<longlongrightarrow> t) (finite_subsets_at_top A)\<close>
+    by (simp add: has_sum_def)
+  also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>F. apply_denotation (\<Sum>x\<in>F. g x)) \<longlongrightarrow> apply_denotation t) (finite_subsets_at_top A)\<close>
+    by (simp add: tendsto_denotation_apply_denotation)
+  also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>F. \<Sum>x\<in>F. apply_denotation (g x)) \<longlongrightarrow> apply_denotation t) (finite_subsets_at_top A)\<close>
+    by (simp add: apply_denotation_sum)
+  also have \<open>\<dots> \<longleftrightarrow> ((\<lambda>x. apply_denotation (g x)) has_sum apply_denotation t) A\<close>
+    by (simp add: has_sum_def)
+  finally show ?thesis
+    by -
+qed
+
+lemma has_sum_denotation_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_denotation) ===> (=) ===> cr_denotation ===> (\<longleftrightarrow>)) HAS_SUM HAS_SUM\<close>
+proof (intro rel_funI, rename_tac f g A B s t)
+  fix g :: \<open>'a \<Rightarrow> denotation\<close> and f s t and A B :: \<open>'a set\<close>
+  assume \<open>((=) ===> cr_denotation) f g\<close> and st: \<open>cr_denotation s t\<close> and [symmetric, simp]: \<open>A = B\<close>
+  then have fg: \<open>cr_denotation (f x) (g x)\<close> for x
+    by (simp add: rel_fun_def)
+  from st have st': \<open>s = apply_denotation t\<close>
+    by (meson cr_denotation_def)
+  from fg have fg': \<open>f x = apply_denotation (g x)\<close> for x
+    by (simp add: cr_denotation_def)
+  show \<open>(f has_sum s) A \<longleftrightarrow> (g has_sum t) B\<close>
+    by (simp add: st' fg'[abs_def] has_sum_denotation_apply_denotation)
+qed
+
+lemma summable_on_denotation_apply_denotation:
+  \<open>g summable_on A \<longleftrightarrow> km_summable (\<lambda>x. apply_denotation (g x)) A\<close>
+proof (rule iffI)
+  assume \<open>g summable_on A\<close>
+  then obtain s where \<open>(g has_sum s) A\<close>
+    using summable_on_def by blast
+  define g' s' where \<open>g' x = apply_denotation (g x)\<close> and \<open>s' = apply_denotation s\<close> for x
+  from \<open>(g has_sum s) A\<close>
+  have \<open>(g' has_sum s') A\<close>
+    by (simp add: has_sum_denotation_apply_denotation g'_def[abs_def] s'_def)
+  moreover have \<open>kraus_map s'\<close>
+    using apply_denotation is_cq_map_def s'_def by blast
+  ultimately show \<open>km_summable g' A\<close>
+    by (metis g'_def apply_denotation has_sum_coordinatewise is_cq_map_def km_summable_iff_sums_to_kraus_map
+        mem_Collect_eq)
+next
+  define g' where \<open>g' x = apply_denotation (g x)\<close> for x
+  then have km_g': \<open>kraus_map (g' x)\<close> for x
+    using apply_denotation is_cq_map_def by force
+  assume asm: \<open>km_summable g' A\<close>
+  then obtain s' where \<open>((\<lambda>x. g' x t) has_sum s' t) A\<close> and \<open>kraus_map s'\<close> for t
+    apply (subst (asm) km_summable_iff_sums_to_kraus_map[OF km_g'])
+    by fastforce
+  then have sum_s: \<open>(g' has_sum s') A\<close>
+    by (simp add: has_sum_coordinatewise)
+  then obtain s' where sum_s: \<open>(g' has_sum s') A\<close>
+    using summable_on_def by blast
+  then have \<open>is_cq_map qFst s'\<close>
+    apply (rule is_cq_map_has_sum[rotated 2])
+    using apply_denotation asm g'_def[abs_def] asm by auto
+  then obtain s where \<open>s' = apply_denotation s\<close>
+    using apply_denotation_cases by blast
+  with sum_s have \<open>(g' has_sum apply_denotation s) A\<close>
+    by simp
+  then have \<open>(g has_sum s) A\<close>
+    by (simp add: g'_def[abs_def] has_sum_denotation_apply_denotation)
+  then show \<open>g summable_on A\<close>
+    by (simp add: has_sum_imp_summable)
+qed
+
+
+lemma summable_on_denotation_transfer[transfer_rule]:
+  includes lifting_syntax
+  shows \<open>(((=) ===> cr_denotation) ===> (=) ===> (\<longleftrightarrow>)) (\<lambda>g A. km_summable g A) Infinite_Sum.summable_on\<close>
+  apply (simp add: summable_on_denotation_apply_denotation[abs_def])
+  by transfer_prover
+
+lemma
+  assumes \<open>denotation_norm D \<le> 1\<close>
+  shows denotation_while_bounded[iff]: \<open>denotation_norm (denotation_while e D) \<le> 1\<close>
+    and denotation_while_has_sum: \<open>(denotation_while_n e D has_sum denotation_while e D) UNIV\<close>
+proof -
+  define W where \<open>W = denotation_while_n e D\<close>
+  have rewrite_Wsum: \<open>(\<Sum>n\<le>M. W n) = (denotation_cases (\<lambda>m. if e m then D else 1))^M * (denotation_cases (\<lambda>m. if e m then 0 else 1))\<close> for M
+    by (simp add: W_def denotation_while_n_sum)
+  have finsum: \<open>(\<Sum>n\<in>F. km_bound (apply_denotation (W n))) \<le> id_cblinfun\<close> if \<open>finite F\<close> for F
+  proof -
+    define N where \<open>N = Max F\<close>
+    have \<open>(\<Sum>n\<in>F. km_bound (apply_denotation (W n))) \<le> (\<Sum>n\<le>N. km_bound (apply_denotation (W n)))\<close>
+      using that by (auto intro!: sum_mono2 simp: N_def)
+    also have \<open>\<dots> = km_bound (\<Sum>n\<le>N. apply_denotation (W n))\<close>
+      apply (rule km_bound_sum[symmetric])
+      using apply_denotation is_cq_map_def by blast
+    also have \<open>\<dots> = km_bound (apply_denotation (\<Sum>n\<le>N. W n))\<close>
+      by (simp add: apply_denotation_sum)
+    also have \<open>\<dots> = km_bound (apply_denotation (denotation_cases (\<lambda>m. if e m then D else 1) ^ N * denotation_cases (\<lambda>m. if e m then 0 else 1)))\<close>
+      by (simp add: rewrite_Wsum)
+    also have \<open>\<dots> \<le> denotation_norm (denotation_cases (\<lambda>m. if e m then D else 1) ^ N * denotation_cases (\<lambda>m. if e m then 0 else 1)) *\<^sub>R id_cblinfun\<close>
+      by (simp add: denotation_norm.rep_eq km_bound_leq_km_norm_id)
+    also have \<open>\<dots> \<le> 1 *\<^sub>R id_cblinfun\<close> (is \<open>denotation_norm (?x^N * ?y) *\<^sub>R id_cblinfun \<le> _\<close>)
+      apply (rule scaleR_right_mono)
+      by (auto intro!: times_denotation_bounded[THEN order_trans] mult_le_one power_le_one
+          power_denotation_bounded[THEN order_trans] denotation_cases_bounded assms)
+    also have \<open>\<dots> = id_cblinfun\<close>
+      by simp
+    finally show ?thesis
+      by -
+  qed
+  then have \<open>summable_on_in cweak_operator_topology (\<lambda>n. km_bound (apply_denotation (W n))) UNIV\<close>
+    apply (rule summable_wot_boundedI)
+    by auto
+  then have km_summable: \<open>km_summable (\<lambda>n. apply_denotation (W n)) UNIV\<close>
+    by (simp add: km_summable_def)
+  then have \<open>kraus_map (\<lambda>\<rho>. \<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>)\<close>
+    apply (rule kraus_map_infsum[rotated])
+    using apply_denotation is_cq_map_def by blast
+  have \<open>infsum_in cweak_operator_topology (\<lambda>n. km_bound (apply_denotation (W n))) UNIV \<le> id_cblinfun\<close>
+    by (simp add: finsum infsum_wot_boundedI)
+  then have km_bound: \<open>km_bound (\<lambda>\<rho>. \<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>) \<le> id_cblinfun\<close>
+    apply (subst km_bound_infsum)
+    using apply_denotation km_summable by (auto intro!: simp: is_cq_map_def)
+  have \<open>W summable_on UNIV\<close>
+    by (simp add: summable_on_denotation_apply_denotation km_summable flip: W_def)
+  then show \<open>(W has_sum denotation_while e D) UNIV\<close>
+    by (simp add: denotation_while_def W_def)
+  then have \<open>((\<lambda>n. apply_denotation (W n) \<rho>) has_sum apply_denotation (denotation_while e D) \<rho>) UNIV\<close> for \<rho>
+    by (simp add: has_sum_denotation_apply_denotation has_sum_coordinatewise)
+  then have while_infsum: \<open>apply_denotation (denotation_while e D) \<rho> = (\<Sum>\<^sub>\<infinity>n. apply_denotation (W n) \<rho>)\<close> for \<rho>
+    by (metis infsumI)
+  show \<open>denotation_norm (denotation_while e D) \<le> 1\<close>
+    using norm_cblinfun_mono[OF _ km_bound]
+    by (simp_all add: denotation_norm.rep_eq km_norm_def while_infsum[abs_def])
+qed
+
+definition denotation_from_quantum :: \<open>(cl \<Rightarrow> (qu ell2, qu ell2) trace_class \<Rightarrow> (qu ell2, qu ell2) trace_class) \<Rightarrow> denotation\<close> where
+  \<open>denotation_from_quantum q = denotation_cases (\<lambda>c. Abs_denotation (km_tensor km_complete_measurement_ket (q c)))\<close>
+
+lemma denotation_from_quantum_bounded[iff]:
+  assumes \<open>\<And>c. kraus_map (q c)\<close>
+  assumes \<open>\<And>c. km_norm (q c) \<le> 1\<close>
+  shows \<open>denotation_norm (denotation_from_quantum q) \<le> 1\<close>
+  unfolding denotation_from_quantum_def
+  apply (rule denotation_cases_bounded)
+  by (simp add: eq_onp_def is_cq_map_qFst assms denotation_norm.abs_eq km_norm_tensor)
+
+lift_definition denotation_from_classical :: \<open>(cl \<Rightarrow> cl) \<Rightarrow> denotation\<close> is
+  \<open>\<lambda>f. cq_map_from_kraus_family qFst qSnd (\<lambda>c. kf_map_inj (\<lambda>_. f c) kf_id)\<close>
+  by (rule cq_map_from_kraus_family_is_cq_map)
+
+lemma denotation_from_classical_eq_sample: \<open>denotation_from_classical f = denotation_sample (\<lambda>c. point_distr (f c))\<close>
+proof  -
+  have 1: \<open>(id_cblinfun, d) \<in> range (\<lambda>x. (sqrt (of_bool (x = d)) *\<^sub>R id_cblinfun, x))\<close> for d :: cl
+  by auto
+  have 2: \<open>(\<lambda>m. of_bool (m = d)) summable_on UNIV\<close> for d :: cl
+    apply (subst summable_on_cong_neutral[OF _ _ refl, where T=\<open>{d}\<close>])
+    by auto
+  have 3: \<open>kf_map_inj (\<lambda>_. d) kf_id = kf_sample (prob (point_distr d))\<close> for d :: cl
+    apply (simp add: kf_id_def del: kf_of_op_id)
+    apply (transfer' fixing: d)
+    by (auto intro!: simp: 1 2)
+  show ?thesis
+    apply (transfer' fixing: f)
+    by (simp add: 3)
+qed
 
 end

@@ -1036,6 +1036,46 @@ proof -
     by (simp add: cr_cblinfun_def)
 qed
 
+lemmas continuous_on_cinner[continuous_intros] =
+  bounded_bilinear.continuous_on[OF bounded_sesquilinear.bounded_bilinear [OF bounded_sesquilinear_cinner]]
+
+instance cblinfun :: (chilbert_space, chilbert_space) pospace
+proof (rule pospaceI, cases \<open>heterogenous_same_type_cblinfun TYPE('a) TYPE('b)\<close>)
+  case True
+  then have le: \<open>x \<ge> y \<longleftrightarrow> (\<forall>h. h \<bullet>\<^sub>C x (heterogenous_cblinfun_id h) \<ge> h \<bullet>\<^sub>C y (heterogenous_cblinfun_id h))\<close> for x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    by (simp add: less_eq_cblinfun_def_heterogenous cblinfun.diff_left cinner_diff_right)
+  
+  have \<open>{(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y} =
+        (\<Inter>h. {xy::'a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'a \<Rightarrow>\<^sub>C\<^sub>L 'b. h \<bullet>\<^sub>C fst xy (heterogenous_cblinfun_id h) \<ge> h \<bullet>\<^sub>C snd xy (heterogenous_cblinfun_id h)})\<close>
+    by (auto intro!: simp: less_eq_cblinfun_def_heterogenous True cblinfun.diff_left cinner_diff_right)
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Int closed_Collect_le closed_Collect_eq continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y}\<close>
+    by -
+next
+  case False
+  then have le: \<open>x \<ge> y \<longleftrightarrow> x = y\<close> for x y :: \<open>'a \<Rightarrow>\<^sub>C\<^sub>L 'b\<close>
+    by (force simp add: less_eq_cblinfun_def_heterogenous cblinfun.diff_left cinner_diff_right)
+  have \<open>{(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y} =
+        (\<Inter>h. \<Inter>k. {xy::'a \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'a \<Rightarrow>\<^sub>C\<^sub>L 'b. h \<bullet>\<^sub>C fst xy k = h \<bullet>\<^sub>C snd xy k})\<close>
+    by (auto intro!: cblinfun_eqI cinner_extensionality[where 'a='b]
+        simp: less_eq_cblinfun_def_heterogenous False cblinfun.diff_left cinner_diff_right)
+  also have \<open>closed \<dots>\<close>
+    by (auto intro!: closed_Int closed_Collect_eq continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x:: 'a \<Rightarrow>\<^sub>C\<^sub>L 'b, y). x \<ge> y}\<close>
+    by -
+qed
+
+instance trace_class :: (chilbert_space, chilbert_space) pospace
+proof (rule pospaceI)
+  have \<open>{(x::('a,'b) trace_class, y). y \<le> x} = (\<lambda>(x,y). (from_trace_class x, from_trace_class y)) -` {(x,y). x \<ge> y}\<close>
+    by (auto intro!: simp: less_eq_trace_class_def)
+  also have \<open>closed \<dots>\<close>
+    apply (intro closed_vimage closed_superdiagonal)
+    by (auto intro!: continuous_intros simp: case_prod_unfold)
+  finally show \<open>closed {(x::('a,'b) trace_class, y). y \<le> x}\<close>
+    by -
+qed
 
 
 
