@@ -18,7 +18,7 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 
 * [Isabelle2023](https://isabelle.in.tum.de/website-Isabelle2023/) must be installed.
   Simply download it and unpack it somewhere.
-* The AFP (version 2023) must be installed. Download it [here](https://www.isa-afp.org/download.html)
+* The AFP (version 2023) must be installed. Download it [here](https://www.isa-afp.org/release/afp-2023-09-13.tar.gz)
   and unpack it somewhere.
 
 ## Installation
