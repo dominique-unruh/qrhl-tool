@@ -512,6 +512,143 @@ definition cq_map_from_kraus_family :: \<open>('cl,'m) qregister \<Rightarrow> (
       (kf_comp_dependent (\<lambda>c. kf_apply_qregister Q (\<EE> c)) 
       (kf_apply_qregister C (kf_complete_measurement_ket))))\<close>
 
+(* TODO move *)
+definition qregister_partial_trace :: \<open>('a,'m) qregister => ('m ell2, 'm ell2) trace_class => ('a ell2, 'a ell2) trace_class\<close> where
+  \<open>qregister_partial_trace Q \<rho> = (SOME \<sigma>. \<forall>a. trace_tc (compose_tcr a \<sigma>) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>))\<close>
+
+(* TODO move *)
+lemma trace_compose_eq_then_eq:
+  fixes t u :: \<open>'a::chilbert_space \<Rightarrow>\<^sub>C\<^sub>L 'b::chilbert_space\<close>
+  assumes \<open>\<And>a. trace (cblinfun_compose a t) = trace (cblinfun_compose a u)\<close>
+  shows \<open>t = u\<close>
+proof (rule cblinfun_eqI, rule cinner_extensionality, rename_tac h g)
+  fix g :: 'b and h :: 'a
+  from assms
+  have \<open>trace (cblinfun_compose (butterfly h g) t) = trace (cblinfun_compose (butterfly h g) u)\<close>
+    by simp
+  then show \<open>g \<bullet>\<^sub>C (t *\<^sub>V h) = g \<bullet>\<^sub>C (u *\<^sub>V h)\<close>
+    by (metis trace_butterfly_comp)
+qed
+
+
+lemma qregister_partial_trace_unique:
+  assumes \<open>\<And>a. trace_tc (compose_tcr a \<sigma>) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+  shows \<open>qregister_partial_trace Q \<rho> = \<sigma>\<close>
+proof -
+  define \<sigma>' where \<open>\<sigma>' = qregister_partial_trace Q \<rho>\<close>
+  have \<open>trace_tc (compose_tcr a \<sigma>') = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close> for a
+    unfolding \<sigma>'_def qregister_partial_trace_def
+    apply (rule someI2_ex) 
+    using assms apply blast
+    by simp
+  with assms have \<open>trace_tc (compose_tcr a \<sigma>') = trace_tc (compose_tcr a \<sigma>)\<close> for a
+    by simp
+  then show \<open>\<sigma>' = \<sigma>\<close>
+    apply transfer
+    apply (rule trace_compose_eq_then_eq)
+    by auto
+qed
+
+lemma qregister_partial_trace_via_complement:
+  assumes \<open>qcomplements Q R\<close>
+  shows \<open>qregister_partial_trace Q \<rho> = partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q,R\<rbrakk>\<^sub>q) \<rho>)\<close>
+  by x
+
+lemma separating_set_bounded_clinear_iso_qregister_nested:
+  fixes Q :: \<open>('a,'b) qregister\<close> and S :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
+  assumes \<open>iso_qregister Q\<close>
+  assumes \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) S\<close>
+  shows \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) (apply_qregister Q ` S)\<close>
+try0
+sledgehammer [dont_slice]
+proof (intro separating_setI)
+  fix f g :: \<open>('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> 'c\<close>
+  assume \<open>bounded_clinear f\<close> and \<open>bounded_clinear g\<close>
+  assume fg_QS: \<open>f u = g u\<close> if \<open>u \<in> apply_qregister Q ` S\<close> for u
+  define f' g' where \<open>f' t = f (apply_qregister Q t)\<close> and \<open>g' t = g (apply_qregister Q t)\<close> for t
+  have [iff]: \<open>bounded_clinear f'\<close>  \<open>bounded_clinear g'\<close>
+    by (auto intro!: 
+        comp_bounded_clinear[OF \<open>bounded_clinear f\<close>, unfolded o_def]
+        comp_bounded_clinear[OF \<open>bounded_clinear g\<close>, unfolded o_def] 
+        bounded_clinear_apply_qregister_tc assms
+        simp: f'_def[abs_def] g'_def[abs_def])
+  have \<open>f' t = g' t\<close> if \<open>t \<in> S\<close> for t
+    by (simp add: f'_def fg_QS g'_def that)
+  then have \<open>f' = g'\<close>
+    apply (rule_tac eq_from_separatingI[OF assms(2)])
+    by auto
+  show \<open>f = g\<close>
+  proof (rule ext)
+    fix t :: \<open>'b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close>
+    from assms have surj_Q: \<open>surj (apply_qregister Q)\<close>
+      by (meson bij_def bij_iso_qregister)
+    then obtain u where u: \<open>t = apply_qregister Q u\<close>
+      by fast
+    with \<open>f' = g'\<close>
+    have \<open>f' u = g' u\<close>
+      by simp
+    then show \<open>f t = g t\<close>
+      by (simp add: f'_def g'_def u)
+  qed
+qed
+
+
+
+lemma qregister_partial_trace_exists:
+  \<open>trace_tc (compose_tcr a (qregister_partial_trace Q \<rho>)) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+proof -
+  wlog \<open>qregister Q\<close>
+    by x
+  define \<sigma> where \<open>\<sigma> = qregister_partial_trace Q \<rho>\<close>
+  from qcomplement_exists[OF \<open>qregister Q\<close>]
+  have \<open>let 'g::type = qregister_decomposition_basis Q in
+        trace_tc (compose_tcr a \<sigma>) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+  proof with_type_mp
+    with_type_case
+    then obtain R :: \<open>('g, 'b) qregister\<close> where \<open>qcomplements Q R\<close>
+      by auto
+    then have \<sigma>_pt: \<open>\<sigma> = partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q,R\<rbrakk>\<^sub>q) \<rho>)\<close>
+      unfolding \<sigma>_def
+      by (rule qregister_partial_trace_via_complement)
+    define \<rho>' where \<open>\<rho>' = apply_qregister_tc (qregister_inv \<lbrakk>Q,R\<rbrakk>\<^sub>q) \<rho>\<close>
+
+    have 1: \<open>trace_tc (compose_tcr a (partial_trace \<rho>')) = trace_tc (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>')\<close> for a
+      by -
+
+    have \<open>trace_tc (compose_tcr (apply_qregister Q a) \<rho>)
+     = trace_tc (compose_tcr (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (a \<otimes>\<^sub>o id_cblinfun)) (apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q \<rho>'))\<close>
+      apply (rule arg_cong2[where f=\<open>\<lambda>x y. trace_tc (compose_tcr x y)\<close>])
+      using \<open>qcomplements Q R\<close> apply_qregister_extend_pair_right iso_qregister_def' qcomplements_def'
+       apply blast 
+      by (metis \<open>qcomplements Q R\<close> \<rho>'_def apply_qregister_tc_inv_inverse iso_qregister_inv_iso
+          qcomplements_def')
+    also have \<open>\<dots> = trace_tc (apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>'))\<close>
+      apply (rule arg_cong[where f=trace_tc])
+      by -
+    also have \<open>\<dots> = trace_tc (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>')\<close>
+      by -
+    also have \<open>\<dots> = trace_tc (compose_tcr a (partial_trace \<rho>'))\<close>
+      using "1" by presburger
+    also have \<open>\<dots> = trace_tc (compose_tcr a \<sigma>)\<close>
+      using \<rho>'_def \<sigma>_pt by fastforce
+    finally show \<open>trace_tc (compose_tcr a \<sigma>) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+      by simp
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by (simp add: \<sigma>_def)
+qed
+
+
+definition kraus_family_from_cq_map :: \<open>('cl,'m) qregister \<Rightarrow> ('qu,'m) qregister \<Rightarrow> 
+         (('m ell2, 'm ell2) trace_class \<Rightarrow> ('m ell2, 'm ell2) trace_class) \<Rightarrow> 
+         ('cl \<Rightarrow> ('qu ell2, 'qu ell2, 'cl) kraus_family)\<close> where
+  \<open>kraus_family_from_cq_map C Q \<EE> c = 
+      kf_map_inj snd
+      (kf_comp kf_partial_trace_left
+      (kf_comp (km_some_kraus_family (km_apply_qregister (qregister_inv \<lbrakk>C,Q\<rbrakk>\<^sub>q) \<EE>))
+      (kf_tensor_left (tc_butterfly (ket c) (ket c)))))\<close>
+
 lemma cq_map_from_kraus_family_invalid1[simp]: \<open>cq_map_from_kraus_family non_qregister Q \<EE> = 0\<close>
   by (simp add: cq_map_from_kraus_family_def[abs_def])
 
@@ -718,6 +855,195 @@ proof -
   from 5 show ?thesis
     by (simp add: cq_map_from_kraus_family_def km_norm_kf_norm)
 qed
+
+
+lemma cq_map_from_kraus_family_as_qFstqSnd:
+  assumes \<open>qcomplements C Q\<close>
+  shows \<open>km_apply_qregister (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) (cq_map_from_kraus_family C Q \<EE>)
+      = cq_map_from_kraus_family qFst qSnd \<EE>\<close>
+  by x
+
+(* TODO move *)
+lemma kf_comp_dependent_raw_kf_filter_move:
+  assumes \<open>bdd_above ((kf_norm o \<EE>) ` Set.filter P (kf_domain \<FF>))\<close>
+  shows \<open>kf_comp_dependent_raw \<EE> (kf_filter P \<FF>) = kf_comp_dependent_raw (\<lambda>c. if P c then \<EE> c else 0) \<FF>\<close>
+proof (rule Rep_kraus_family_inject[THEN iffD1])
+  from assms have bdd1: \<open>bdd_above ((kf_norm \<circ> \<EE>) ` kf_domain (kf_filter P \<FF>))\<close>
+    by (simp add: kf_domain_filter)
+  then obtain B where B: \<open>kf_norm (\<EE> x) \<le> B\<close> if \<open>x \<in> kf_domain (kf_filter P \<FF>)\<close> for x
+    by (force simp: bdd_above_def)
+  have bdd2: \<open>bdd_above ((kf_norm \<circ> (\<lambda>c. if P c then \<EE> c else 0)) ` kf_domain \<FF>)\<close>
+    apply (rule bdd_aboveI2[where M=\<open>max 0 B\<close>])
+    using B by force
+
+  have \<open>Rep_kraus_family (kf_comp_dependent_raw \<EE> (kf_filter P \<FF>))
+       = Set.filter (\<lambda>(EF, _). EF \<noteq> 0) ((\<lambda>((F, y), (E, x)). (E o\<^sub>C\<^sub>L F, F, E, y, x)) ` 
+           (SIGMA (F, y):Set.filter (\<lambda>(F, y). P y) (Rep_kraus_family \<FF>). Rep_kraus_family (\<EE> y)))\<close>
+    using bdd1
+    by (simp add: kf_comp_dependent_raw.rep_eq case_prod_unfold kf_filter.rep_eq)
+  also have \<open>\<dots> = Set.filter (\<lambda>(EF, F, E, y, x). EF \<noteq> 0 \<and> P y) ((\<lambda>((F, y), (E, x)). (E o\<^sub>C\<^sub>L F, F, E, y, x)) ` 
+           (SIGMA (F, y):Rep_kraus_family \<FF>. Rep_kraus_family (\<EE> y)))\<close>
+    by force
+  also have \<open>\<dots> = Set.filter (\<lambda>(EF, _). EF \<noteq> 0) ((\<lambda>((F, y), (E, x)). (E o\<^sub>C\<^sub>L F, F, E, y, x)) `
+      (SIGMA (F, y):Rep_kraus_family \<FF>. if P y then Rep_kraus_family (\<EE> y) else {}))\<close> (is \<open>?lhs = ?rhs\<close>)
+  proof (rule Set.set_eqI, rename_tac tuple)
+    fix tuple :: \<open>'e \<Rightarrow>\<^sub>C\<^sub>L 'c \<times> 'e \<Rightarrow>\<^sub>C\<^sub>L 'b \<times> 'b \<Rightarrow>\<^sub>C\<^sub>L 'c \<times> 'a \<times> 'd\<close>
+    obtain EF F E y x where tuple: \<open>tuple = (EF,F,E,y,x)\<close>
+      apply atomize_elim
+      by (auto simp: prod_eq_iff)
+    show \<open>tuple \<in> ?lhs \<longleftrightarrow> tuple \<in> ?rhs\<close>
+      apply (cases \<open>P y\<close>)
+      apply (auto intro!: bexI[of _ \<open>(F, y)\<close>] bexI[of _ \<open>(E, x)\<close>] simp: tuple image_iff)[1]
+      by (auto intro!: bexI[of _ \<open>(F, y)\<close>] simp: tuple image_iff)
+  qed
+  also have \<open>\<dots> = Set.filter (\<lambda>(EF, _). EF \<noteq> 0) ((\<lambda>((F, y), (E, x)). (E o\<^sub>C\<^sub>L F, F, E, y, x)) `
+      (SIGMA (F, y):Rep_kraus_family \<FF>. Rep_kraus_family (if P y then \<EE> y else 0)))\<close>
+    by (metis (mono_tags, lifting) zero_kraus_family.rep_eq)
+  also have \<open>\<dots> = Rep_kraus_family (kf_comp_dependent_raw (\<lambda>c. if P c then \<EE> c else 0) \<FF>)\<close>
+    using bdd2 by (simp add: kf_comp_dependent_raw.rep_eq)
+  finally show \<open>Rep_kraus_family (kf_comp_dependent_raw \<EE> (kf_filter P \<FF>)) = Rep_kraus_family (kf_comp_dependent_raw (\<lambda>c. if P c then \<EE> c else 0) \<FF>)\<close>
+    by -
+qed
+
+(* TODO move *)
+lemma kf_comp_dependent_kf_filter_move: 
+  assumes \<open>bdd_above ((kf_norm \<circ> \<EE>) ` Set.filter P (kf_domain \<FF>))\<close>
+  shows \<open>kf_comp_dependent \<EE> (kf_filter P \<FF>) = kf_comp_dependent (\<lambda>c. if P c then \<EE> c else 0) \<FF>\<close>
+  (* apply (rule Rep_kraus_family_inject[THEN iffD1]) *)
+  unfolding kf_comp_dependent_def
+  apply (rule arg_cong[where f=\<open>kf_map _\<close>])
+  using assms by (rule kf_comp_dependent_raw_kf_filter_move)
+
+(* TODO move *)
+lemma swap_tensor_tc_sandwich[simp]: \<open>sandwich_tc swap_ell2 (tc_tensor a b) = tc_tensor b a\<close>
+  apply transfer'
+  by simp
+
+
+lemma cq_map_from_kraus_family_qFstqSnd_apply:
+\<open>sandwich_tc (tensor_ell2_left (ket d)*)
+(cq_map_from_kraus_family qFst qSnd \<EE> (tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>))
+= \<EE> c *\<^sub>k\<^sub>r @{d} \<rho>\<close>
+proof -
+  have bdd1: \<open>bdd_above
+     ((\<lambda>x. kf_norm (case x of (_, c) \<Rightarrow> kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q (kf_constant (tc_butterfly (ket c) (ket c))))) `
+      X)\<close> for X
+by -
+
+  have \<open>sandwich_tc (tensor_ell2_left (ket d)*)
+          (cq_map_from_kraus_family qFst qSnd \<EE> (tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>))
+    = kf_of_op (tensor_ell2_left (ket d)*) *\<^sub>k\<^sub>r (kf_comp_dependent (\<lambda>(_, c). kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q (kf_constant (tc_butterfly (ket c) (ket c))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (\<EE> c)) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q kf_complete_measurement_ket)) *\<^sub>k\<^sub>r
+      tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>)\<close>
+    by (simp add: cq_map_from_kraus_family_def kf_of_op_apply)
+  also have \<open>\<dots> = (kf_comp_dependent (\<lambda>(_, c). kf_comp (kf_of_op (tensor_ell2_left (ket d)*)) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q (kf_constant (tc_butterfly (ket c) (ket c)))))
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (\<EE> c)) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q kf_complete_measurement_ket)) *\<^sub>k\<^sub>r
+      tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>)\<close>
+    apply (subst kf_comp_apply[unfolded o_def, THEN fun_cong, symmetric])
+    apply (rule kf_apply_eqI)
+    apply (rule kf_comp_dependent_comp_assoc_weak[symmetric, THEN kf_eq_weak_trans])
+     apply (simp add: bdd1)
+    by (simp add: case_prod_unfold)
+  also have \<open>\<dots> = (kf_comp_dependent (\<lambda>(_, c). if c=d then kf_partial_trace_left else 0)
+       (kf_comp_dependent (\<lambda>c. kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (\<EE> c)) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q kf_complete_measurement_ket)) *\<^sub>k\<^sub>r
+      tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>)\<close>
+(* We might use something else than kf_partial_trace_left here if it's easier *)
+  proof -
+    have *: \<open>kf_comp (kf_of_op (tensor_ell2_left (ket d)*)) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q (kf_constant (tc_butterfly (ket c) (ket c))))
+                =\<^sub>k\<^sub>r (if c=d then kf_partial_trace_left else 0)\<close>
+      by x
+    show ?thesis
+      apply (rule kf_apply_eqI)
+      apply (rule kf_comp_dependent_cong_weak)
+      subgoal by x
+      using *
+      by -
+  qed
+  also have \<open>\<dots> = kf_comp_dependent (\<lambda>_. kf_partial_trace_left)
+     (kf_filter (\<lambda>(_,c). c = d \<and> True) (kf_comp_dependent (\<lambda>c. kf_apply_qregister qSnd (\<EE> c)) (kf_apply_qregister qFst kf_complete_measurement_ket))) *\<^sub>k\<^sub>r
+    tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>\<close>
+    unfolding case_prod_unfold
+    apply (subst kf_comp_dependent_kf_filter_move[symmetric])
+    subgoal by x
+    by simp
+  also have \<open>\<dots> = kf_comp_dependent (\<lambda>_. kf_partial_trace_left)
+     (kf_comp_dependent (\<lambda>e. kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (kf_filter ((=)d) (\<EE> e))) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q kf_complete_measurement_ket)) *\<^sub>k\<^sub>r
+    tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>\<close>
+    apply (subst kf_filter_comp_dependent)
+    subgoal by x
+    apply (subst flip_eq_const)
+    by (simp add: kf_filter_kf_apply_qregister flip_eq_const)
+  also have \<open>\<dots> = kf_partial_trace_left *\<^sub>k\<^sub>r
+     (kf_comp_dependent (\<lambda>e. kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (kf_filter ((=)d) (\<EE> e))) (kf_apply_qregister \<lbrakk>#1\<rbrakk>\<^sub>q kf_complete_measurement_ket)) *\<^sub>k\<^sub>r
+    tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>\<close>
+    by (simp add: kf_comp_apply o_def flip: kf_comp_def )
+  also have \<open>\<dots> = kf_partial_trace_left *\<^sub>k\<^sub>r
+    kf_apply_qregister \<lbrakk>#2.\<rbrakk>\<^sub>q (kf_filter ((=)d) (\<EE> c)) *\<^sub>k\<^sub>r tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>\<close>
+    by x
+  also have \<open>\<dots> = kf_partial_trace_left *\<^sub>k\<^sub>r
+    tc_tensor (tc_butterfly (ket c) (ket c)) (kf_filter ((=)d) (\<EE> c) *\<^sub>k\<^sub>r \<rho>)\<close>
+    by -
+  also have \<open>\<dots> = kf_partial_trace_left *\<^sub>k\<^sub>r tc_tensor (tc_butterfly (ket c) (ket c)) (\<EE> c *\<^sub>k\<^sub>r @{d} \<rho>)\<close>
+    by (metis (mono_tags, lifting) kf_apply_on_def kf_filter_cong_eq singletonD singletonI)
+  also have \<open>\<dots> = \<EE> c *\<^sub>k\<^sub>r @{d} \<rho>\<close>
+    apply (simp add: kf_partial_trace_left_def)
+    apply (subst kf_apply_map_inj)
+    subgoal by x
+    by (simp add: kf_comp_apply kf_of_op_apply partial_trace_tensor trace_tc_butterfly flip: partial_trace_is_kf_partial_trace)
+  finally show ?thesis
+    by -
+qed
+
+
+lemma
+  assumes \<open>qcomplements C Q\<close>
+shows \<open>kraus_family_from_cq_map C Q (cq_map_from_kraus_family C Q \<EE>) c \<equiv>\<^sub>k\<^sub>r \<EE> c\<close>
+proof (rule kf_eqI)
+  fix x :: 'a and \<rho> :: \<open>('c ell2, 'c ell2) trace_class\<close>
+  assume \<open>\<rho> \<ge> 0\<close>
+  have inj_snd: \<open>inj_on snd X\<close> for X :: \<open>((unit \<times> unit) \<times> 'a) set\<close>
+    by (auto intro!: inj_onI)
+  have snd_x: \<open>(\<lambda>w. snd w = x) = (\<lambda>(e, f). f=x \<and> True)\<close>
+    by auto
+
+  have \<open>kraus_family_from_cq_map C Q (cq_map_from_kraus_family C Q \<EE>) c *\<^sub>k\<^sub>r @{x} \<rho> = 
+kf_filter (\<lambda>w. snd w = x)
+     (kf_comp kf_partial_trace_left
+       (kf_comp
+         (km_some_kraus_family (km_apply_qregister (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) (cq_map_from_kraus_family C Q \<EE>)))
+         (kf_tensor_left (tc_butterfly (ket c) (ket c))))) *\<^sub>k\<^sub>r \<rho>\<close>
+    by (simp add: kraus_family_from_cq_map_def kf_apply_on_def kf_filter_map_inj kf_apply_map_inj inj_snd)
+  also have \<open>\<dots> = kf_partial_trace_left *\<^sub>k\<^sub>r @{x}
+    km_some_kraus_family (km_apply_qregister (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) (cq_map_from_kraus_family C Q \<EE>)) *\<^sub>k\<^sub>r
+    tc_tensor (tc_butterfly (ket c) (ket c)) \<rho>\<close>
+    apply (subst snd_x)
+    apply (subst kf_filter_comp)
+    by (simp add: kf_comp_apply kf_apply_on_def)
+  also have \<open>\<dots> = xxx\<close>
+    apply (subst kf_apply_km_some_kraus_family)
+subgoal by -
+     apply (subst cq_map_from_kraus_family_as_qFstqSnd)
+  apply (simp add: assms)
+
+
+apply (subst kf_apply_map_inj)
+apply (simp add: )
+    by x
+  show \<open>kraus_family_from_cq_map C Q (cq_map_from_kraus_family C Q \<EE>) c *\<^sub>k\<^sub>r @{x} \<rho> = \<EE> c *\<^sub>k\<^sub>r @{x} \<rho>\<close>
+
+  apply (rule eq_from_separatingI2x) back
+apply (rule )
+
+  apply (rule ext)
+
+  apply (auto intro!: ext 
+simp add: kraus_family_from_cq_map_def[abs_def] cq_map_from_kraus_family_def)
+  by x
+
+lemma
+  assumes \<open>is_cq_map C \<EE>\<close>
+  shows \<open>cq_map_from_kraus_family C Q (kraus_family_from_cq_map C Q \<EE>) = \<EE>\<close>
+  by x
 
 
 lemma is_cq_map_plus:
@@ -1066,38 +1392,34 @@ lemma is_cq_map_complete_measurement[iff]:
 
 
 lemma cq_map_local_c_bot[simp]:
+  assumes \<open>is_cq_map qFst E\<close>
   shows \<open>cq_map_local_c \<bottom> m E = E\<close>
 proof (rule ext)
   fix \<rho>
-  show \<open>cq_map_local_c \<bottom> m E \<rho> = E \<rho>\<close>
-    (* apply (rule local_defE[of E]) *)
-    apply (transfer' fixing: m)
-    by (simp add: copy_CREGISTER_from_bot[abs_def])
+  have [iff]: \<open>kraus_map E\<close>
+    using assms is_cq_map_def by blast
+
+  have \<open>cq_map_local_c \<bottom> m E \<rho> = cq_id \<lbrakk>#1\<rbrakk>\<^sub>q (E (cq_id \<lbrakk>#1\<rbrakk>\<^sub>q \<rho>))\<close>
+    by (simp add: cq_map_local_c_def km_local_register_bot trace_tc_butterfly)
+  also have \<open>\<dots> = E \<rho>\<close>
+    using assms
+    apply (simp add: is_cq_map_def o_def)
+    by metis
+  finally show \<open>cq_map_local_c \<bottom> m E \<rho> = E \<rho>\<close>
+    by -
 qed
+
 
 lemma cq_map_local_q_bot:
   fixes E :: \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class \<Rightarrow> (('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
     and \<rho> :: \<open>('q ell2,'q ell2) trace_class\<close> and \<rho>' :: \<open>(('c\<times>'q) ell2, ('c\<times>'q) ell2) trace_class\<close>
-  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> \<le> 1\<close>
-  shows \<open>cq_map_local_q \<bottom> \<rho> E \<rho>' = norm \<rho> *\<^sub>R E \<rho>'\<close>
-proof -
-  have \<open>cq_map_apply (cq_map_local_q \<bottom> \<rho> E) \<rho>' = cq_map_apply (cq_map_seq (cq_map_tensor_op_right \<rho>) (cq_map_seq (cq_map_tensor_id_right E) cq_map_partial_trace)) \<rho>'\<close>
-    by (simp add: cq_map_apply_seq cq_map_local_q_def cq_map_auxiliary_state_def)
-  also have \<open>\<dots> = cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_id_right E) (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
-    by (simp add: cq_map_apply_seq)
-  also have \<open>\<dots> = cq_map_apply E (cq_map_apply cq_map_partial_trace (cq_map_apply (cq_map_tensor_op_right \<rho>) \<rho>'))\<close>
-    by (simp add: cq_map_partial_trace_tensor_id_right)
-  also have \<open>\<dots> = cq_map_apply E (norm \<rho> *\<^sub>R \<rho>')\<close>
-    by (simp add: cq_map_apply_partial_trace_tensor_op_right)
-  also have \<open>\<dots> = norm \<rho> *\<^sub>R cq_map_apply E \<rho>'\<close>
-    using assms
-    by (auto simp: mult_le_one norm_leq1_cq norm_pos_cq cq_map_apply_scaleR)
-  finally show ?thesis
-    by -
-qed
+  assumes \<open>kraus_map E\<close>
+  shows \<open>cq_map_local_q \<bottom> \<rho> E \<rho>' = trace_tc \<rho> *\<^sub>C E \<rho>'\<close>
+  by (simp add: cq_map_local_q_def km_local_register_bot assms trace_tc_tensor trace_tc_butterfly)
 
-lemma cq_map_local_q_bot'[simp]:
-  assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> = 1\<close>
+lemma cq_map_local_q_bot':
+  assumes \<open>kraus_map E\<close>
+  assumes \<open>trace_tc \<rho> = 1\<close>
   shows \<open>cq_map_local_q \<bottom> \<rho> E = E\<close>
   by (auto intro!: ext simp: cq_map_local_q_bot assms)
 

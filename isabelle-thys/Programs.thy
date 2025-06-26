@@ -833,14 +833,24 @@ lemma denotation_localvars:
   by (simp add: localvars_def denotation_localvars1)
 
 lemma denotation_local_c_bot[simp]: \<open>denotation_local_c \<bottom> c D = D\<close>
-  apply (transfer' fixing: c)
-  by simp
+  apply (rule apply_denotation_inject[THEN iffD1], rule ext)
+  apply (subst denotation_local_c.rep_eq)
+  apply (subst cq_map_local_c_bot)
+  using apply_denotation by simp_all
 
 lemma denotation_local_q_bot[simp]:
   assumes \<open>\<rho> \<ge> 0\<close> and \<open>norm \<rho> = 1\<close>
   shows \<open>denotation_local_q \<bottom> \<rho> D = D\<close>
-  apply (transfer' fixing: \<rho>)
-  using assms by simp
+proof -
+  have [iff]: \<open>trace_tc \<rho> = 1\<close>
+    using assms
+    by (simp flip: norm_tc_pos)
+  show ?thesis
+    apply (rule apply_denotation_inject[THEN iffD1], rule ext)
+    apply (subst denotation_local_q.rep_eq)
+    apply (subst cq_map_local_q_bot')
+    by (simp_all add: assms)
+qed
 
 lemma localvars1_empty: "denotation (localvars1 empty_cregister empty_qregister P) = denotation P"
   by (simp add: denotation_localvars1 norm_tc_butterfly)
@@ -854,6 +864,7 @@ lift_definition kf_in_qref_strict :: \<open>('qu ell2,'qu ell2,'cl) kraus_family
 (* definition kf_in_qref :: \<open>('qu ell2,'qu ell2,'cl) kraus_family \<Rightarrow> 'qu QREGISTER \<Rightarrow> bool\<close> where
   \<open>kf_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF>. \<EE> \<equiv>\<^sub>k\<^sub>r \<FF> \<and> kf_in_qref_strict \<FF> Q)\<close> *)
 
+(* TODO not what we want? Want to talk about the quantum part only. *)
 definition km_in_qref where \<open>km_in_qref \<EE> Q \<longleftrightarrow> (\<exists>\<FF> :: (_,_,unit) kraus_family. kf_apply \<FF> = \<EE> \<and> kf_in_qref_strict \<FF> Q)\<close>
 
 
@@ -863,7 +874,7 @@ definition km_in_qref where \<open>km_in_qref \<EE> Q \<longleftrightarrow> (\<e
   using kraus_equivalent'_trans kraus_equivalent'_sym
   by meson *)
 
-lemma qc_map_in_qref_seq:
+(* lemma qc_map_in_qref_seq:
   assumes \<open>qc_map_in_qref E Q\<close>
   assumes \<open>qc_map_in_qref F Q\<close>
   shows \<open>qc_map_in_qref (cq_map_seq E F) Q\<close>
@@ -922,13 +933,13 @@ lemma qc_map_in_qref_quantum_op:
   assumes \<open>\<And>x. kf_in_qref (E x) Q\<close>
   shows \<open>qc_map_in_qref (cq_map_quantum_op E) Q\<close>
   using assms apply (transfer fixing: E Q)
-  by (auto intro!: kf_in_qref_map_outcome)
+  by (auto intro!: kf_in_qref_map_outcome) *)
 
 (* definition fvq_of_cq_map :: \<open>(cl, qu, cl, qu) cq_map \<Rightarrow> QVARIABLE\<close> where
   \<open>fvq_of_cq_map \<EE> = Inf {Q. qc_map_in_qref \<EE> Q}\<close> *)
 
 definition program_in_qref :: \<open>program \<Rightarrow> QVARIABLE \<Rightarrow> bool\<close> where
-  \<open>program_in_qref p = qc_map_in_qref (denotation p)\<close>
+  \<open>program_in_qref p = km_in_qref (denotation p)\<close>
 
 (* definition fvq_program :: \<open>program \<Rightarrow> QVARIABLE\<close> where
   \<open>fvq_program p = fvq_of_cq_map (denotation p)\<close> *)

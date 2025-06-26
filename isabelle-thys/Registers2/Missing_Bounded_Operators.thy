@@ -1078,5 +1078,9 @@ proof (rule pospaceI)
 qed
 
 
+lemma trace_tc_tensor: \<open>trace_tc (tc_tensor a b) = trace_tc a * trace_tc b\<close>
+  apply transfer'
+  by (simp add: trace_tensor)
+
 
 end

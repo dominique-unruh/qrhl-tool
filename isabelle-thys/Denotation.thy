@@ -10,6 +10,13 @@ typedef denotation = \<open>{\<EE> :: program_state \<Rightarrow> program_state.
 
 setup_lifting type_definition_denotation
 
+lemma is_cq_map_apply_denotation[iff]: \<open>is_cq_map qFst (apply_denotation E)\<close>
+  using apply_denotation by blast
+
+lemma kraus_map_apply_denotation[iff]: \<open>kraus_map (apply_denotation E)\<close>
+  using is_cq_map_def by blast
+
+
 lift_definition denotation_norm :: \<open>denotation \<Rightarrow> real\<close> is km_norm.
 (* lift_definition denotation_bounded :: \<open>denotation \<Rightarrow> bool\<close> is \<open>\<lambda>D. km_norm D \<le> 1\<close>. *)
 
