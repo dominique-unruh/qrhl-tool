@@ -12,9 +12,9 @@ theory BOLegacy
     (* This should not be imported here, but in QRHL_Code. But if we import it there, 
        we run into this bug: 
        https://lists.cam.ac.uk/pipermail/cl-isabelle-users/2019-June/msg00063.html *)
-    Tensor_Product2.Tensor_Product_Code
+    Hilbert_Space_Tensor_Product.Tensor_Product_Code
 
-    Complex_Bounded_Operators.Complex_L2 "HOL-Library.Adhoc_Overloading" Tensor_Product2.Tensor_Product Tensor_Product2.ToDo_Tensor
+    Complex_Bounded_Operators.Complex_L2 Hilbert_Space_Tensor_Product.Hilbert_Space_Tensor_Product
 
     Registers.Quantum (* Imported because otherwise instantiations in QRHL_Code for bit will happen that make it impossible to merge Registers.Quantum with that theory.
 And we include it already here so that out simpset removals here won't be overwritten in a merge *)
@@ -41,6 +41,7 @@ hide_const (open) Quantum.pauliZ
 syntax (output) "_forced_parentheses" :: \<open>'a \<Rightarrow> 'a\<close> ("'(_')")
 
 unbundle lattice_syntax
+unbundle cblinfun_syntax
 
 (* Needed to make the terms below print with parentheses. If not, the result of printing cannot be parsed back. *)
 translations "A *\<^sub>S _forced_parentheses (B \<sqinter> C)" \<leftharpoondown> "A *\<^sub>S (B \<sqinter> C)"
@@ -71,9 +72,6 @@ abbreviation "C1_to_complex == (one_dim_iso :: _ \<Rightarrow> complex)"
 abbreviation (input) "applyOp == cblinfun_apply"
 abbreviation (input) "applyOpSpace == cblinfun_image"
 abbreviation (input) "timesOp == cblinfun_compose"
-
-unbundle no_notation_blinfun_apply
-unbundle cblinfun_notation
 
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
