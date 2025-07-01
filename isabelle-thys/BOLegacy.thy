@@ -115,8 +115,8 @@ lemma proj_ket_is_0[simp]: \<open>proj (ket x) *\<^sub>S ccspan {ket y} = 0\<clo
 abbreviation \<open>comm_op \<equiv> swap_ell2\<close>
 definition \<open>assoc_op = assoc_ell2*\<close>
 
-
-
+lemma unitary_assoc_op[iff]: \<open>unitary assoc_op\<close>
+  by (simp add: assoc_op_def)
 
 definition remove_qvar_unit_op :: "(('a*unit) ell2,'a ell2) cblinfun" where
   \<open>remove_qvar_unit_op = (tensor_ell2_right 1)*\<close>

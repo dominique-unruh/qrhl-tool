@@ -23,7 +23,8 @@ text \<open>Three auxiliary lemmas\<close>
 lemma l1: "isometry (A*) \<Longrightarrow> A o\<^sub>C\<^sub>L (A* o\<^sub>C\<^sub>L B) = B" for B :: "(_,_) l2bounded"
   by (metis isometryD double_adj cblinfun_compose_assoc cblinfun_compose_id_left)
 lemma l2: "(A \<otimes>\<^sub>o B) o\<^sub>C\<^sub>L ((A' \<otimes>\<^sub>o B') o\<^sub>C\<^sub>L C) = ((A o\<^sub>C\<^sub>L A') \<otimes>\<^sub>o (B o\<^sub>C\<^sub>L B')) o\<^sub>C\<^sub>L C"
-  by (subst cblinfun_compose_assoc[symmetric], auto)
+  apply (subst cblinfun_compose_assoc[symmetric])
+  by (auto simp: comp_tensor_op)
 lemma l3: "isometry A \<Longrightarrow> A* o\<^sub>C\<^sub>L (A o\<^sub>C\<^sub>L B) = B"
   by (metis isometryD cblinfun_compose_assoc cblinfun_compose_id_left)
 
