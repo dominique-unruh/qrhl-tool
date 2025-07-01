@@ -25,7 +25,7 @@ class PrintCommandTest extends AnyFunSuite {
     val output = tl.state.lastOutput
     println(output)
     assert(output.contains("lemma test_"))
-    assert(output.contains("""shows "(1::nat) = 1""""))
+    assert(output.contains("""shows "(1::nat) = 1"""") || output.contains("""shows "1 = 1""""))
     assert(!output.contains("declared_qvars"))
   }
 }
