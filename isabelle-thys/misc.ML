@@ -27,9 +27,11 @@ fun conv_from_tac check tac ctxt ct =
   (Names are renamed to be distinct.)
  *)
 fun pat_lambda_conv ctxt varlist ct = let
-  val (tn,tT) = Variable.variant_frees ctxt [] [("term",Thm.typ_of_cterm ct)] |> hd
+  val tT = Thm.typ_of_cterm ct
+  val name_ctxt = ctxt |> Variable.declare_names (Thm.term_of ct) |> Variable.names_of
+  val (tn,name_ctxt) = Name.variant "term" name_ctxt
   val t' = Free(tn,tT)
-  val varlist' = Name.variant_list [tn] (map fst varlist)
+  val varlist' = Name.variants name_ctxt (map fst varlist)
   val varlist'' = map2 (fn n => fn (_,T) => (n,T)) varlist' varlist
   val pattern = HOLogic.mk_tuple (map Free varlist'')
   val rhs = HOLogic.tupled_lambda pattern (t' $ pattern)
@@ -74,7 +76,7 @@ structure MethodErrorStack = Proof_Data (
 datatype lazy_error = Lazy_Error of unit -> string
 exception LAZY_ERROR of lazy_error
 fun lazy_error msg = LAZY_ERROR (Lazy_Error msg)
-val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => Pretty.to_polyml (Pretty.str (msg ())))
+val _ = ML_system_pp (fn _ => fn _ => fn Lazy_Error msg => ML_Pretty.str (msg ()))
 fun method_error_push msg = MethodErrorStack.map (fn st => msg::st)
 (* val method_error = Attrib.setup_config_bool \<^binding>\<open>method_error\<close> (K false) *)
 fun msg_to_string ctxt msg () = String.concatWith "\n" (msg() :: map (fn m => "- "^m()) (MethodErrorStack.get ctxt))

@@ -479,7 +479,8 @@ proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
   have "rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2) \<longleftrightarrow>
         rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)"
     apply (rule eq)
-    using p1 p2 unfolding prod1 prod2 apply auto by presburger+
+    using p1 p2 unfolding prod1 prod2
+     apply auto by algebra
   then
   show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and> rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
         rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). range f1 \<subseteq> range (embedding::'a\<Rightarrow>_) \<and> range f2 \<subseteq> range (embedding::'b\<Rightarrow>_) \<and> rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
@@ -507,7 +508,7 @@ proof (rename_tac rel_v rel_exp1 rel_exp2 prod1 prod2)
   have "rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2) \<longleftrightarrow>
         rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)"
     apply (rule eq)
-    using p1 p2 unfolding prod1 prod2 apply auto by presburger+
+    using p1 p2 unfolding prod1 prod2 apply auto by algebra
   then
   show "rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp1 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2 =
         rel_prod rel_v (\<lambda>(vs1, f1) (vs2, f2). rel_exp2 (vs1, inv embedding \<circ> f1) (vs2, inv embedding \<circ> f2)) prod1 prod2"
@@ -894,7 +895,7 @@ lemma rel_set_subst_expression_footprint_x:
   shows "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
 proof (rule rel_setI)
 
-  have goal: "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" 
+  have "goal": "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" 
     and [transfer_rule]: "list_all2 subR s1 s2"
     and [transfer_rule]: "rel_set R vs1 vs2"
     and [transfer_rule]: "bi_unique R"
@@ -955,10 +956,10 @@ proof (rule rel_setI)
     qed
   qed
   show "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" for x
-    apply (rule goal) using assms that by simp_all
+    apply (rule "goal") using assms that by simp_all
   show "\<exists>x\<in>subst_expression_footprint s1 vs1. R x y" if "y \<in> subst_expression_footprint s2 vs2" for y
     apply (subst conversep_iff[of R, symmetric])
-    apply (rule goal[where R="conversep R" and subR="conversep subR"]) 
+    apply (rule "goal"[where R="conversep R" and subR="conversep subR"]) 
           apply (simp_all add: list.rel_flip)
     using that assms by (simp_all add: subR_def)
 qed
@@ -972,7 +973,7 @@ lemma rel_set_subst_expression_footprint:
   shows "rel_set R (subst_expression_footprint s1 vs1) (subst_expression_footprint s2 vs2)"
 proof (rule rel_setI)
 
-  have goal: "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" 
+  have "goal": "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" 
     and [transfer_rule]: "list_all2 subR s1 s2"
     and [transfer_rule]: "rel_set R vs1 vs2"
     and [transfer_rule]: "bi_unique R"
@@ -1034,10 +1035,10 @@ proof (rule rel_setI)
     qed
   qed
   show "\<exists>y\<in>subst_expression_footprint s2 vs2. R x y" if "x \<in> subst_expression_footprint s1 vs1" for x
-    apply (rule goal) using assms that by simp_all
+    apply (rule "goal") using assms that by simp_all
   show "\<exists>x\<in>subst_expression_footprint s1 vs1. R x y" if "y \<in> subst_expression_footprint s2 vs2" for y
     apply (subst conversep_iff[of R, symmetric])
-    apply (rule goal[where R="conversep R" and subR="conversep subR"]) 
+    apply (rule "goal"[where R="conversep R" and subR="conversep subR"]) 
           apply (simp_all add: list.rel_flip)
     using that assms by (simp_all add: subR_def)
 qed
@@ -1500,22 +1501,16 @@ ML_file "expressions.ML"
 
 simproc_setup clean_expression ("expression Q e") = Expressions.clean_expression_simproc
 
-consts "expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
+syntax "_expression_syntax" :: "'a \<Rightarrow> 'a expression" ("Expr[_]")
 
-parse_translation \<open>[(\<^const_syntax>\<open>expression_syntax\<close>, fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
+parse_translation \<open>[("_expression_syntax", fn ctx => fn [e] => Expressions.term_to_expression_untyped ctx e)]\<close>
 
 print_translation \<open>[(\<^const_syntax>\<open>expression\<close>, fn ctxt => fn [vars,t] => 
-  (Const(\<^const_syntax>\<open>expression_syntax\<close>, dummyT) $
+  \<^try>\<open>
+    (Const("_expression_syntax", dummyT) $
       Expressions.expression_to_term_syntax (\<^Const>\<open>expression dummyT dummyT\<close> $ vars $ t))
-  handle _ => raise Match)
-]\<close>
-
-hide_const expression_syntax
-
-(* TODO remove *)
-schematic_goal "?x = substitute_vars \<lbrakk>var_z,var_x\<rbrakk> Expr[x]" and "?x = xxx"
-apply (tactic \<open>Expressions.substitute_vars_tac \<^context> 1\<close>)
-print_theorems
-  oops
+    catch _ => raise Match
+  \<close>
+)]\<close>
 
 end

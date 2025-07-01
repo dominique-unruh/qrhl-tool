@@ -76,7 +76,7 @@ abbreviation (input) "timesOp == cblinfun_compose"
 consts cdot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl "\<cdot>" 70)
 
 adhoc_overloading
-  cdot "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
+  cdot \<rightleftharpoons> "\<lambda>x. timesOp x" "\<lambda>x. cblinfun_apply x" "\<lambda>x. applyOpSpace x"
 
 lemma equal_span':
   fixes f g :: "'a::cbanach \<Rightarrow> 'b::cbanach"
@@ -111,5 +111,16 @@ lemma Proj_on_image [simp]: \<open>Proj S *\<^sub>S S = S\<close>
 
 lemma proj_ket_is_0[simp]: \<open>proj (ket x) *\<^sub>S ccspan {ket y} = 0\<close> if \<open>x \<noteq> y\<close>
   by (cheat proj_ket_is_0)
+
+abbreviation \<open>comm_op \<equiv> swap_ell2\<close>
+definition \<open>assoc_op = assoc_ell2*\<close>
+
+
+
+
+definition remove_qvar_unit_op :: "(('a*unit) ell2,'a ell2) cblinfun" where
+  \<open>remove_qvar_unit_op = (tensor_ell2_right 1)*\<close>
+
+abbreviation \<open>addState \<equiv> tensor_ell2_right\<close>
 
 end

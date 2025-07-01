@@ -5,7 +5,7 @@ theory Universe
 begin
 
 hide_const (open) HOLZF.Inf
-no_notation m_inv ("inv\<index> _" [81] 80)
+unbundle no m_inv_syntax
 
 (* For proving instances of types declared with 
   "datatype" (not "datatype_new"), see, e.g., "char"

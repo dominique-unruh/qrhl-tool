@@ -6,7 +6,7 @@ theory QRHL_Code
     (* Hilbert_Space_Tensor_Product.Tensor_Product_Code *)
 begin
 
-unbundle jnf_notation
+unbundle jnf_syntax
 
 (* Hiding constants/syntax that were overwritten by Jordan_Normal_Form *)
 hide_const (open) Lattice.sup
@@ -101,7 +101,7 @@ lemma [code_post]:
 
 lemma quantum_equality_full_def_let:
   "quantum_equality_full U Q V R = (let U=U; V=V in
-                 (eigenspace 1 (comm_op \<cdot> (V*\<cdot>U)\<otimes>(U*\<cdot>V))) \<guillemotright> variable_concat Q R)"
+                 (eigenspace 1 (comm_op \<cdot> ((V*\<cdot>U)\<otimes>\<^sub>o(U*\<cdot>V)))) \<guillemotright> variable_concat Q R)"
   unfolding quantum_equality_full_def by auto
 
 lemma space_div_unlifted_code [code]: "space_div_unlifted S \<psi> = (let A = addState \<psi> in kernel (Proj S \<cdot> A - A))"
@@ -125,6 +125,6 @@ lemmas prepare_for_code = quantum_equality_full_def_let add_join_variables_hint 
   space_div_add_extend_lift_as_var_concat_hint INF_lift Cla_inf_lift Cla_plus_lift Cla_sup_lift
   top_leq_lift top_geq_lift bot_leq_lift bot_geq_lift top_eq_lift bot_eq_lift top_eq_lift2 bot_eq_lift2
 
-unbundle no_jnf_notation
+unbundle no jnf_syntax
 
 end

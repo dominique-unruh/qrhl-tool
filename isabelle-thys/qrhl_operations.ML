@@ -12,7 +12,7 @@ fun term_to_id ctxt t = Synchronized.change_result table (fn (tab1,tab2) =>
   | NONE => let
       val id = serial ()
       val tab2' = Termtab.update_new (t,id) tab2
-      val tab1' = Inttab.update_new (id, (t, Lazy.lazy (fn _ => YXML.content_of (Syntax.string_of_term ctxt t)))) tab1
+      val tab1' = Inttab.update_new (id, (t, Lazy.lazy (fn _ => Syntax.string_of_term ctxt t |> YXML.parse_body |> XML.content_of))) tab1
     in (id,(tab1',tab2')) end)
 fun lookup_id id = case Inttab.lookup (Synchronized.value table |> fst) id of NONE => error "QRHL_Operations.Terms.lookup_id"
   | SOME x => x
@@ -204,7 +204,7 @@ in fact end
 
 fun debug ctxt = let
   val obj = Proof_Context.get_fact ctxt (Facts.named "Programs.program_fv")
-  val str = \<^make_string> obj |> YXML.content_of
+  val str = \<^make_string> obj |> YXML.parse_body |> XML.content_of
   in str end
 
 
@@ -396,7 +396,7 @@ fun whatVarterm (VTCons _) = "cons"
 
 fun show_oracles_lines thm : string list = let
   val ctxt = thm |> Thm.theory_of_thm |> Proof_Context.init_global
-  val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map YXML.content_of
+  val text = Extended_Sorry.show_oracles_lines ctxt [thm] |> map (XML.content_of o YXML.parse_body)
   in text end
 
 local
@@ -524,7 +524,7 @@ fun print_as_statement ctxt name fixes extra_lines assms concl : string =
     val conclusion_s = "  shows " ^ print_term ctxt concl
     val result_string = cat_lines ([lemma_s] @ fixes_s @ extra_lines @ assms_s @ [conclusion_s])
   in
-    YXML.content_of result_string
+    result_string |> YXML.parse_body |> XML.content_of
   end
 
 end
