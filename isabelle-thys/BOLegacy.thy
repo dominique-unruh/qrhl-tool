@@ -263,5 +263,9 @@ qed
 declare finite'_code[code del]
 
 declare tensor_op_adjoint[simp]
+declare comp_tensor_op[simp]
+
+lemmas span_tensor = tensor_ccsubspace_ccspan
+lemmas ket_product = tensor_ell2_ket[symmetric]
 
 end
