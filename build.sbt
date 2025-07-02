@@ -11,7 +11,7 @@ lazy val root = (project in file("."))
   .dependsOn(hashedcomputation)
 
 lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
-  scalaVersion := "2.13.3",
+  scalaVersion := "2.13.16",
   resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
   libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
   // Needed so that logging works in "sbt test"
@@ -33,7 +33,7 @@ name := "qrhl"
 
 version := "snapshot"
 
-scalaVersion := "2.13.3"
+scalaVersion := "2.13.16"
 
 scalacOptions += "-deprecation"
 
