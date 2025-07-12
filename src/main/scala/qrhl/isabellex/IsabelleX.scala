@@ -123,7 +123,7 @@ object Configuration {
   }*/
 
   if (config.getProperty("isabelle-user") != null)
-    throw UserException("Configuration option isabelle-user not supported. Set the environment variable ISABELLE_USER_HOME instead.")
+    throw UserException("Configuration option isabelle-user not supported anymore. You can only change the Isabelle user home in the system wide Isabelle settings.")
 
   def afpRoot : Option[Path] = config.getProperty("afp-root") match {
     case null => None
