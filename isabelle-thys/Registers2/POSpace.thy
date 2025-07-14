@@ -1,5 +1,7 @@
 theory POSpace
   imports Hilbert_Space_Tensor_Product.Misc_Tensor_Product
+    \<comment> \<open>These dependencies are of course not suitable for inclusion in HOL-Main.
+        But they affect only a few proofs and whichever proofs are would be included in Main, I happily rewrite them.\<close>
 begin
 
 class pospace = order + topological_space +
@@ -8,6 +10,8 @@ class pospace = order + topological_space +
       Instead, we unfold the definition of \<^const>\<open>closed\<close> on the product topology.\<close>
 
 lemma pospaceI:
+  \<comment> \<open>\<open>apply intro_classes\<close> gives an ugly subgoal when proving an instantiation for \<^class>\<open>pospace\<close>.
+      \<open>apply (rule pospaceI)\<close> gives an equivalent but more readable one.\<close>
   assumes \<open>closed {(x::'a::{order,topological_space},y). x \<ge> y}\<close>
   shows \<open>OFCLASS('a, pospace_class)\<close>
   apply intro_classes
@@ -118,7 +122,8 @@ qed
 
 lemma pospace_fun:
   \<open>OFCLASS('a \<Rightarrow> 'b::pospace, pospace_class)\<close>
-    \<comment> \<open>Ideally, we would just instantiate \<open>instance fun :: (type, pospace) pospace\<close> but that is rejected by Isabelle\<close>
+    \<comment> \<open>Ideally, we would just instantiate \<open>instance fun :: (type, pospace) pospace\<close> but that is rejected by Isabelle.
+        Hopefully when adding this earlier on in Isabelle, the conflict can be resolved.\<close>
 proof (rule pospaceI)
   have \<open>closed {(x :: 'a \<Rightarrow> 'b,y). y a \<le> x a}\<close> for a
     apply (simp add: case_prod_unfold)
