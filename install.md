@@ -16,9 +16,9 @@ The binary development snapshot can be downloaded from [here](https://nightly.li
 To check whether this is the case, go into a terminal,
 and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
 
-* [Isabelle2024](https://isabelle.in.tum.de/website-Isabelle2025/) must be installed.
+* [Isabelle2025](https://isabelle.in.tum.de/website-Isabelle2025/) must be installed.
   Simply download it and unpack it somewhere.
-* The AFP (version 2025) must be installed. Download it [here](https://www.isa-afp.org/release/afp-2025-06-02.tar.gz)
+* The AFP (version 2025) must be installed. Download it e.g. [this version](https://www.isa-afp.org/release/afp-2025-03-19.tar.gz).
   and unpack it somewhere.
 
 ## Installation
