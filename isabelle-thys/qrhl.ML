@@ -567,13 +567,29 @@ fun variable_rewriting_simproc _ ctx ct =
   end 
   handle TERM _ => NONE *)
 
+fun declare_variable_type_witness_message lthy sort = let
+  val sort_string = Syntax.string_of_sort lthy sort
+  val sort_string_no_universe = Syntax.string_of_sort lthy (filter (fn cl => cl <> @{class universe}) sort)
+  in
+    "Assuming the existence of a type of sort " ^ sort_string ^ ".\n" ^
+    "To show that this is not an inconsistency, define an arbitrary type of that sort first.\n" ^
+    "The following commands can achieve this (for example):\n\n" ^
+    "typedef somename = \<open>UNIV :: nat set\<close> (* Replace UNIV :: nat set by something suitable *)\n" ^
+    "  by auto\n" ^
+    "derive universe somename\n" ^
+    "instantiation somename :: \<open>" ^ sort_string_no_universe ^ "\<close> begin\n" ^
+    "instance\n" ^
+    "  apply intro_classes\n" ^
+    "  sorry (* Your proof here! *)\n" ^
+    "end"
+  end
+
 fun declare_variable_type args sort a mx lthy = 
   let val sort' = Sign.minimize_sort (Proof_Context.theory_of lthy) (@{class universe}::sort)
       val is_base_sort = Sign.subsort (Proof_Context.theory_of lthy) (Object_Logic.get_base_sort lthy |> the_default [], sort)
       (* val _ = Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'] |> @{print} *)
       val _ = if null (Sign.witness_sorts (Proof_Context.theory_of lthy) [] [sort'] |> fst) then
-                warning ("Assuming the existence of a type of sort "^Syntax.string_of_sort lthy sort'^".\n"^
-                         "To show that this is not an inconsistency, define an arbitrary type of that sort first!")
+                error (declare_variable_type_witness_message lthy sort')
               else ()
       val (T,lthy) = Typedecl.typedecl {final = true} (a, args, mx) lthy
       val (typname,_) = dest_Type T

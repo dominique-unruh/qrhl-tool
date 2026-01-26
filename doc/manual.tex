@@ -3989,18 +3989,19 @@ for declaring that a given type has further type classes (besides \texttt{univer
   \texttt{s$_i$} and \texttt{s} with the type class \texttt{universe} added.})
 
 The command will check whether the existence of a type of the given
-sorts can be consistently assumed.  If this is not the case, a warning
+sorts can be consistently assumed.  If this is not the case, an error
 is issued.\footnote{If the warning is not justified, it is possible to
   remove it by manually defining a new type (e.g., via
   \texttt{typedef} or \texttt{datatype}) and showing that that type
   has the required sort (it is a \emph{sort witness}). After that,
-  \texttt{declare\_variable\_type} will not issue a warning any more
-  since the existence of a type of the right sort is ensured.}  For
-example,
+  \texttt{declare\_variable\_type} will not issue an error any more
+  since the existence of a type of the right sort is ensured.
+  Boilerplate code for these manual steps are provided in the error message.}
+For example,
 \begin{lstlisting}
   declare_variable_type wrong :: "{finite,no_top}"
 \end{lstlisting}
-produces a warning since it would declare a type that is both finite
+produces an error since it would declare a type that is both finite
 and has no upper bound, and thus lead to a contradiction.
 
 
