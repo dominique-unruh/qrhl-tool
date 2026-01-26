@@ -1,8 +1,9 @@
 import java.io.PrintWriter
-import NativePackagerHelper._
+import NativePackagerHelper.*
 
 import scala.sys.process.Process
 import java.nio.file.Files
+import scala.util.Using
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
@@ -31,7 +32,7 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
 
 name := "qrhl"
 
-version := "snapshot"
+version := Using.resource(scala.io.Source.fromFile("version"))(_.mkString.trim)
 
 scalaVersion := "2.13.16"
 
