@@ -2,14 +2,14 @@
 # and edit the paths below.
 
 
-# isabelle-home indicates the directory where the Isabelle2025 distribution is located.
+# isabelle-home indicates the directory where the Isabelle2025-2 distribution is located.
 # This option is required.
-# (On OS/X, the Isabelle home is of the form .../Isabelle2025.app.)
+# (On OS/X, the Isabelle home is of the form .../Isabelle2025-2.app.)
 
-# isabelle-home = /opt/Isabelle2025
+# isabelle-home = /opt/Isabelle2025-2
 
 
 # AFP (Archive of Formal Proofs) theory directory.
 # This option is optional. If it is not provided, it is required that Isabelle is already configured to include the AFP.
 
-# afp-root = /opt/afp-2025
+# afp-root = /opt/afp-2025-2

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Fast tests" type="ScalaTestRunConfiguration" factoryName="ScalaTest" singleton="true" show_console_on_std_err="false" show_console_on_std_out="false">
-    <module name="qrhl" />
+    <module name="qrhl.test" />
     <option name="VMParameters" value="-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Dscala.control.noTraceSuppression=true" />
     <option name="allowRunningInParallel" value="false" />
     <option name="alternativeJrePath" />
@@ -25,31 +25,31 @@
     <option name="classBuf">
       <list>
         <option value="Test0" />
-        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.ExampleFilesTest" />
         <option value="qrhl.IsabelleUnitTest" />
+        <option value="qrhl.QRHLSubgoalTest" />
         <option value="qrhl.logic.BlockTest" />
-        <option value="qrhl.logic.VariableTest" />
         <option value="qrhl.logic.StatementTest" />
-        <option value="qrhl.toplevel.ParserTest" />
-        <option value="qrhl.toplevel.ToplevelTest" />
-        <option value="qrhl.toplevel.PrintCommandTest" />
+        <option value="qrhl.logic.VariableTest" />
         <option value="qrhl.toplevel.DeclareProgramCommandTest" />
         <option value="qrhl.toplevel.IsabelleToplevelCommandTest" />
-        <option value="qrhl.tactic.SpTacTest" />
-        <option value="qrhl.tactic.WpTacTest" />
-        <option value="qrhl.tactic.O2HTacTest" />
-        <option value="qrhl.tactic.RndTacTest" />
-        <option value="qrhl.tactic.SeqTacTest" />
-        <option value="qrhl.tactic.CaseTacTest" />
-        <option value="qrhl.tactic.RuleTacTest" />
-        <option value="qrhl.tactic.SwapTacTest" />
-        <option value="qrhl.tactic.EqualTacTest" />
+        <option value="qrhl.toplevel.ParserTest" />
+        <option value="qrhl.toplevel.PrintCommandTest" />
+        <option value="qrhl.toplevel.ToplevelTest" />
         <option value="qrhl.tactic.ByQRHLTacTest" />
+        <option value="qrhl.tactic.CaseTacTest" />
+        <option value="qrhl.tactic.EqualTacTest" />
         <option value="qrhl.tactic.ExpressionTest" />
+        <option value="qrhl.tactic.O2HTacTest" />
         <option value="qrhl.tactic.RewriteTacTest" />
-        <option value="qrhl.isabellex.IsabelleXTest" />
+        <option value="qrhl.tactic.RndTacTest" />
+        <option value="qrhl.tactic.RuleTacTest" />
+        <option value="qrhl.tactic.SeqTacTest" />
+        <option value="qrhl.tactic.SpTacTest" />
+        <option value="qrhl.tactic.SwapTacTest" />
+        <option value="qrhl.tactic.WpTacTest" />
         <option value="qrhl.isabellex.ConfigurationTest" />
+        <option value="qrhl.isabellex.IsabelleXTest" />
         <option value="qrhl.isabellex.MLValueConvertersTest" />
       </list>
     </option>
