@@ -18,7 +18,7 @@ jobs:
             git submodule foreach --recursive git clean -ffdx   # GitHub actions doesn't clean the submodules, see https://github.com/actions/checkout/issues/358
             ISABELLE_VERSION="`cat src/main/resources/qrhl/isabellex/isabelleVersion`"
             echo "isabelle-home = /opt/Isabelle$ISABELLE_VERSION" >qrhl-tool.conf
-            echo "afp-root = /opt/afp-$ISABELLE_VERSION" >>qrhl-tool.conf
+            #echo "afp-root = /opt/afp-$ISABELLE_VERSION" >>qrhl-tool.conf  # expecting AFP to be already configured for Isabelle
             sbt 'testOnly -- -h target/test-reports-html'
             
         - name: Running tests (Windows)
