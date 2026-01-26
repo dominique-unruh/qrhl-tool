@@ -236,12 +236,8 @@ proof -
   define RR where \<open>RR = {(x,y). R x y}\<close>
   define Rdom where \<open>Rdom = {x. R x x}\<close>
   have \<open>equiv Rdom RR\<close>
-    using \<open>part_equivp R\<close>
-    apply (auto intro!: equivI simp add: RR_def Rdom_def)
-      apply (smt (verit) case_prodI case_prodI2 internal_case_prod_conv internal_case_prod_def mem_Collect_eq part_equivp_def refl_on_def')
-    apply (metis (mono_tags, lifting) case_prodD case_prodI mem_Collect_eq part_equivp_symp symI)
-    using part_equivpE transp_trans by auto
-
+    using \<open>part_equivp R\<close> part_equivp_imp_equiv[of R] RR_def Rdom_def
+    by simp
   define B where \<open>B = (norm A)\<^sup>2\<close>
   have [simp]: \<open>B \<ge> 0\<close>
     by (simp add: B_def)
@@ -331,9 +327,7 @@ proof -
         by auto 
       have 2: \<open>inj_on snd (SIGMA C:S'. C \<inter> S)\<close>
         apply (rule inj_onI)
-        apply auto
-         apply (metis Int_iff S'_def Set.member_filter \<open>equiv Rdom RR\<close> empty_iff quotient_disj)
-        by (metis Int_iff S'_def Set.member_filter \<open>equiv Rdom RR\<close> empty_iff quotient_disj)
+        using \<open>disjoint S'\<close> disjointD by fastforce
       show ?thesis
         by (auto simp: sum.Sigma sum.reindex 1 2 case_prod_beta)
     qed

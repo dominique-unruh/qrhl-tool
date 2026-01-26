@@ -1182,6 +1182,17 @@ proof -
     by (smt (verit, ccfv_threshold) with_type_mp)
 qed
 
+lemma qregister_decomposition':
+  fixes F :: \<open>('a,'b) qregister\<close>
+  assumes \<open>qregister F\<close>
+  shows \<open>let 'c::type = qregister_decomposition_basis F in
+         (\<exists>U :: ('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2. unitary U \<and> 
+            (\<forall>a. apply_qregister F a = sandwich U (a \<otimes>\<^sub>o id_cblinfun)))\<close>
+  using assms qregister.rep_eq register_decomposition by blast
+
+
+
+
 lemma iso_qregister_pair_id_empty[iff]: \<open>iso_qregister (qregister_pair qregister_id empty_qregister)\<close>
   by (metis iso_qregister_def' iso_qregister_id qcompatible_empty qregister_chain_is_qregister
       qregister_chain_pair_Fst qregister_left_right_inverse)

@@ -729,7 +729,7 @@ proof -
     by (auto intro!: image_eqI simp: case_prod_unfold kf_apply_qregister.rep_eq)
   show ?thesis
     apply (transfer' fixing: Q \<EE> \<FF>)
-    by (simp add: kf_domain_apply_qregister image_image case_prod_beta qregister_compose filter_image apply_qregister_is_0_simp
+    by (simp add: kf_domain_apply_qregister image_image case_prod_beta Compr_image_eq apply_qregister_is_0_simp
         flip: qregister_compose)
 qed
 

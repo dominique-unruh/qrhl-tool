@@ -254,8 +254,8 @@ in
 fun QCOMPLEMENT_INDEX_REGISTER_conv ctxt = let
   val solver = mk_solver "ACTUAL_QREGISTER" (fn _ => ACTUAL_QREGISTER_tac ctxt)
   val ctxt = Simplifier.put_simpset simpset ctxt 
-      addSSolver solver
-      addSolver solver
+      |> Simplifier.add_safe_solver solver
+      |> Simplifier.add_unsafe_solver solver
   in
 (* TODO: Add check that this is an INDEX-QREGISTER *)
     Simplifier.rewrite ctxt

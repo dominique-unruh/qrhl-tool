@@ -549,18 +549,56 @@ proof -
     by auto
 qed
 
+declare compose_tcr.zero_left[simp]
+declare compose_tcr.zero_right[simp]
+declare compose_tcl.zero_left[simp]
+declare compose_tcl.zero_right[simp]
+
+lemma qregister_partial_trace_invalid[simp]: \<open>qregister_partial_trace non_qregister = 0\<close>
+  apply (rule ext)
+  apply (rule qregister_partial_trace_unique)
+  by simp
+
 lemma qregister_partial_trace_via_complement:
   assumes \<open>qcomplements Q R\<close>
   shows \<open>qregister_partial_trace Q \<rho> = partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q,R\<rbrakk>\<^sub>q) \<rho>)\<close>
-  by x
+proof (rule qregister_partial_trace_unique)
+  have [iff]: \<open>iso_qregister \<lbrakk>Q, R\<rbrakk>\<close>
+    using assms qcomplements_def' by blast
+  have Qchain: \<open>Q = qregister_chain \<lbrakk>Q,R\<rbrakk> qFst\<close>
+    by (metis assms iso_qregister_inv_chain not_qcompatible_chain pair_fst_snd qcompatible_Fst_Snd
+        qcomplements_def' qregister_chain_pair qregister_chain_pair_Fst)
+  define \<rho>' where \<open>\<rho>' = apply_qregister_tc (qregister_inv \<lbrakk>Q, R\<rbrakk>\<^sub>q) \<rho>\<close>
+  have \<rho>_\<rho>': \<open>\<rho> = apply_qregister_tc \<lbrakk>Q,R\<rbrakk> \<rho>'\<close>
+    by (metis \<rho>'_def apply_qregister_tc_inv_inverse assms iso_qregister_inv_iso qcomplements_def')
+  fix a
+  have \<open>trace_tc (compose_tcr a (partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q, R\<rbrakk>\<^sub>q) \<rho>)))
+    = trace (a o\<^sub>C\<^sub>L from_trace_class (partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q, R\<rbrakk>\<^sub>q) (apply_qregister_tc \<lbrakk>Q, R\<rbrakk>\<^sub>q \<rho>'))))\<close>
+    by (simp add: trace_tc.rep_eq compose_tcr.rep_eq \<rho>_\<rho>')
+  also have \<open>\<dots> = trace (a o\<^sub>C\<^sub>L from_trace_class (partial_trace (apply_qregister_tc qregister_id \<rho>')))\<close>
+    apply (subst qregister_chain_apply_tc[symmetric, unfolded o_def, THEN fun_cong])
+    using assms iso_qregister_inv_iso qcomplements_def' apply blast
+    using assms qcomplements_def' apply blast
+    by (metis assms iso_qregister_inv_chain qcomplements_def')
+  also have \<open>\<dots> = trace (a o\<^sub>C\<^sub>L from_trace_class (partial_trace \<rho>'))\<close>
+    by simp
+  also have \<open>\<dots> = trace (apply_qregister Q a o\<^sub>C\<^sub>L apply_qregister \<lbrakk>Q, R\<rbrakk>\<^sub>q (from_trace_class \<rho>'))\<close>
+    apply (subst Qchain)
+    apply (simp add: apply_iso_qregister_trace flip: qregister_compose)
+    by (metis Laws_Quantum.Fst_def circularity_of_trace qFst.rep_eq trace_class_from_trace_class
+        trace_partial_trace_compose_eq_trace_compose_tensor_id)
+  also have \<open>\<dots> = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+    by (simp add:  \<rho>_\<rho>' trace_tc.rep_eq compose_tcr.rep_eq apply_qregister_tc.rep_eq iso_qregister_co_dim)
+  ultimately show \<open>trace_tc (compose_tcr a (partial_trace (apply_qregister_tc (qregister_inv \<lbrakk>Q, R\<rbrakk>\<^sub>q) \<rho>)))
+       = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
+    by simp
+qed
 
 lemma separating_set_bounded_clinear_iso_qregister_nested:
   fixes Q :: \<open>('a,'b) qregister\<close> and S :: \<open>('a ell2 \<Rightarrow>\<^sub>C\<^sub>L 'a ell2) set\<close>
   assumes \<open>iso_qregister Q\<close>
   assumes \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) S\<close>
   shows \<open>separating_set (bounded_clinear :: (_\<Rightarrow>'c::complex_normed_vector) \<Rightarrow> _) (apply_qregister Q ` S)\<close>
-try0
-sledgehammer [dont_slice]
 proof (intro separating_setI)
   fix f g :: \<open>('b ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2) \<Rightarrow> 'c\<close>
   assume \<open>bounded_clinear f\<close> and \<open>bounded_clinear g\<close>
@@ -592,13 +630,11 @@ proof (intro separating_setI)
   qed
 qed
 
-
-
 lemma qregister_partial_trace_exists:
   \<open>trace_tc (compose_tcr a (qregister_partial_trace Q \<rho>)) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
 proof -
   wlog \<open>qregister Q\<close>
-    by x
+    using negation by (simp add: non_qregister)
   define \<sigma> where \<open>\<sigma> = qregister_partial_trace Q \<rho>\<close>
   from qcomplement_exists[OF \<open>qregister Q\<close>]
   have \<open>let 'g::type = qregister_decomposition_basis Q in
@@ -613,7 +649,8 @@ proof -
     define \<rho>' where \<open>\<rho>' = apply_qregister_tc (qregister_inv \<lbrakk>Q,R\<rbrakk>\<^sub>q) \<rho>\<close>
 
     have 1: \<open>trace_tc (compose_tcr a (partial_trace \<rho>')) = trace_tc (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>')\<close> for a
-      by -
+      apply (simp add: trace_tc.rep_eq compose_tcr.rep_eq)
+      by (simp add: trace_partial_trace_compose_eq_trace_compose_tensor_id flip: circularity_of_trace)
 
     have \<open>trace_tc (compose_tcr (apply_qregister Q a) \<rho>)
      = trace_tc (compose_tcr (apply_qregister \<lbrakk>Q,R\<rbrakk>\<^sub>q (a \<otimes>\<^sub>o id_cblinfun)) (apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q \<rho>'))\<close>
@@ -623,12 +660,11 @@ proof -
       by (metis \<open>qcomplements Q R\<close> \<rho>'_def apply_qregister_tc_inv_inverse iso_qregister_inv_iso
           qcomplements_def')
     also have \<open>\<dots> = trace_tc (apply_qregister_tc \<lbrakk>Q,R\<rbrakk>\<^sub>q (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>'))\<close>
-      apply (rule arg_cong[where f=trace_tc])
-      by -
+      by (simp add: trace_tc.rep_eq compose_tcr.rep_eq apply_qregister_tc.rep_eq qregister_compose)
     also have \<open>\<dots> = trace_tc (compose_tcr (a \<otimes>\<^sub>o id_cblinfun) \<rho>')\<close>
-      by -
+      using \<open>qcomplements Q R\<close> qcomplements_def' trace_tc_apply_qregister_tc_iso by blast
     also have \<open>\<dots> = trace_tc (compose_tcr a (partial_trace \<rho>'))\<close>
-      using "1" by presburger
+      using 1 by presburger
     also have \<open>\<dots> = trace_tc (compose_tcr a \<sigma>)\<close>
       using \<rho>'_def \<sigma>_pt by fastforce
     finally show \<open>trace_tc (compose_tcr a \<sigma>) = trace_tc (compose_tcr (apply_qregister Q a) \<rho>)\<close>
@@ -856,12 +892,77 @@ proof -
     by (simp add: cq_map_from_kraus_family_def km_norm_kf_norm)
 qed
 
+(* TODO move *)
+lemma kf_comp_dependent_assoc': 
+  fixes \<EE> :: \<open>('g \<times> 'f) \<Rightarrow> ('c::chilbert_space,'d::chilbert_space,'e) kraus_family\<close>
+    and \<FF> :: \<open>'g \<Rightarrow> ('b::chilbert_space,'c::chilbert_space,'f) kraus_family\<close>
+    and \<GG> :: \<open>('a::chilbert_space,'b::chilbert_space,'g) kraus_family\<close>
+  assumes bdd_E: \<open>bdd_above ((kf_norm o \<EE>) ` (SIGMA x:kf_domain \<GG>. kf_domain (\<FF> x)))\<close>
+  assumes bdd_F: \<open>bdd_above ((kf_norm o \<FF>) ` kf_domain \<GG>)\<close>
+  shows \<open>kf_comp_dependent \<EE> (kf_comp_dependent \<FF> \<GG>) \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>(g,f,e). ((g,f),e)) (kf_comp_dependent (\<lambda>g. kf_comp_dependent (\<lambda>f. \<EE> (g,f)) (\<FF> g)) \<GG>)\<close>
+proof -
+  have \<open>kf_comp_dependent \<EE> (kf_comp_dependent \<FF> \<GG>)
+          \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>(g,f,e). ((g,f),e)) (kf_map (\<lambda>((g,f),e). (g,f,e)) (kf_comp_dependent (\<lambda>(g,f). curry \<EE> g f) (kf_comp_dependent \<FF> \<GG>)))\<close>
+    apply (rule kf_eq_sym)
+    apply (rule kf_map_twice[THEN kf_eq_trans])
+    apply (rewrite at \<open>kf_map \<hole>\<close> to id DEADID.rel_mono_strong)
+     apply auto[1]
+    apply (rule kf_map_id[THEN kf_eq_trans])
+    by simp
+  also have \<open>\<dots> \<equiv>\<^sub>k\<^sub>r kf_map (\<lambda>(g,f,e). ((g,f),e)) (kf_comp_dependent (\<lambda>g. kf_comp_dependent (curry \<EE> g) (\<FF> g)) \<GG>)\<close>
+    apply (rule kf_eq_sym)
+    apply (rule kf_map_cong)
+     apply blast
+    apply (rule kf_comp_dependent_assoc)
+    using assms by fastforce+
+  finally show ?thesis
+    by (simp add: curry_def)
+qed
+
+(* TODO move *)
+lemma kf_comp_id_left_weak: \<open>kf_comp kf_id \<EE> =\<^sub>k\<^sub>r \<EE>\<close>
+  by (metis kf_apply_map kf_comp_id_left kf_eq_imp_eq_weak kf_eq_weak_def)
+
+(* TODO move *)
+lemma kf_comp_id_right_weak: \<open>kf_comp \<EE> kf_id =\<^sub>k\<^sub>r \<EE>\<close>
+  by (metis kf_apply_map kf_comp_id_right kf_eq_imp_eq_weak kf_eq_weak_def)
+
+(* TODO move *)
+lemma kf_norm_comp_id_right[simp]: \<open>kf_norm (kf_comp \<EE> kf_id) = kf_norm \<EE>\<close>
+  unfolding kf_id_def
+  apply (rule kf_norm_comp_of_op_coiso)
+  by simp
+
+(* TODO move *)
+lemma kf_norm_comp_id_left[simp]: \<open>kf_norm (kf_comp kf_id \<EE>) = kf_norm \<EE>\<close>
+  unfolding kf_id_def
+  apply (rule kf_norm_comp_iso)
+  by simp
 
 lemma cq_map_from_kraus_family_as_qFstqSnd:
   assumes \<open>qcomplements C Q\<close>
   shows \<open>km_apply_qregister (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) (cq_map_from_kraus_family C Q \<EE>)
       = cq_map_from_kraus_family qFst qSnd \<EE>\<close>
-  by x
+proof -
+  have [register, iff]: \<open>iso_qregister \<lbrakk>C,Q\<rbrakk>\<close>
+    using assms qcomplements_def' by blast
+  have [register, iff]: \<open>qregister (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q)\<close>
+    using iso_qregister_def' iso_qregister_inv_iso by blast
+  have chainC: \<open>qregister_chain (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) C = qFst\<close>
+    apply (rewrite at C in \<open>qregister_chain _ \<hole>\<close> to \<open>qregister_chain \<lbrakk>C,Q\<rbrakk> qFst\<close> DEADID.rel_mono_strong)
+    using iso_qregister_def' apply force
+    by (simp add: iso_qregister_inv_chain flip: qregister_chain_assoc)
+  have chainQ: \<open>qregister_chain (qregister_inv \<lbrakk>C, Q\<rbrakk>\<^sub>q) Q = qSnd\<close>
+    apply (rewrite at Q in \<open>qregister_chain _ \<hole>\<close> to \<open>qregister_chain \<lbrakk>C,Q\<rbrakk> qSnd\<close> DEADID.rel_mono_strong)
+    using iso_qregister_def' apply force
+    by (simp add: iso_qregister_inv_chain flip: qregister_chain_assoc)
+
+  show ?thesis
+    apply (rule ext)
+    by (simp add: cq_map_from_kraus_family_def km_apply_qregister_kf_apply
+        kf_apply_qregister_comp_dependent case_prod_unfold chainC chainQ
+        flip: kf_apply_qregister_chain)
+qed
 
 (* TODO move *)
 lemma kf_comp_dependent_raw_kf_filter_move:

@@ -1148,7 +1148,24 @@ next
     by simp
 qed
 
-
-
+lemma part_equivp_imp_equiv:
+  assumes \<open>part_equivp R\<close>
+  shows \<open>equiv {x. R x x} {(x,y). R x y}\<close>
+proof (rule equivI)
+  show \<open>{(x, y). R x y} \<subseteq> {x. R x x} \<times> {x. R x x}\<close>
+    using assms
+    unfolding part_equivp_def
+    by blast
+  show \<open>refl_on {x. R x x} {(x, y). R x y}\<close>
+    by (auto intro!: refl_onI)
+  show \<open>sym {(x, y). R x y}\<close>
+    using assms
+    unfolding part_equivp_refl_symp_transp  symp_sym_eq[symmetric]
+    by auto
+  show \<open>trans {(x, y). R x y}\<close>
+    using assms transp_trans
+    unfolding part_equivp_refl_symp_transp
+    by blast
+qed
 
 end

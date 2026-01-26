@@ -81,10 +81,10 @@ lemma INSTANTIATE_VARIABLE_cong[cong]: \<open>INSTANTIATE_VARIABLE x y = INSTANT
 lemma INSTANTIATE_VARIABLE_instantiate: \<open>INSTANTIATE_VARIABLE x x\<close>
   by (simp add: INSTANTIATE_VARIABLE_def)
 setup \<open>
-map_theory_simpset (fn ctxt => ctxt
-    addSolver 
+map_theory_simpset (
+    Simplifier.add_unsafe_solver (
       Simplifier.mk_solver "INSTANTIATE_VARIABLE" (fn ctxt => 
-        resolve_tac ctxt @{thms INSTANTIATE_VARIABLE_instantiate}))\<close>
+        resolve_tac ctxt @{thms INSTANTIATE_VARIABLE_instantiate})))\<close>
 
 (* 
 (* TODO outdated doc comment *)
@@ -209,6 +209,140 @@ qed
 definition qregister_co_dim :: \<open>('a,'b) qregister \<Rightarrow> real\<close> where
   \<open>qregister_co_dim Q = trace_norm (apply_qregister Q (selfbutter (ket undefined)))\<close>
 
+lemma qregister_co_dim_invalid[simp]: \<open>qregister_co_dim non_qregister = 0\<close>
+  by (simp add: qregister_co_dim_def)
+
+lemma trace_id_cblinfun[simp]: \<open>trace (id_cblinfun :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) = cdim (UNIV :: 'a set)\<close>
+proof (cases \<open>cfinite_dim (UNIV :: 'a set)\<close>)
+  case True
+  let ?id = \<open>id_cblinfun :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space\<close>
+  from cfinite_dim_subspace_has_onb[OF True]
+  obtain B :: \<open>'a set\<close> where [iff]: \<open>finite B\<close> and \<open>is_ortho_set B\<close> and \<open>cspan B = UNIV\<close> and \<open>x \<in> B \<Longrightarrow> norm x = 1\<close> for x
+    by auto
+  then have [iff]: \<open>is_onb B\<close>
+    by (metis complex_vector.spanning_subset_independent is_onb_def is_ortho_set_cindependent orthonormal_basis_exists top.extremum)
+  from \<open>is_onb B\<close> have [iff]: \<open>trace_class ?id\<close>
+    apply (rule trace_classI)
+    by simp
+  have \<open>trace ?id = (\<Sum>e\<in>B. e \<bullet>\<^sub>C e)\<close>
+    by (simp add: trace_alt_def[of B])
+  also have \<open>\<dots> = card B\<close>
+    apply (subst sum.cong[where B=B and h=\<open>\<lambda>_. 1\<close>])
+    using cnorm_eq_1 is_onb_def by auto
+  also have \<open>card B = cdim (UNIV :: 'a set)\<close>
+    apply (rule complex_vector.basis_card_eq_dim)
+      apply simp
+    using \<open>cspan B = UNIV\<close> apply order
+    by (simp add: \<open>is_ortho_set B\<close> is_ortho_set_cindependent)
+  finally show ?thesis
+    by simp
+next
+  case False
+  let ?id = \<open>id_cblinfun :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space\<close>
+  obtain B :: \<open>'a set\<close> where \<open>is_onb B\<close>
+    using is_onb_some_chilbert_basis by blast
+  from False have \<open>infinite B\<close>
+    by (metis \<open>is_onb B\<close> ccspan.rep_eq cfinite_dim_def closure_finite_cspan complex_vector.span_UNIV complex_vector.span_eq is_onb_def
+        is_onb_some_chilbert_basis span_some_chilbert_basis)
+  have \<open>\<not> trace_class ?id\<close>
+  proof (rule notI)
+    assume [iff]: \<open>trace_class ?id\<close>
+    obtain n :: nat where \<open>Re (trace ?id) < n\<close>
+      using reals_Archimedean2[of \<open>Re (trace ?id)\<close>]
+      by meson
+    have \<open>trace ?id \<ge> n\<close>
+    proof -
+      from infinite_arbitrarily_large[OF \<open>infinite B\<close>, of n]
+      obtain C where \<open>C \<subseteq> B\<close> and \<open>card C = n\<close> and \<open>finite C\<close>
+        by blast
+      have \<open>Proj (ccspan C) \<le> Proj (ccspan B)\<close>
+        using \<open>C \<subseteq> B\<close> by (auto intro!: ccspan_mono simp add: Proj_mono)
+      also have \<open>\<dots> = ?id\<close>
+        by (metis Proj_top \<open>is_onb B\<close> is_onb_def)
+      finally have \<open>trace (Proj (ccspan C)) \<le> trace ?id\<close>
+        apply (rule trace_cblinfun_mono[rotated -1])
+        using \<open>finite C\<close> trace_class_Proj apply blast
+        by simp
+      moreover have \<open>trace (Proj (ccspan C)) = card C\<close>
+      proof (use \<open>finite C\<close> \<open>C \<subseteq> B\<close> in induction)
+        case empty
+        then show ?case
+          by simp
+      next
+        case (insert x C)
+        have [simp]: \<open>norm x = 1\<close>
+          by (metis \<open>is_onb B\<close> insert.prems insert_subset is_onb_def is_ortho_setD local.insert(2) subset_iff)
+        have [iff]: \<open>y \<in> C \<Longrightarrow> is_orthogonal x y\<close> for y
+          by (metis \<open>is_onb B\<close> insert.prems insert_subset is_onb_def is_ortho_setD local.insert(2) subset_iff)
+        have \<open>trace (Proj (ccspan (insert x C))) = trace (proj x) + trace (Proj (ccspan C))\<close>
+          by (simp add: Proj_orthog_ccspan_insert ccspan_finite_dim local.insert(1) trace_class_Proj trace_plus)
+        also have \<open>\<dots> = 1 + trace (Proj (ccspan C))\<close>
+         using \<open>norm x = 1\<close> by (simp add: trace_butterfly flip: butterfly_eq_proj cnorm_eq_1)
+        also have \<open>\<dots> = 1 + card C\<close>
+          using insert.prems local.insert(3) by force
+        finally show ?case
+          apply (subst card_insert_disjoint)
+          using local.insert(1) apply blast
+          using local.insert(2) apply blast
+          by fastforce
+      qed
+      ultimately show ?thesis
+        using \<open>card C = n\<close> by argo
+    qed
+    then have \<open>Re (trace ?id) \<ge> n\<close>
+      using Re_mono by fastforce
+    with \<open>Re (trace ?id) < n\<close>
+    show False
+      try0
+      by auto
+  qed
+  then have \<open>trace ?id = 0\<close>
+    by (simp add: not_trace_class_trace0)
+  moreover from False
+  have \<open>cdim (UNIV :: 'a set) = 0\<close>
+    by (simp add: cdim_infinite_0)
+  ultimately show ?thesis
+    by fastforce
+qed
+
+
+
+lemma trace_norm_id_cblinfun[simp]: \<open>trace_norm (id_cblinfun :: 'a \<Rightarrow>\<^sub>C\<^sub>L 'a::chilbert_space) = cdim (UNIV :: 'a set)\<close>
+  by (metis of_real_eq_iff of_real_of_nat_eq positive_id_cblinfun trace_id_cblinfun trace_norm_pos)
+
+lemma cdim_UNIV_ell2[simp]: \<open>cdim (UNIV :: 'a ell2 set) = CARD('a)\<close>
+proof (cases \<open>finite (UNIV::'a set)\<close>)
+  case True
+  then have span: \<open>cspan (range ket :: 'a ell2 set) = UNIV\<close>
+    using closed_cspan_range_ket closure_finite_cspan finite_imageI by blast
+  then have \<open>cdim (UNIV :: 'a ell2 set) = card (range ket :: 'a ell2 set)\<close>
+    by (metis cindependent_ket complex_vector.dim_span_eq_card_independent)
+  also have \<open>\<dots> = CARD('a)\<close>
+    by (simp add: card_image)
+  finally show ?thesis
+    by meson
+next
+  case False
+  then have \<open>infinite (range ket :: 'a ell2 set)\<close>
+    by auto
+  then have \<open>\<not> cfinite_dim (UNIV :: 'a ell2 set)\<close>
+    by (metis cfinite_dim_def cindependent_ket complex_vector.independent_span_bound top.extremum top_le)
+  then have \<open>cdim (UNIV :: 'a ell2 set) = 0\<close>
+    by (simp add: cdim_infinite_0)
+  moreover from False have \<open>CARD('a) = 0\<close>
+    by fastforce
+  ultimately show ?thesis
+    by simp
+qed
+
+
+lemma qregister_co_dim_for_decompose_register:
+  fixes U :: \<open>('a \<times> 'b) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'c ell2\<close>
+  assumes [iff]: \<open>unitary U\<close>
+  assumes Fdecomp: \<open>\<And>a. apply_qregister F a = sandwich U (a \<otimes>\<^sub>o id_cblinfun)\<close>
+  shows \<open>real CARD('b) = qregister_co_dim F\<close>
+  by (simp add: qregister_co_dim_def Fdecomp trace_norm_sandwich_isometry trace_norm_tensor trace_norm_butterfly)
+
 lift_definition apply_qregister_tc :: \<open>('a,'b) qregister \<Rightarrow> ('a ell2, 'a ell2) trace_class \<Rightarrow> ('b ell2, 'b ell2) trace_class\<close> is
   \<open>\<lambda>Q. if qregister_co_dim Q \<noteq> 0 then apply_qregister Q else 0\<close>
 proof (erule CollectE, rule CollectI, rename_tac Q t)
@@ -279,17 +413,62 @@ proof -
 qed
 
 
-(* TODO move *)
+lemma apply_qregister_trace:
+  fixes X :: \<open>('a, 'b) qregister\<close>
+  shows \<open>trace (apply_qregister X t) = trace t * qregister_co_dim X\<close>
+proof -
+  wlog \<open>qregister X\<close>
+    using negation
+    by (simp add: non_qregister)
+  from qregister_decomposition'[OF this]
+  have \<open>let 'c::type = qregister_decomposition_basis X in ?thesis\<close>
+  proof with_type_mp
+    case with_type_mp
+    then obtain U :: \<open>('a \<times> 'c) ell2 \<Rightarrow>\<^sub>C\<^sub>L 'b ell2\<close> where [iff]: \<open>unitary U\<close> and decomp: \<open>apply_qregister X a = sandwich U *\<^sub>V a \<otimes>\<^sub>o id_cblinfun\<close> for a
+      by fast
+    then have \<open>CARD('c) = qregister_co_dim X\<close>
+      by (rule qregister_co_dim_for_decompose_register) 
+    moreover have \<open>trace (apply_qregister X t) = trace t * CARD('c)\<close>
+      by (simp add: decomp trace_tensor trace_sandwich_isometry)
+    ultimately show \<open>trace (apply_qregister X t) = trace t * qregister_co_dim X\<close>
+      by (metis of_real_of_nat_eq)
+  qed
+  from this[cancel_with_type]
+  show ?thesis
+    by simp
+qed
+
+lemma apply_qregister_trace_norm:
+  shows \<open>trace_norm (apply_qregister X t) = trace_norm t * qregister_co_dim X\<close>
+proof -
+  wlog [register]: \<open>qregister X\<close>
+    using negation
+    by (simp add: non_qregister)
+  have \<open>trace_norm (apply_qregister X t) = trace (abs_op (apply_qregister X t))\<close>
+    by auto
+  also have \<open>\<dots> = trace (apply_qregister X (abs_op t))\<close>
+    by (simp add: apply_qregister_abs_op)
+  also have \<open>\<dots> = trace (abs_op t) * qregister_co_dim X\<close>
+    by (simp add: apply_qregister_trace)
+  also have \<open>\<dots> = trace_norm t * qregister_co_dim X\<close>
+    by force
+  ultimately show ?thesis
+    by (simp add: of_real_hom.injectivity)
+qed
+
+
+
+
 lemma apply_iso_qregister_trace_norm:
   assumes \<open>iso_qregister X\<close>
   shows \<open>trace_norm (apply_qregister X t) = trace_norm t\<close>
-proof -
-  from iso_qregister_decomposition[OF assms(1)]
-  obtain U where \<open>unitary U\<close> and \<open>apply_qregister X = sandwich U\<close>
-    by auto
-  with assms show ?thesis
-    by (metis apply_qregister_abs_op of_real_hom.injectivity trace_abs_op trace_sandwich_isometry unitary_isometry)
-qed
+  using assms iso_qregister_decomposition trace_norm_sandwich_isometry by force
+
+lemma apply_iso_qregister_trace:
+  assumes \<open>iso_qregister X\<close>
+  shows \<open>trace (apply_qregister X t) = trace t\<close>
+  using assms iso_qregister_decomposition by force
+
 
 lemma apply_iso_qregister_tc_norm:
   assumes \<open>iso_qregister X\<close>
@@ -512,6 +691,12 @@ next
     by simp
 qed
 
+
+lemma trace_tc_apply_qregister_tc: \<open>trace_tc (apply_qregister_tc Q t) = trace_tc t * qregister_co_dim Q\<close>
+  by (simp add: trace_tc.rep_eq apply_qregister_tc.rep_eq apply_qregister_trace)
+
+lemma trace_tc_apply_qregister_tc_iso: \<open>trace_tc (apply_qregister_tc Q t) = trace_tc t\<close> if \<open>iso_qregister Q\<close>
+  by (simp add: iso_qregister_co_dim that trace_tc_apply_qregister_tc)
 
 
 end
