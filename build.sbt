@@ -13,7 +13,7 @@ lazy val root = (project in file("."))
 
 lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
   scalaVersion := "2.13.16",
-  resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
+//  resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases"),
   libraryDependencies += "org.log4s" %% "log4s" % "1.8.2",
   // Needed so that logging works in "sbt test"
   libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.30" % Test,
@@ -102,8 +102,8 @@ Universal / mappings += (baseDirectory.value / "target" / "GITREVISION" -> "GITR
 Universal / mappings ++= directory("proofgeneral")
 
 // Without this, updateSbtClassifiers fails (and that breaks Intelli/J support)
-resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
-resolvers ++= Resolver.sonatypeOssRepos("snapshots")
+//resolvers += Resolver.bintrayIvyRepo("sbt","sbt-plugin-releases")
+//resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 
 // To avoid that several tests simultaneously try to build Isabelle
 Test / parallelExecution := false
