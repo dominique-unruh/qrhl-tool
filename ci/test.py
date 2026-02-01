@@ -19,9 +19,9 @@ def main():
     qrhl_dir = ci_dir.parent
     show_results = args.show_results or (args.num_tests <= 1)
     isabelle_version=qrhl_dir.joinpath("src/main/resources/qrhl/isabellex/isabelleVersion").read_text()
+    exclude = "/.git /.idea /.run /ci /target /project/target /scala-isabelle/.idea /scala-isabelle/.run /scala-isabelle/ci /scala-isabelle/target /scala-isabelle/project/target".split()
     settings = Settings(ci_dir=ci_dir, main_dir=qrhl_dir, show_results=show_results, isabelle_versions=(isabelle_version,),
-                        container_repo_dir="qrhl-tool")
-    dataclasses.replace(settings, exclude = settings.exclude + tuple(f"/scala-isabelle{word}" for word in settings.exclude))
+                        container_repo_dir="qrhl-tool", exclude=exclude)
 
     config = TestConfig(isabelle=isabelle_version, java=args.java)
     success = do_tests(settings, config, args.num_tests)

@@ -49,3 +49,4 @@ _region_.pdf
 /_site
 /ci/.image
 /ci/all-files/
+__pycache__/
