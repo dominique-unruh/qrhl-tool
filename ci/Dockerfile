@@ -7,7 +7,8 @@ pacman-key --refresh-keys
 EOT
 
 RUN bash -ex <<EOT  # Install dependencies
-pacman -Sy --noconfirm wget file sudo fontconfig git gnupg curl sbt ttf-dejavu pcre2 inetutils make python
+pacman -Sy --noconfirm wget file sudo fontconfig git gnupg curl sbt ttf-dejavu pcre2 inetutils make python \
+    texlive-latex texlive-latexextra texlive-mathscience texlive-bibtexextra texlive-latexrecommended texlive-fontsextra
 pacman -Sc
 EOT
 
