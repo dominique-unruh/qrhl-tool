@@ -12,7 +12,7 @@ jobs:
         - name: Running tests
           run:
             ci/test.py --no-show-results --num-tests 1;
-            mv target/test-results/test-reports/qrhl.zip .
+            mv target/test-results/*/test-reports/qrhl.zip .
 
         - name: Upload test results
           uses: actions/upload-artifact@v4
