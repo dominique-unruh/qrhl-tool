@@ -7,7 +7,7 @@ pacman-key --refresh-keys
 EOT
 
 RUN bash -ex <<EOT  # Install dependencies
-pacman -Sy --noconfirm wget file sudo fontconfig git gnupg curl sbt ttf-dejavu pcre2 inetutils make
+pacman -Sy --noconfirm wget file sudo fontconfig git gnupg curl sbt ttf-dejavu pcre2 inetutils make python
 pacman -Sc
 EOT
 
