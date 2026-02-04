@@ -1,4 +1,4 @@
-VERSION="snapshot"
+VERSION=$(shell cat version 2>/dev/null || echo "snapshot")
 SOURCES := $(shell find src) $(wildcard *.qrhl) $(wildcard *.thy) doc/manual.pdf
 
 qrhl.zip : target/universal/qrhl-$(VERSION).zip

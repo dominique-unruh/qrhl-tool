@@ -137,11 +137,13 @@ assembly / assemblyMergeStrategy := {
 Steps when releasing a release/release candidate:
 
  - git checkout release-candidate
- - If this is the first RC for a new release, reset release-candidate to master
- - Edit version in Makefile, build.sbt
- - git commit
- - git tag vXXX (XXX is the version)
- - sbt clean
+ - If this is the first RC for a new release:
+   git reset --hard master
+ - git submodule update --init --recursive
+ - Edit version in `./version`
+ - git commit -m "Bumped version"
+ - git tag "v$(cat version)"
+ - git clean -fdx
  - sbt test
  - ./test.sh in pq-fo-verify
  - make qrhl.zip
