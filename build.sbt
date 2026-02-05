@@ -149,7 +149,7 @@ Steps when releasing a release/release candidate:
  - make qrhl.zip
  - git push
  - wait for github runner tests to succeed
- - git push origin vXXX
+ - git push origin "v$(cat version)"
  - Create a new release here: https://github.com/dominique-unruh/qrhl-tool/releases/new
  - git checkout master
  - git cherry -v master release-candidate
