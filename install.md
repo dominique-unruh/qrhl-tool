@@ -16,14 +16,14 @@ The binary development snapshot can be downloaded from [here](https://nightly.li
 To check whether this is the case, go into a terminal,
 and enter `java -version` or `emacs -version`, respectively, and see whether the commands are found.
 
-* [Isabelle2025](https://isabelle.in.tum.de/website-Isabelle2025/) must be installed.
+* [Isabelle2025-2](https://isabelle.in.tum.de/website-Isabelle2025-2/) must be installed.
   Simply download it and unpack it somewhere.
-* The AFP (version 2025) must be installed. Download it e.g. [this version](https://www.isa-afp.org/release/afp-2025-03-19.tar.gz).
+* The AFP (version 2025-1, not that 2025-2 does not exist) must be installed. Download it e.g. [this version](https://www.isa-afp.org/release/afp-2025-12-19.tar.gz).
   and unpack it somewhere.
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7.3`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7.4`.
 (Or `qrhl-snapshot` in case of the development snapshot.)
 
 Edit `.qrhl-tool.conf` in your home directory.
@@ -36,7 +36,7 @@ To update, simply extract the new version.
 
 ## Executing the demos
 
-In the `qrhl-0.7.3` directory, execute `proofgeneral.sh`.
+In the `qrhl-0.7.4` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -65,7 +65,7 @@ Then open and edit the file normally.
 
 * Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.7.3`). 
+* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.7.4`). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
