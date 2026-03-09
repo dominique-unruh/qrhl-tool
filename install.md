@@ -5,7 +5,7 @@ Qrhl-tool requires Linux, OS/X, or Windows to run.
 
 You can download the qrhl-tool binaries [here](https://github.com/dominique-unruh/qrhl-tool/releases).
 
-The binary development snapshot can be downloaded from [here](https://nightly.link/dominique-unruh/qrhl-tool/workflows/test/master/qrhl.zip).
+[//]: # (The binary development snapshot can be downloaded from [here]&#40;https://nightly.link/dominique-unruh/qrhl-tool/workflows/test/master/qrhl.zip&#41;.)
 
 ## Prerequisites
 
