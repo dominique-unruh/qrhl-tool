@@ -69,6 +69,13 @@ class IsabelleXTest extends AnyFunSuite {
       assert(getAB(ctxt) == ("3", "4"))
     }
   }
+
+  test("checkAFPVersion") {
+    if (Configuration.afpRoot.isEmpty)
+      println("Skipping checkAFPVersion since AFP-root not known")
+    else
+      IsabelleX.checkAFPVersion()
+  }
 }
 
 object IsabelleXTest {
