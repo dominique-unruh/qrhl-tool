@@ -18,12 +18,12 @@ and enter `java -version` or `emacs -version`, respectively, and see whether the
 
 * [Isabelle2025-2](https://isabelle.in.tum.de/website-Isabelle2025-2/) must be installed.
   Simply download it and unpack it somewhere.
-* The AFP (version 2025-1, not that 2025-2 does not exist) must be installed. Download it e.g. [this version](https://www.isa-afp.org/release/afp-2025-12-19.tar.gz).
+* The AFP (version 2025-1, note that 2025-2 does not exist) must be installed. Download it e.g. [this version](https://www.isa-afp.org/release/afp-2025-12-19.tar.gz).
   and unpack it somewhere.
 
 ## Installation
 
-Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7.4`.
+Simply unpack `qrhl.zip`. This will create a directory called `qrhl-0.7.5`.
 (Or `qrhl-snapshot` in case of the development snapshot.)
 
 Edit `.qrhl-tool.conf` in your home directory.
@@ -34,9 +34,32 @@ and `afp-root = <where you unpackaged AFP>`.
 To update, simply extract the new version.
 (Possibly updating `.qrhl-tool.conf` if the Isabelle version has changed.)
 
+On slower computers, it may additionally be useful to increase Isabelle's timeout:
+* Edit `<where you unpackaged Isabelle>/etc/options`
+* Find the line `public option timeout_scale : real = 1.0 for build`
+* Change `1.0` to, e.g., `10.0` (multiplies timeouts by 10)
+
+## Installation check
+
+If you want to check whether you set things up correctly in the previous step, you can run:
+`bin/qrhl examples/example.qrhl`
+
+This should produce approximately the following output:
+```text
+Loaded config file: /home/username/.qrhl-tool.conf
+
+No current goal.
+*** Starting Isabelle process. The first time, this also builds Isabelle which can take a very long time (e.g., 20-60min)...
+[... very long wait ...]
+All proofs processed successfully.
+```
+
+If you get an error containing something like `Unfinished session(s): Complex_Bounded_Operators, Hilbert_Space_Tensor_Product, ...`
+you likely ran into a timeout. Increase it as described above.
+
 ## Executing the demos
 
-In the `qrhl-0.7.4` directory, execute `proofgeneral.sh`.
+In the `qrhl-0.7.5` directory, execute `proofgeneral.sh`.
 
 This will open emacs running ProofGeneral configured for the qrhl
 tool.  Open one of the example files in `examples/`,
@@ -65,7 +88,7 @@ Then open and edit the file normally.
 
 * Make sure that [sbt](https://www.scala-sbt.org/) (Scala Build Tool) is on the path.
 * Use `git clone https://github.com/dominique-unruh/qrhl-tool.git` to download the sources.
-* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.7.4`). 
+* Use `git checkout master` (replace `master` by the version/git revision you wish to compile, e.g., `v0.7.5`). 
 * Create a `qrhl-tool.conf` file as described in the binary installation section above.
 * Run `./isabelle.sh` as described above (this will (re)compile the sources if needed).
 * Run `bin/qrhl` to run the tool on the command line.
