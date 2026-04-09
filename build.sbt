@@ -32,7 +32,11 @@ lazy val hashedcomputation = (project in file("hashedcomputation")).settings(
 
 name := "qrhl"
 
-version := Using.resource(scala.io.Source.fromFile("version"))(_.mkString.trim)
+version := {
+  val version = Using.resource(scala.io.Source.fromFile("version"))(_.mkString.trim)
+  assert(version.head.isDigit || version.startsWith("snapshot"), version)
+  version
+}
 
 scalaVersion := "2.13.16"
 
@@ -140,7 +144,7 @@ Steps when releasing a release/release candidate:
  - If this is the first RC for a new release:
    git reset --hard master
  - git submodule update --init --recursive
- - Edit version in `./version`
+ - Edit version in `./version` (without leading v)
  - git commit -m "Bumped version"
  - git tag "v$(cat version)"
  - git clean -fdx
