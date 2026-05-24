@@ -1,0 +1,47 @@
+isabelle OWP.
+
+quantum var qglobA : infinite.
+classical var cglobA : infinite.
+classical var adv_in : X.
+classical var adv_out : X.
+classical var x : X.
+classical var x' : X.
+
+adversary A free qglobA, cglobA, adv_in, adv_out.
+
+program g_owp := {
+  x <$ uniform UNIV;
+  adv_in <- g x;
+  call A;
+  x' <- adv_out;
+}.
+
+program B := {
+  call A;
+  adv_out <- f adv_out;
+}.
+
+program f_owp := {
+  x <$ uniform UNIV;
+  adv_in <- f x;
+  call B;
+  x' <- adv_out;
+}.
+
+ambient var rho : program_state.
+
+lemma security: Pr[x=x' : g_owp(rho)] = Pr[x=x' : f_owp(rho)].
+  byqrhl.
+  inline g_owp.
+  inline f_owp.
+  inline B.
+  wp 1 2.
+  equal 1.
+   1: { simp. }
+  wp 1 1.
+  rnd x,x <- map_distr (λx. (x, f x)) (uniform UNIV).
+  skip.
+  simp! g_def bij_f.
+qed.
+
+  
